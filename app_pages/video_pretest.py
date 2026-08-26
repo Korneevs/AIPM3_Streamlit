@@ -67,8 +67,7 @@ def group_figure(rows: list[dict]) -> go.Figure:
         y=frame["label"],
         orientation="h",
         marker_color=colors,
-        customdata=frame[["Наблюдение"]].to_numpy(),
-        hovertemplate="%{y}<br>Локальное влияние: %{x:.1f}%<br>%{customdata[0]}<extra></extra>",
+        hovertemplate="%{y}<br>Локальное влияние: %{x:.1f}%<extra></extra>",
     ))
     figure.add_vline(x=0, line_color="#6B7280", line_width=1)
     figure.update_layout(
@@ -144,13 +143,11 @@ def show_result(result: dict) -> None:
         for item in result["interpretation"]["strengths"]:
             with st.container(border=True):
                 st.markdown(f"**{item['title']}**")
-                st.caption(item["detail"])
     with bad_col:
         st.markdown("### Что ограничивает результат")
         for item in result["interpretation"]["limits"]:
             with st.container(border=True):
                 st.markdown(f"**{item['title']}**")
-                st.caption(item["detail"])
 
     st.subheader("Разбор по логическим группам признаков")
     st.caption(
@@ -161,43 +158,12 @@ def show_result(result: dict) -> None:
         group_figure(result["interpretation"]["group_rows"]),
         use_container_width=True,
     )
-    group_table = pd.DataFrame(result["interpretation"]["group_rows"])
-    group_table["Локальное влияние, %"] = group_table["Локальное влияние, %"].round(1)
-    st.dataframe(group_table, hide_index=True, use_container_width=True)
 
     with st.expander("Устойчивость идеи при неполном просмотре"):
         st.plotly_chart(recovery_figure(result["recovery_curve"]), use_container_width=True)
         st.caption(
             "Две линии — независимые наборы фрагментов ролика. Чем выше линии и чем "
             "меньше расстояние между ними, тем устойчивее считывается главная идея."
-        )
-
-    with st.expander("Технические результаты моделей"):
-        st.write({
-            "AIPM 1.0 — класс": result["aipm1"]["raw_class"],
-            "AIPM 1.0 — вероятности классов": [round(value, 4) for value in result["aipm1"]["probability"]],
-            "AIPM 2.0 — прогноз norm Ad Recall": round(result["aipm2"]["raw_score"], 4),
-            "Message Delivery — score": round(result["message_delivery"]["raw_score"], 4),
-            "Message Delivery — класс": result["message_delivery"]["raw_class"],
-            "AIPM 3.0 — нормированный индекс": round(result["aipm3"]["index"], 4),
-        })
-        st.markdown("**Объективные признаки AIPM 1.0 / AIPM 2.0**")
-        st.dataframe(
-            pd.DataFrame([
-                {"Признак": key, "Значение": value}
-                for key, value in result["objective_features"].items()
-            ]),
-            hide_index=True,
-            use_container_width=True,
-        )
-        st.markdown("**Признаки Message Delivery**")
-        st.dataframe(
-            pd.DataFrame([
-                {"Признак": key, "Значение": value}
-                for key, value in result["message_delivery_business"].items()
-            ]),
-            hide_index=True,
-            use_container_width=True,
         )
 
     downloadable = {
