@@ -4,7 +4,6 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from aipm3.creative_diagnosis import build_diagnosis, panel_signal, scene_example
-from aipm3 import brief_details as detail
 from aipm3 import creative_review as review
 
 
@@ -72,65 +71,6 @@ def test_scene_requires_source_time_and_two_transcripts(fault):
     assert scene_example(source, ['message_focus']) is None
 
 
-BRIEF = {'uvp': 'широкий выбор', 'rtb': 'проверенные товары'}
-ANSWERS = [{'respondent_id': 'p1', 'answer': 'Есть разные вещи, их качество проверяют'},
-           {'respondent_id': 'p2', 'answer': 'Авито'}]
-PARTS = detail.validate_parts({'parts': [{'dimension': 'uvp', 'brief_quote': 'широкий выбор'},
-                                       {'dimension': 'rtb', 'brief_quote': 'проверенные'}]}, BRIEF)
-
-
-def coding():
-    return {'answers': [{'respondent_id': a['respondent_id'], 'parts': [
-        {'part_id': p['part_id'], 'status': 'matched', 'quote': a['answer']} for p in PARTS]} for a in ANSWERS]}
-
-
-def test_semantic_paraphrases_quotes_disagreement_and_cache():
-    first, second = coding(), coding()
-    second['answers'][0]['parts'][1] = {'part_id': 'd2', 'status': 'absent', 'quote': ''}
-    out = detail.combine([first, second], PARTS, BRIEF, ANSWERS)
-    assert out['summary'][0]['counts']['matched'] == 1
-    assert out['summary'][0]['counts']['absent'] == 1  # brand only never counts
-    assert out['summary'][1]['counts']['uncertain'] == 1
-    assert detail.is_current(out, BRIEF, list(reversed(ANSWERS)))
-    assert not detail.is_current(out, {**BRIEF, 'uvp': 'скорость'}, ANSWERS)
-    assert not detail.is_current({**out, 'version': 'old'}, BRIEF, ANSWERS)
-
-
-@pytest.mark.parametrize('fault', ['quote', 'duplicate', 'missing', 'unknown'])
-def test_invalid_details_rejected(fault):
-    payload = coding()
-    if fault == 'quote':
-        payload['answers'][0]['parts'][0]['quote'] = 'доставка'
-    elif fault == 'duplicate':
-        payload['answers'][0]['parts'][1]['part_id'] = 'd1'
-    elif fault == 'missing':
-        payload['answers'].pop()
-    else:
-        payload['answers'][0]['parts'][0]['status'] = 'anything'
-    with pytest.raises(ValueError):
-        detail.combine([payload, payload], PARTS, BRIEF, ANSWERS)
-
-
-def test_parts_cannot_add_requirements_or_omit_dimension():
-    for parts in [[{'dimension': 'uvp', 'brief_quote': 'дешевле всех'}], PARTS[:1], PARTS * 2]:
-        with pytest.raises(ValueError):
-            detail.validate_parts({'parts': parts}, BRIEF)
-
-
-def test_partial_loss_requires_agreement_and_exact_brief_span():
-    first = coding()
-    first['answers'][0]['parts'][1].update(status='partial', missing_brief_quote='проверенные')
-    output = detail.combine([first, first], PARTS, BRIEF, ANSWERS)
-    assert output['summary'][1]['answers'][0]['missing_brief_quote'] == 'проверенные'
-    invalid = copy.deepcopy(first)
-    invalid['answers'][0]['parts'][1]['missing_brief_quote'] = 'гарантия'
-    with pytest.raises(ValueError):
-        detail.combine([invalid, invalid], PARTS, BRIEF, ANSWERS)
-    second = copy.deepcopy(first)
-    second['answers'][0]['parts'][1]['missing_brief_quote'] = 'проверен'
-    assert detail.combine([first, second], PARTS, BRIEF, ANSWERS)['summary'][1]['answers'][0]['missing_brief_quote'] == ''
-
-
 def test_actual_four_saved_scores_and_features_unchanged():
     import json
     from pathlib import Path
@@ -146,19 +86,6 @@ def test_actual_four_saved_scores_and_features_unchanged():
         report = build_diagnosis(new)
         assert new == before
         assert report == build_diagnosis(new)
-
-
-def test_details_are_text_only_and_use_fixed_rubric(monkeypatch):
-    calls = []
-    def fake(prompt, schema, key):
-        calls.append((prompt, schema))
-        return coding()
-    monkeypatch.setattr(review, 'ask_json', fake)
-    before = copy.deepcopy((PARTS, BRIEF, ANSWERS))
-    detail.compare(BRIEF, ANSWERS, 'test', parts=PARTS)
-    assert len(calls) == 2
-    assert all(s == detail.CODING_SCHEMA for _, s in calls)
-    assert (PARTS, BRIEF, ANSWERS) == before
 
 
 def test_manager_ui_has_evidence_no_shap():

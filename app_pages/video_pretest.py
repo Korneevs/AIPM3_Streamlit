@@ -12,7 +12,9 @@ import streamlit as st
 from artifacts import artifact_path
 from aipm3.models import SCORING_VERSION, FrozenModels, level_from_percentile, load_frozen_models
 from aipm3.pipeline import run_analysis
-from aipm3.review_ui import show_brief_review, show_manager_readout, show_scene_review
+from aipm3.profile_ui import show_feature_profile
+from aipm3.feature_profile import build_profile
+from aipm3.result_export import export_result
 
 
 @st.cache_resource(show_spinner=False)
@@ -112,24 +114,9 @@ def show_result(result: dict, api_key: str = "", video_bytes: bytes | None = Non
 
     st.plotly_chart(component_figure(result), use_container_width=True)
 
-    show_manager_readout(result)
-
-    with st.expander("Содержательность ответов при неполном просмотре"):
-        st.plotly_chart(recovery_figure(result["recovery_curve"]), use_container_width=True)
-        st.caption(
-            "Две линии — разные наборы фрагментов ролика. Высота показывает сглаженную долю "
-            "содержательных ответов синтетиков. В них могут быть разные идеи: это не доля "
-            "считавших именно главный или задуманный посыл и не прогноз для людей."
-        )
-
-    show_scene_review(result, api_key, video_bytes, suffix)
-    st.divider()
-    show_brief_review(result, api_key)
-
-    downloadable = {
-        key: value for key, value in result.items()
-        if key not in {"objective_runs", "transcripts", "prepared_video"}
-    }
+    show_feature_profile(result)
+    downloadable = export_result(result)
+    downloadable['feature_profile'] = build_profile(result)
     st.download_button(
         "Скачать результат JSON",
         data=json.dumps(downloadable, ensure_ascii=False, indent=2),
