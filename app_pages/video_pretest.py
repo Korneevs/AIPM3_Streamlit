@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import tempfile
@@ -12,6 +13,7 @@ import streamlit as st
 from artifacts import artifact_path
 from aipm3.models import SCORING_VERSION, FrozenModels, level_from_percentile, load_frozen_models
 from aipm3.pipeline import run_analysis
+from aipm3.review_ui import show_brief_review, show_manager_readout, show_scene_review
 
 
 @st.cache_resource(show_spinner=False)
@@ -100,7 +102,7 @@ def recovery_figure(curve: dict[str, float]) -> go.Figure:
         height=330,
         margin=dict(l=10, r=10, t=20, b=15),
         xaxis=dict(title="Доля доступного ролика, %", range=[20, 105]),
-        yaxis=dict(title="Доля валидно считавших идею", tickformat=".0%", range=[0, 1]),
+        yaxis=dict(title="Содержательные ответы (сглаженная доля)", tickformat=".0%", range=[0, 1]),
         legend=dict(orientation="h", y=1.12),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
@@ -108,7 +110,7 @@ def recovery_figure(curve: dict[str, float]) -> go.Figure:
     return figure
 
 
-def show_result(result: dict) -> None:
+def show_result(result: dict, api_key: str = "", video_bytes: bytes | None = None, suffix: str = ".mp4") -> None:
     aipm3 = result["aipm3"]
     if aipm3["level"] == 2:
         st.success(f"**AIPM 3.0: {aipm3['label']}**")
@@ -116,6 +118,11 @@ def show_result(result: dict) -> None:
         st.warning(f"**AIPM 3.0: {aipm3['label']}**")
     else:
         st.error(f"**AIPM 3.0: {aipm3['label']}**")
+
+    main_idea = str(result.get("main_idea") or "").strip()
+    with st.container(border=True):
+        st.markdown("### Основная идея ролика")
+        st.write(main_idea or "Не удалось однозначно определить основную идею.")
 
     col_total, col_aipm1, col_aipm2, col_md = st.columns(4)
     col_total.metric(
@@ -133,38 +140,30 @@ def show_result(result: dict) -> None:
 
     st.plotly_chart(component_figure(result), use_container_width=True)
 
-    st.subheader("Как читать результат")
-    st.info(result["interpretation"]["summary"])
-    st.markdown(f"**Главная идея, считанная синтетическими респондентами:** {result['main_idea']}")
-
-    good_col, bad_col = st.columns(2)
-    with good_col:
-        st.markdown("### Что в ролике работает")
-        for item in result["interpretation"]["strengths"]:
-            with st.container(border=True):
-                st.markdown(f"**{item['title']}**")
-    with bad_col:
-        st.markdown("### Что ограничивает результат")
-        for item in result["interpretation"]["limits"]:
-            with st.container(border=True):
-                st.markdown(f"**{item['title']}**")
+    show_manager_readout(result)
 
     st.subheader("Разбор по логическим группам признаков")
     st.caption(
         "Зелёное — группа поддерживает компонент, красное — ограничивает. "
-        "Проценты сравнимы только внутри одного компонента."
+        "Проценты сравнимы только внутри одного компонента: это нормированные вклады SHAP, "
+        "не проценты влияния на людей или бизнес-результат."
     )
     st.plotly_chart(
         group_figure(result["interpretation"]["group_rows"]),
         use_container_width=True,
     )
 
-    with st.expander("Устойчивость идеи при неполном просмотре"):
+    with st.expander("Содержательность ответов при неполном просмотре"):
         st.plotly_chart(recovery_figure(result["recovery_curve"]), use_container_width=True)
         st.caption(
-            "Две линии — независимые наборы фрагментов ролика. Чем выше линии и чем "
-            "меньше расстояние между ними, тем устойчивее считывается главная идея."
+            "Две линии — разные наборы фрагментов ролика. Высота показывает сглаженную долю "
+            "содержательных ответов синтетиков. В них могут быть разные идеи: это не доля "
+            "считавших именно главный или задуманный посыл и не прогноз для людей."
         )
+
+    show_scene_review(result, api_key, video_bytes, suffix)
+    st.divider()
+    show_brief_review(result, api_key)
 
     downloadable = {
         key: value for key, value in result.items()
@@ -203,6 +202,7 @@ if analyze_btn:
     if uploaded_file is None:
         st.warning("Сначала загрузите ролик.")
     else:
+        st.session_state.pop("aipm3_result", None)
         suffix = Path(uploaded_file.name).suffix.lower() or ".mp4"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as stream:
             stream.write(uploaded_file.getvalue())
@@ -227,6 +227,12 @@ if analyze_btn:
 if "aipm3_result" in st.session_state:
     st.divider()
     if st.session_state["aipm3_result"].get("scoring_version") == SCORING_VERSION:
-        show_result(st.session_state["aipm3_result"])
+        stored = st.session_state["aipm3_result"]
+        video_bytes = uploaded_file.getvalue() if uploaded_file is not None else None
+        suffix = Path(uploaded_file.name).suffix.lower() if uploaded_file is not None else ".mp4"
+        if video_bytes is not None and hashlib.sha256(video_bytes).hexdigest() != stored.get("source_sha"):
+            st.warning("Загружен другой файл. Нажмите «Начать анализ»: прежние оценки относятся к предыдущему ролику.")
+        else:
+            show_result(stored, api_key, video_bytes, suffix)
     else:
         st.warning("Обновлена нормировка AIPM 3.0. Запустите анализ заново: прежний результат относится к старой версии расчёта.")

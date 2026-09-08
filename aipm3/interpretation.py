@@ -240,13 +240,6 @@ def build_interpretation(
     for row in negative[:3]:
         limits.append({"title": row["Группа"], "detail": row["Наблюдение"]})
 
-    if not strengths:
-        strongest = max(creative_rows, key=lambda row: row["Локальное влияние, %"])
-        strengths.append({"title": strongest["Группа"], "detail": strongest["Наблюдение"]})
-    if not limits:
-        weakest = min(creative_rows, key=lambda row: row["Локальное влияние, %"])
-        limits.append({"title": weakest["Группа"], "detail": weakest["Наблюдение"]})
-
     return {
         "levels": levels,
         "summary": _top_level_summary(

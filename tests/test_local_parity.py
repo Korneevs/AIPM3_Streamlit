@@ -254,6 +254,8 @@ def test_whole_pipeline_routes_independent_features(tmp_path, monkeypatch):
     monkeypatch.setattr(pipeline, "_message_delivery_extract", lambda *args: {
         "panel": panel, "recovery": recovery, "words_per_second": 2.0,
         "transcript_frame": pd.DataFrame([{"transcript": "Example"}]),
+        "panel_frame": pd.DataFrame([{"respondent_id": f"p{i:02d}", "main_message_summary": "Example idea"}
+                                     for i in range(1, 31)]),
     })
     result = pipeline.run_analysis(source_video=source, output_root=tmp_path / "out", api_key="test", models=models)
     assert sorted(routed) == ["aipm1", "aipm2"]
@@ -262,6 +264,25 @@ def test_whole_pipeline_routes_independent_features(tmp_path, monkeypatch):
     assert result["component_video_sha"]["aipm1"] != result["component_video_sha"]["aipm2"]
     assert result["main_idea"] == "Example idea"
     assert result["interpretation"]["group_rows"]
+    assert len(result["blind_answers"]) == 30
+    assert result["source_sha"]
+    # Replay the actual pipeline entry point from before the diagnostic change.
+    import subprocess
+    import types
+    old_source = subprocess.run(
+        ["git", "show", "f93868af0cfe4504f4011db3279c58bca835c405:aipm3/pipeline.py"],
+        cwd=artifacts_dir.parent, capture_output=True,
+    )
+    assert old_source.returncode == 0
+    old = types.ModuleType("aipm3._pre_review_pipeline")
+    old.__package__ = "aipm3"
+    exec(compile(old_source.stdout, "pre_review_pipeline.py", "exec"), old.__dict__)
+    old._legacy_extract = pipeline._legacy_extract
+    old._message_delivery_extract = pipeline._message_delivery_extract
+    previous = old.run_analysis(source_video=source, output_root=tmp_path / "before", api_key="test", models=models)
+    for key in ["aipm1", "aipm2", "message_delivery", "aipm3", "objective_features", "objective_runs",
+                "message_delivery_business", "recovery_curve", "main_idea"]:
+        assert result[key] == previous[key], key
     saved = next((tmp_path / "out").rglob("result.json"))
     assert json.loads(saved.read_text())["aipm3"] == result["aipm3"]
     # The Streamlit page renders exactly the same result and loads pinned models.

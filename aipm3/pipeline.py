@@ -10,6 +10,7 @@ import numpy as np
 
 from . import message_delivery_runtime as md_runtime
 from .interpretation import build_interpretation
+from .creative_review import manager_readout
 from .models import SCORING_VERSION, FrozenModels, aipm3_score, score_aipm1, score_aipm2, score_message_delivery
 from .objective_features import PROTOCOL_VERSION, extract_component, prepare_legacy_video
 
@@ -158,6 +159,7 @@ def run_analysis(
             "aipm1": a1_video_sha, "aipm2": a2_video_sha, "message_delivery": video_sha,
         },
         "video_sha": video_sha,
+        "source_sha": source_hash,
         "duration_seconds": duration,
         "prepared_video": str(prepared),
         "objective_features": {"aipm1": a1_features, "aipm2": a2_features},
@@ -171,7 +173,12 @@ def run_analysis(
         "recovery_curve": recovery["condition_valid_posterior"],
         "interpretation": interpretation,
         "transcripts": md_extracted["transcript_frame"].to_dict(orient="records"),
+        "blind_answers": [
+            {"respondent_id": str(row["respondent_id"]), "answer": str(row["main_message_summary"])}
+            for row in md_extracted["panel_frame"].to_dict(orient="records")
+        ] if "panel_frame" in md_extracted else [],
     }
+    result["manager_readout"] = manager_readout(result)
     (output_dir / "result.json").write_text(
         json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8",
     )
