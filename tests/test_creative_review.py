@@ -199,11 +199,14 @@ show_brief_review(st.session_state["result"], "test")
     at.session_state["result"] = result
     fake = MagicMock(side_effect=lambda b, a, k: review.combine_codings([coding(a)] * 2, b, a))
     monkeypatch.setattr(review, "compare_brief", fake)
+    from aipm3 import brief_details
+    monkeypatch.setattr(brief_details, "compare", MagicMock(side_effect=RuntimeError("details unavailable")))
     at.run()
     assert not at.exception
     at.button[0].click().run()
     assert not at.exception
-    assert len(at.dataframe) == 1
+    assert len(at.dataframe) == 0
+    assert any("Что осталось от задуманного посыла" in m.value for m in at.markdown)
     assert fake.call_count == 1
     assert at.button[0].disabled
     at.text_area[0].set_value("другая выгода").run()

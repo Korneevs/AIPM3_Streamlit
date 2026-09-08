@@ -177,6 +177,11 @@ def run_analysis(
             {"respondent_id": str(row["respondent_id"]), "answer": str(row["main_message_summary"])}
             for row in md_extracted["panel_frame"].to_dict(orient="records")
         ] if "panel_frame" in md_extracted else [],
+        # Read-only diagnostic copy, taken AFTER prediction; never model inputs.
+        "diagnostic_panel": md_extracted["panel_frame"].to_dict(orient="records")
+        if "panel_frame" in md_extracted else [],
+        "diagnostic_recovery": md_extracted["recovery_frame"].to_dict(orient="records")
+        if "recovery_frame" in md_extracted else [],
     }
     result["manager_readout"] = manager_readout(result)
     (output_dir / "result.json").write_text(

@@ -6,7 +6,6 @@ import os
 import tempfile
 from pathlib import Path
 
-import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -49,34 +48,6 @@ def component_figure(result: dict) -> go.Figure:
         margin=dict(l=10, r=10, t=15, b=15),
         xaxis=dict(range=[0, 100], title="Позиция относительно референсных роликов"),
         yaxis=dict(autorange="reversed", title=""),
-        showlegend=False,
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-    )
-    return figure
-
-
-def group_figure(rows: list[dict]) -> go.Figure:
-    frame = pd.DataFrame(rows)
-    frame = frame.loc[frame["Группа"].ne("Контекст бренда")].copy()
-    frame["label"] = frame["Компонент"] + " · " + frame["Группа"]
-    frame = frame.sort_values("Локальное влияние, %")
-    colors = frame["Локальное влияние, %"].map(
-        lambda value: "#27AE60" if value > 0 else "#E44D61"
-    )
-    figure = go.Figure(go.Bar(
-        x=frame["Локальное влияние, %"],
-        y=frame["label"],
-        orientation="h",
-        marker_color=colors,
-        hovertemplate="%{y}<br>Локальное влияние: %{x:.1f}%<extra></extra>",
-    ))
-    figure.add_vline(x=0, line_color="#6B7280", line_width=1)
-    figure.update_layout(
-        height=max(380, 37 * len(frame)),
-        margin=dict(l=10, r=10, t=20, b=15),
-        xaxis_title="Доля локального влияния внутри компонента, %",
-        yaxis_title="",
         showlegend=False,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
@@ -142,17 +113,6 @@ def show_result(result: dict, api_key: str = "", video_bytes: bytes | None = Non
     st.plotly_chart(component_figure(result), use_container_width=True)
 
     show_manager_readout(result)
-
-    st.subheader("Разбор по логическим группам признаков")
-    st.caption(
-        "Зелёное — группа поддерживает компонент, красное — ограничивает. "
-        "Проценты сравнимы только внутри одного компонента: это нормированные вклады SHAP, "
-        "не проценты влияния на людей или бизнес-результат."
-    )
-    st.plotly_chart(
-        group_figure(result["interpretation"]["group_rows"]),
-        use_container_width=True,
-    )
 
     with st.expander("Содержательность ответов при неполном просмотре"):
         st.plotly_chart(recovery_figure(result["recovery_curve"]), use_container_width=True)
