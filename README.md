@@ -19,7 +19,6 @@ aipm3/                          # inference и бизнес-интерпрета
 artifacts.py                    # загрузка замороженных моделей из Secrets
 scripts/build_local_artifacts.py
 requirements.txt
-packages.txt                    # системный ffmpeg
 ```
 
 Модели, обучающие таблицы и API-ключи в GitHub не хранятся. Три замороженных
@@ -89,4 +88,13 @@ packages.txt                    # системный ffmpeg
 1. Создать приложение из этого репозитория, ветка `main`, файл `streamlit_app.py`.
 2. В **Advanced settings → Secrets** вставить всё содержимое локального файла
    `SECRETS_FOR_STREAMLIT.toml`.
-3. Нажать **Deploy**. Установка `ffmpeg` идёт через `packages.txt`.
+3. Нажать **Deploy**. FFmpeg поставляется внутри wheel `imageio-ffmpeg==0.6.0`.
+   Системная установка через `apt` не нужна: `packages.txt` намеренно отсутствует.
+   Это исключает сбой сборки на просроченном индексе Debian `bullseye-security`.
+   Если после обновления остаётся предыдущая ошибка сборки, выполните
+   **Manage app → Reboot app**.
+
+Подготовка ролика, чтение длительности и создание recovery-масок уже поддерживают
+бинарник из `imageio-ffmpeg`; их код, настройки кодирования, промпты и веса моделей
+не изменены. `tests/test_bundled_ffmpeg.py` проверяет эти операции без системного
+FFmpeg, включая наличие звука в подготовленных видео и всех шести масках.

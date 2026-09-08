@@ -8,5 +8,5 @@ scikit-learn==1.5.1
 scipy>=1.12,<2
 shap>=0.46,<1
 joblib>=1.4,<2
-imageio-ffmpeg>=0.5,<1
+imageio-ffmpeg==0.6.0
 tomli>=2; python_version < "3.11"
