@@ -1,0 +1,167 @@
+{
+  "profile_version": "creative-group-scores-v2",
+  "scoring_version": "reference-product-20260908",
+  "calibration_id": "frozen-output-iqr-avito-reference-20260908-v1",
+  "formula": "50 + 50 * tanh(sum(feature_effects[group]) / component.scale)",
+  "neutral": 50,
+  "validation": {
+      "completed": true,
+      "videos": 3,
+      "fresh_repeats_per_video": 2,
+      "comparison_runs_per_video": 3,
+      "engineering_tolerance_points": 10,
+      "groups": {
+        "Фокус внимания": {
+          "component": "aipm1",
+          "max_range": 0
+        },
+        "Эмоциональный крючок": {
+          "component": "aipm1",
+          "max_range": 0
+        },
+        "Выделение оффера": {
+          "component": "aipm1",
+          "max_range": 0
+        },
+        "Фокус сообщения": {
+          "component": "aipm1",
+          "max_range": 0
+        },
+        "Видимость бренда": {
+          "component": "aipm2",
+          "max_range": 0
+        },
+        "Аудиальный крючок": {
+          "component": "aipm2",
+          "max_range": 0
+        },
+        "Подача и темп": {
+          "component": "aipm2",
+          "max_range": 0
+        },
+        "Полнота и конкретность предложения": {
+          "component": "message_delivery",
+          "max_range": 16.39385518704796
+        },
+        "Устойчивость при неполном просмотре": {
+          "component": "message_delivery",
+          "max_range": 7.806507103983883
+        },
+        "Речь и автономность звука": {
+          "component": "message_delivery",
+          "max_range": 1.1713935634093744
+        },
+        "Смысловой фокус и CTA": {
+          "component": "message_delivery",
+          "max_range": 4.988150228569232
+        }
+      },
+      "unstable_groups": [
+        "Полнота и конкретность предложения"
+      ],
+      "pass_group_video_pairs": 32,
+      "group_video_pairs": 33,
+      "summary": "Пилот: 3 ролика, исходный запуск и по 2 полностью свежих разметки. Проверены все входы: AIPM1, AIPM2, панель 30, recovery и транскрипция. Размах не более 10 баллов: 32 из 33 пар «ролик — группа». Это инженерный допуск, не доказательство эквивалентности. Три ролика не гарантируют такую же устойчивость на других креативах."
+    },
+  "scale_shared_by_all_groups_of_component": true,
+  "model_sha256": {
+    "aipm1": "58499a03ee0140a97f3114835e8f8c491c19505da070f74c46964f438380e98e",
+    "aipm2": "a394835ee873635530b6397c984487ef0e6ea42fa477000397df83c7ee9b1bfb",
+    "message_delivery": "3506bbaeb202a11d3716751a7c635f2f9a2aa46cc57fa9a0ea955aceb13f2c48"
+  },
+  "components": {
+    "aipm1": {
+      "scale": 4.155372167594591,
+      "scale_method": "iqr",
+      "n": 41,
+      "q25": -4.150173924798465,
+      "median": -2.7599962475639,
+      "q75": 0.005198242796126351,
+      "min": -4.930190015700383,
+      "max": 4.965159041983341,
+      "reference_n": 41,
+      "output": "class2_minus_class0_raw_logit",
+      "reference": {
+        "source": "v2_decomposition/final_dataset_v2.parquet",
+        "source_sha256": "6ca556f8db43dc00617bc798c387764e1da649ba943f7ceac74d32b37c0b6915",
+        "input_rows": 41,
+        "selection": "All historical labelled AIPM1 training creatives",
+        "excluded_rows": 0,
+        "selected_features_sha256": "60f06e2b4589e45f22ef6097436052bc94d6f132b76a62d6feda5409d51300f6"
+      }
+    },
+    "aipm2": {
+      "scale": 0.07297314369485888,
+      "scale_method": "iqr",
+      "n": 41,
+      "q25": 0.0999757685975054,
+      "median": 0.1175485796532155,
+      "q75": 0.17294891229236428,
+      "min": 0.05157276472446068,
+      "max": 0.2939223800201749,
+      "reference_n": 41,
+      "output": "raw_predicted_adrecall",
+      "reference": {
+        "source": "v3_adrecall/decomp_v4_gap.parquet",
+        "source_sha256": "3d1557cc540056207571b4a8323bb9c89ae8357390b2114470d670af8ae0f59c",
+        "input_rows": 108,
+        "valid_rows_all_brands": 105,
+        "failed_or_incomplete_rows": 3,
+        "other_brand_rows_excluded": 64,
+        "selection": "Complete ok Avito creatives only; fixed Avito brand context",
+        "brand_mean_adrecall": 0.1358,
+        "selected_features_sha256": "f93b803d0322f8eaada9e0b18d2801dfdd61496e690031b9aa344454e2b886ba"
+      }
+    },
+    "message_delivery": {
+      "scale": 0.8906299593235264,
+      "scale_method": "iqr",
+      "n": 48,
+      "q25": 0.8483320081199698,
+      "median": 1.1307906287354665,
+      "q75": 1.7389619674434962,
+      "min": -0.039646494337387934,
+      "max": 2.116356321086972,
+      "reference_n": 48,
+      "output": "raw_ordinal_regression_score",
+      "reference": {
+        "source": "Historical merged MD feature rows; frozen train_manifest.csv",
+        "train_manifest_sha256": "1ed1d6e02d4b58e90cd962bc6d0f208c5477c4b21d062db4015f87f6adf40d7c",
+        "input_rows": 58,
+        "selection": "Exact 48 training rows; excludes fixed 10-video holdout",
+        "excluded_rows": 10,
+        "selected_row_ids_sha256": "b5fc29bb273a9841bd5d3d936cb3ab76a90e2c80d7244cbdb6442aa7224401c6",
+        "selected_features_sha256": "4e008059197ffcafe4b1e2c2458ee91be0d38b49fe3cf9b02bea6c6a513177bc",
+        "frozen_raw_normalization_verified": true,
+        "frozen_signed_mean_order_verified": true
+      }
+    }
+  },
+  "sensitivity_audit": {
+    "aipm2_all_valid_brands_fixed_avito_context": {
+      "scale": 0.06508491470258074,
+      "scale_method": "iqr",
+      "n": 105,
+      "q25": 0.10096981575043215,
+      "median": 0.13812089003435146,
+      "q75": 0.1660547304530129,
+      "min": 0.05157276472446068,
+      "max": 0.2939223800201749
+    },
+    "aipm2_all_brands_to_avito_scale_ratio": 0.8919023000398174
+  },
+  "libraries": {
+    "catboost": "1.2.10",
+    "shap": "0.49.1",
+    "scikit-learn": "1.5.1",
+    "numpy": "2.0.2"
+  },
+  "limitations": [
+    "Historical reference cohorts differ by component; scales are frozen, not re-estimated per uploaded video.",
+    "Higher means more favorable signed attribution for the corresponding model output, not causal impact or a human response percentage.",
+    "AIPM1 explains the high-versus-low logit contrast, not the exact discrete class index or creative_score.",
+    "Fifty means zero signed local attribution, not the median creative or an acceptance threshold.",
+    "Group values do not sum to the composite AIPM index and cannot be compared as absolute impacts across components.",
+    "Calibration does not establish extraction repeatability; validate new independent extraction runs separately."
+  ]
+}

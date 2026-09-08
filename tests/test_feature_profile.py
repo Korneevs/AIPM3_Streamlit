@@ -1,59 +1,198 @@
-"""Native-unit profile contracts; none of these tests request model inference."""
-import copy
+"""Fixed-scale group scores; never invoke extraction, prediction or an API."""
+from copy import deepcopy
 import json
 from pathlib import Path
 
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from aipm3 import feature_profile as profile
+from aipm3 import feature_profile as profile, models
+from aipm3.message_delivery_runtime import FINAL_FEATURES
 from aipm3.profile_ui import group_figure
 
 
-def source_result():
+def manifest():
     return {
-        'duration_seconds': 20,
-        'objective_runs': {
-            'aipm1': [dict(main_character=True, state_transformation=False, humor=True)
-                      for _ in range(3)],
-            'aipm2': [dict(brand_logo_screen_seconds=10, pack_shot_duration_seconds=4)
-                      for _ in range(2)],
-        },
-        'diagnostic_panel': [
-            dict(call_id=(i - 1) // 3 + 1, respondent_id=f'p{i:02d}',
-                 core_claim_quartile_coverage=3, offer_condition_count=1,
-                 audio_only_message_completeness=3, visual_only_message_completeness=2,
-                 cta_clarity=False, message_specificity_level=2)
-            for i in range(1, 31)
-        ],
+        'profile_version': profile.VERSION,
+        'scoring_version': models.SCORING_VERSION,
+        'model_sha256': deepcopy(models.EXPECTED_ARTIFACT_SHA256),
+        'calibration_id': 'synthetic-independent-reference',
+        'components': {name: {'scale': scale}
+                       for name, scale in [('aipm1', 2.), ('aipm2', .2), ('message_delivery', .5)]},
+        'validation': {'completed': False},
     }
 
 
-def measured(result):
-    return {row['feature']: row for row in profile.measure_profile(result)}
+def source_result():
+    result = {'model_sha256': deepcopy(models.EXPECTED_ARTIFACT_SHA256),
+              'scoring_version': models.SCORING_VERSION,
+              'aipm3': {'index': 1.2345, 'level': 1}}
+    for component, (_, groups) in profile.GROUPS.items():
+        result[component] = {'feature_effects': {feature: 0. for features in groups.values() for feature in features}}
+    result['aipm2']['feature_effects']['brand_mean_adrecall'] = 1000.
+    return result
 
 
-def test_native_units_and_separate_constructs_are_preserved():
-    rows = measured(source_result())
-    assert rows['brand_logo_screen_seconds']['value'] == 50
-    assert rows['brand_logo_screen_seconds']['native_value'] == 10
-    assert rows['pack_shot_duration_seconds']['value'] == 20
-    assert rows['core_claim_quartile_coverage']['value'] == 3
-    assert rows['core_claim_quartile_coverage']['maximum'] == 4
-    assert rows['audio_only_message_completeness']['value'] == 3
-    assert rows['audio_only_message_completeness']['maximum'] == 3
-    assert rows['main_character']['display'] == 'Есть'
-    assert rows['state_transformation']['display'] == 'Нет'
-    assert all(rows[f]['calls'] == 10 for f in profile.CANDIDATES
-               if profile.CANDIDATES[f][2] == 'panel')
-    result = profile.build_profile(source_result())
-    assert 'score' not in result and 'group_scores' not in result
-    assert all('weight' not in r and 'effect' not in r for r in result['measurements'])
+def set_group_effect(result, component, label, effect):
+    features = profile.GROUPS[component][1][label]
+    for feature in features:
+        result[component]['feature_effects'][feature] = 0.
+    result[component]['feature_effects'][features[0]] = effect
+
+
+def keyed(result):
+    return {(r['component'], r['label']): r for r in result['groups']}
+
+
+@pytest.mark.parametrize('scale', [.001, .2, 1., 100.])
+def test_signed_score_is_monotonic_symmetric_bounded_and_neutral_at_zero(scale):
+    effects = [-1000 * scale, -3 * scale, -.01 * scale, 0, .01 * scale, 3 * scale, 1000 * scale]
+    scores = [profile.score_effect(effect, scale) for effect in effects]
+    assert scores == sorted(scores)
+    assert all(0 <= value <= 100 for value in scores)
+    assert scores[3] == 50
+    assert all(value < 50 for value in scores[:3])
+    assert all(value > 50 for value in scores[4:])
+    assert profile.score_effect(.3 * scale, scale) + profile.score_effect(-.3 * scale, scale) == pytest.approx(100)
+
+
+@pytest.mark.parametrize('effect,scale', [
+    (float('nan'), 1), (float('inf'), 1), (-float('inf'), 1),
+    (0, 0), (1, -1), (1, float('nan')), (1, float('inf')),
+])
+def test_invalid_scales_or_effects_do_not_become_scores(effect, scale):
+    with pytest.raises(ValueError):
+        profile.score_effect(effect, scale)
+
+
+def test_exact_eleven_original_groups_cover_frozen_features_without_fixed_brand():
+    rows = profile.build_profile(source_result(), manifest())['groups']
+    assert len(rows) == 11
+    labels = {
+        'aipm1': {'Фокус внимания', 'Эмоциональный крючок', 'Выделение оффера', 'Фокус сообщения'},
+        'aipm2': {'Видимость бренда', 'Аудиальный крючок', 'Подача и темп'},
+        'message_delivery': {'Полнота и конкретность предложения', 'Устойчивость при неполном просмотре',
+                             'Речь и автономность звука', 'Смысловой фокус и CTA'},
+    }
+    expected = {'aipm1': set(models.AIPM1_FEATURES),
+                'aipm2': set(models.AIPM2_FEATURES) - {'brand_mean_adrecall'},
+                'message_delivery': set(FINAL_FEATURES)}
+    for component in profile.GROUPS:
+        chosen = [r for r in rows if r['component'] == component]
+        assert {r['label'] for r in chosen} == labels[component]
+        features = [f for row in chosen for f in row['features']]
+        assert len(features) == len(set(features))
+        assert set(features) == expected[component]
+    assert all(r['score'] == 50 and r['effect'] == 0 for r in rows)
+
+
+def test_group_effect_is_sum_before_fixed_transform():
+    result = source_result()
+    result['aipm1']['feature_effects'].update(main_character=2., state_transformation=-.5)
+    row = keyed(profile.build_profile(result, manifest()))['aipm1', 'Фокус внимания']
+    assert row['effect'] == 1.5
+    assert row['score'] == profile.score_effect(1.5, 2.)
+    assert row['display_score'] == round(row['score'])
+
+
+def test_no_within_video_renormalization_and_fixed_brand_has_no_group_score():
+    first = source_result()
+    set_group_effect(first, 'aipm1', 'Фокус внимания', 1.)
+    before = keyed(profile.build_profile(first, manifest()))
+    second = deepcopy(first)
+    set_group_effect(second, 'aipm1', 'Эмоциональный крючок', -1e12)
+    second['aipm2']['feature_effects']['brand_mean_adrecall'] = -1e12
+    after = keyed(profile.build_profile(second, manifest()))
+    assert before['aipm1', 'Фокус внимания'] == after['aipm1', 'Фокус внимания']
+    assert all(before[key] == after[key] for key in before if key != ('aipm1', 'Эмоциональный крючок'))
+
+
+def test_all_groups_in_component_share_one_independent_reference_scale():
+    result = source_result()
+    calibration = manifest()
+    for component, (_, groups) in profile.GROUPS.items():
+        for label in groups:
+            set_group_effect(result, component, label, .2)
+    rows = profile.build_profile(result, calibration)['groups']
+    for component in profile.GROUPS:
+        scores = [r['score'] for r in rows if r['component'] == component]
+        assert len(set(scores)) == 1
+        assert scores[0] == profile.score_effect(.2, calibration['components'][component]['scale'])
+    assert len({r['score'] for r in rows}) == 3  # Different model-output units.
+    calibration['components']['aipm1']['scale'] = 20.
+    changed = keyed(profile.build_profile(result, calibration))
+    for original in rows:
+        row = changed[original['component'], original['label']]
+        assert (row['score'] != original['score']) == (original['component'] == 'aipm1')
+
+
+@pytest.mark.parametrize('bad', ['missing', None, float('nan'), float('inf'), 'not a number'])
+def test_missing_or_nonfinite_effect_is_no_data_not_neutral(bad):
+    result = source_result()
+    if bad == 'missing':
+        del result['aipm1']['feature_effects']['humor']
+    else:
+        result['aipm1']['feature_effects']['humor'] = bad
+    rows = keyed(profile.build_profile(result, manifest()))
+    withheld = rows['aipm1', 'Эмоциональный крючок']
+    assert withheld['score'] is None and withheld['effect'] is None
+    assert 'display_score' not in withheld and withheld['reason']
+    assert all(r['score'] == 50 for key, r in rows.items() if key != ('aipm1', 'Эмоциональный крючок'))
+
+
+@pytest.mark.parametrize('field', ['profile_version', 'scoring_version', 'model_sha256'])
+def test_wrong_calibration_contract_is_rejected(field):
+    calibration = manifest()
+    calibration[field] = 'different'
+    with pytest.raises(ValueError, match='frozen models'):
+        profile.build_profile(source_result(), calibration)
+
+
+@pytest.mark.parametrize('field', ['scoring_version', 'model_sha256'])
+@pytest.mark.parametrize('missing', [False, True])
+def test_incompatible_result_has_no_data_instead_of_plausible_scores(field, missing):
+    result = source_result()
+    if missing:
+        result.pop(field)
+    else:
+        result[field] = 'different'
+    rows = profile.build_profile(result, manifest())['groups']
+    assert len(rows) == 11
+    assert all(r['score'] is None and 'display_score' not in r for r in rows)
+
+
+def test_calibration_loader_validates_and_freezes_manifest(monkeypatch):
+    data = manifest()
+    reads = []
+
+    class FakePath:
+        def __init__(self, unused):
+            pass
+
+        def with_name(self, name):
+            assert name == 'group_calibration.json'
+            return self
+
+        def read_text(self):
+            reads.append(1)
+            return json.dumps(data)
+
+    monkeypatch.setattr(profile, 'Path', FakePath)
+    profile.calibration_manifest.cache_clear()
+    try:
+        assert profile.calibration_manifest() == data
+        assert profile.calibration_manifest() == data
+        assert len(reads) == 1
+        data['profile_version'] = 'outdated'
+        profile.calibration_manifest.cache_clear()
+        with pytest.raises(ValueError, match='frozen models'):
+            profile.calibration_manifest()
+    finally:
+        profile.calibration_manifest.cache_clear()
 
 
 def test_deterministic_read_only_without_scoring_or_network(monkeypatch):
     import openai
-    from aipm3 import models
 
     def forbidden(*args, **kwargs):
         pytest.fail('Profile must not call Gemini or scoring')
@@ -61,178 +200,48 @@ def test_deterministic_read_only_without_scoring_or_network(monkeypatch):
     monkeypatch.setattr(openai, 'OpenAI', forbidden)
     for name in ['score_aipm1', 'score_aipm2', 'score_message_delivery', 'aipm3_score']:
         monkeypatch.setattr(models, name, forbidden)
-    source = source_result()
-    before = copy.deepcopy(source)
-    expected = profile.build_profile(source)
-    assert source == before
-    assert profile.build_profile(source) == expected
-    source.update(aipm1={'feature_effects': {'humor': 999}},
-                  aipm2={'score': -99}, message_delivery={'feature_effects': {'x': 999}},
-                  aipm3={'index': 888}, interpretation={'summary': 'Invented advice'},
-                  diagnostics={'current_brief': {'uvp': 'anything', 'rtb': 'anything'}})
-    assert profile.build_profile(source) == expected
+    source, calibration = source_result(), manifest()
+    before = deepcopy((source, calibration))
+    first = profile.build_profile(source, calibration)
+    assert profile.build_profile(source, calibration) == first
+    assert (source, calibration) == before
+    source.update(diagnostic_panel=[{'anything': 999}], diagnostics={'current_brief': {'uvp': 'x', 'rtb': 'y'}},
+                  interpretation={'summary': 'An unrelated narrative'}, aipm3={'index': -999, 'level': 2})
+    assert profile.build_profile(source, calibration) == first
 
 
-@pytest.mark.parametrize('fault', ['missing', 'extra', 'duplicate', 'wrong_call',
-                                  'string_call', 'float_call', 'boolean_call', 'non_row'])
-def test_incomplete_or_malformed_panel_is_not_a_small_valid_panel(fault):
-    source = source_result()
-    rows = source['diagnostic_panel']
-    if fault == 'missing':
-        rows.pop()
-    elif fault == 'extra':
-        rows.append(copy.deepcopy(rows[0]))
-    elif fault == 'duplicate':
-        rows[1]['respondent_id'] = rows[0]['respondent_id']
-    elif fault == 'wrong_call':
-        rows[0]['call_id'] = 2
-    elif fault == 'string_call':
-        rows[0]['call_id'] = '1'
-    elif fault == 'float_call':
-        rows[0]['call_id'] = 1.0
-    elif fault == 'boolean_call':
-        rows[0]['call_id'] = True
-    else:
-        rows[0] = None
-    report = profile.build_profile(source)
-    assert not any(row['source'] == 'panel' for row in report['measurements'])
-    assert any(row['source'] == 'panel' for row in report['withheld'])
-    assert any(row['source'] == 'aipm1' for row in report['measurements'])
+def test_plotly_uses_fixed_zero_to_hundred_axis_and_rounded_numbers():
+    result = source_result()
+    set_group_effect(result, 'aipm1', 'Фокус внимания', .35)
+    set_group_effect(result, 'aipm1', 'Выделение оффера', -.2)
+    rows = [r for r in profile.build_profile(result, manifest())['groups'] if r['component'] == 'aipm1']
+    before = deepcopy(rows)
+    figure = group_figure(rows)
+    assert list(figure.layout.xaxis.range) == [0, 100]
+    assert list(figure.layout.xaxis.tickvals) == [0, 50, 100]
+    assert figure.layout.xaxis.fixedrange
+    assert list(figure.data[0].x) == [100] * 4
+    assert list(figure.data[1].x) == [r['score'] for r in rows]
+    assert [list(x) for x in figure.data[1].customdata] == [[r['label'], r['display_score']] for r in rows]
+    assert all(isinstance(r['display_score'], int) for r in rows)
+    assert all(f"<b>{r['display_score']} / 100</b>" in [a.text for a in figure.layout.annotations] for r in rows)
+    assert any(s.x0 == s.x1 == 50 for s in figure.layout.shapes)
+    assert figure.to_json() == group_figure(rows).to_json()
+    assert rows == before
 
 
-@pytest.mark.parametrize('feature,values', [
-    ('core_claim_quartile_coverage', [5, 1, 1]),
-    ('core_claim_quartile_coverage', [-1, 4, 4]),
-    ('audio_only_message_completeness', [4, 1, 1]),
-    ('audio_only_message_completeness', [-1, 3, 3]),
-    ('offer_condition_count', [1.5, 1, 1]),
-    ('visual_only_message_completeness', [float('nan'), 2, 2]),
-    ('cta_clarity', [2, 0, 0]),
-    ('core_claim_quartile_coverage', [None, 2, 2]),
-])
-def test_bad_raw_values_cannot_hide_inside_valid_call_average(feature, values):
-    source = source_result()
-    for row, value in zip(source['diagnostic_panel'], values):
-        row[feature] = value
-    item = measured(source)[feature]
-    assert item['value'] is None
-    assert not item['within_stable']
+def test_plotly_no_data_is_not_a_zero_length_score():
+    result = source_result()
+    del result['aipm1']['feature_effects']['humor']
+    rows = [r for r in profile.build_profile(result, manifest())['groups'] if r['component'] == 'aipm1']
+    figure = group_figure(rows)
+    assert len(figure.data[0].x) == 4 and len(figure.data[1].x) == 3
+    assert any(a.text == 'Нет данных' for a in figure.layout.annotations)
+    assert all(value == 50 for value in figure.data[1].x)
 
 
-def test_one_feature_missing_does_not_invalidate_unrelated_measurements():
-    source = source_result()
-    del source['diagnostic_panel'][0]['offer_condition_count']
-    rows = measured(source)
-    assert rows['offer_condition_count']['value'] is None
-    assert rows['audio_only_message_completeness']['value'] == 3
-
-
-@pytest.mark.parametrize('component,count,feature', [
-    ('aipm1', 2, 'main_character'), ('aipm1', 4, 'main_character'),
-    ('aipm2', 1, 'brand_logo_screen_seconds'), ('aipm2', 3, 'brand_logo_screen_seconds'),
-])
-def test_legacy_extraction_requires_exact_repeat_count(component, count, feature):
-    source = source_result()
-    row = source['objective_runs'][component][0]
-    source['objective_runs'][component] = [copy.deepcopy(row) for _ in range(count)]
-    assert measured(source)[feature]['value'] is None
-    assert measured(source)['visual_only_message_completeness']['value'] == 2
-
-
-def test_binary_disagreement_is_withheld_instead_of_majority_quality():
-    source = source_result()
-    source['objective_runs']['aipm1'][0]['humor'] = False
-    item = measured(source)['humor']
-    assert not item['within_stable']
-    assert item['display'] == 'Неоднозначно'
-    report = profile.build_profile(source)
-    assert 'humor' not in {r['feature'] for r in report['measurements']}
-    assert 'humor' in {r['feature'] for r in report['withheld']}
-
-
-@pytest.mark.parametrize('bad', [-1, 2, .5, float('inf'), None])
-def test_binary_raw_values_obey_binary_domain(bad):
-    source = source_result()
-    source['objective_runs']['aipm1'][0]['main_character'] = bad
-    assert measured(source)['main_character']['value'] is None
-
-
-@pytest.mark.parametrize('seconds,expected', [(18, 100 * 18 / 18.84), (19, 100), (20, None)])
-def test_duration_rounding_excess_only_is_allowed(seconds, expected):
-    source = source_result()
-    source['duration_seconds'] = 18.84
-    for row in source['objective_runs']['aipm2']:
-        row['brand_logo_screen_seconds'] = seconds
-    item = measured(source)['brand_logo_screen_seconds']
-    if expected is None:
-        assert item['value'] is None
-    else:
-        assert item['value'] == pytest.approx(expected)
-        assert item['native_value'] == seconds
-
-
-@pytest.mark.parametrize('duration', [0, -1, None, float('nan'), float('inf')])
-def test_invalid_duration_does_not_produce_a_brand_percentage(duration):
-    source = source_result()
-    source['duration_seconds'] = duration
-    assert measured(source)['brand_logo_screen_seconds']['value'] is None
-
-
-def test_brand_call_disagreement_is_shown_as_observed_range_not_a_stability_verdict():
-    source = source_result()
-    source['objective_runs']['aipm2'][0]['brand_logo_screen_seconds'] = 0
-    source['objective_runs']['aipm2'][1]['brand_logo_screen_seconds'] = 20
-    item = measured(source)['brand_logo_screen_seconds']
-    assert item['low'] == 0 and item['high'] == 100
-    assert item['within_stable'] is None
-    report = profile.build_profile(source)
-    assert 'brand_logo_screen_seconds' in {r['feature'] for r in report['measurements']}
-    assert 'pack_shot_duration_seconds' in {r['feature'] for r in report['measurements']}
-
-
-@pytest.mark.parametrize('changed_calls,changed_value', [
-    (1, 2), (1, 0), (5, 0), (0, 0),
-])
-def test_panel_persona_variability_remains_visible_without_fake_repeatability_claim(
-        changed_calls, changed_value):
-    source = source_result()
-    for row in source['diagnostic_panel'][:3 * changed_calls]:
-        row['audio_only_message_completeness'] = changed_value
-    item = measured(source)['audio_only_message_completeness']
-    assert item['low'] == (changed_value if changed_calls else 3)
-    assert item['high'] == 3
-    # Persona variation must not be conflated with independent-run validation.
-    assert item['within_stable'] is None
-    report = profile.build_profile(source)
-    assert 'audio_only_message_completeness' in {r['feature'] for r in report['measurements']}
-    assert not any(key in item for key in ['confidence_interval', 'human_readability', 'p_value',
-                                          'mean_sensitivity_2se', 'max_single_call_influence'])
-
-
-def test_unvalidated_or_wrong_version_manifest_cannot_approve_a_measurement(monkeypatch):
-    manifest = copy.deepcopy(profile.validation_manifest())
-    manifest['approved_features'].remove('core_claim_quartile_coverage')
-    monkeypatch.setattr(profile, 'validation_manifest', lambda: manifest)
-    result = profile.build_profile(source_result())
-    assert 'core_claim_quartile_coverage' in {r['feature'] for r in result['withheld']}
-    manifest['profile_version'] = 'other-version'
-    with pytest.raises(ValueError, match='version'):
-        profile.build_profile(source_result())
-
-
-@pytest.mark.parametrize('group,maximum', [('structure', 4), ('channels', 3), ('brand', 100)])
-def test_plotly_chart_retains_native_axis_and_is_not_quality_percentage(group, maximum):
-    rows = [r for r in profile.build_profile(source_result())['measurements'] if r['group'] == group]
-    figure = group_figure(rows, maximum)
-    assert list(figure.layout.xaxis.tickvals) == [0, maximum]
-    assert list(figure.data[1].x) == [r['value'] for r in rows]
-    assert list(figure.data[1].error_x.array) == [r['high'] - r['value'] for r in rows]
-    if maximum != 100:
-        assert all('%' not in str(label) for label in figure.layout.xaxis.ticktext)
-        assert all('%' not in annotation.text for annotation in figure.layout.annotations)
-
-
-def test_compact_ui_has_no_brief_inputs_or_duplicate_plus_minus_narrative():
+def test_ui_shows_eleven_numeric_groups_without_uvp_rtb_narratives(monkeypatch):
+    monkeypatch.setattr(profile, 'calibration_manifest', manifest)
     app = AppTest.from_string('''
 import streamlit as st
 from aipm3.profile_ui import show_feature_profile
@@ -243,54 +252,34 @@ show_feature_profile(st.session_state['result'])
     assert not app.exception
     text = ' '.join(str(item.value) for kind in ['markdown', 'caption', 'subheader', 'text']
                     for item in getattr(app, kind))
-    for prohibited in ['UVP', 'RTB', 'УВП', 'РТБ', 'Что получилось', 'Что ослабляет',
-                       'Локальное влияние', 'SHAP']:
+    for prohibited in ['UVP', 'RTB', 'УВП', 'РТБ', 'Что получилось', 'Что ослабляет']:
         assert prohibited not in text
     assert not app.text_input and not app.text_area and not app.button and not app.dataframe
     assert len(app.get('plotly_chart')) == 3
-    assert 'Больше — не всегда лучше' in text
+    assert 'Больше — лучше' in text and '50 — нейтральный' in text
+    assert 'Он не подстраивается под загруженный ролик' in text
 
 
-def test_public_manifest_matches_pilot_scope_and_withholds_failed_cta():
-    manifest = profile.validation_manifest()
-    assert manifest['videos'] == 3
-    assert manifest['fresh_repeats_per_video'] == 2
-    assert manifest['comparisons_include_saved_baseline'] is True
-    assert manifest['tolerance_fraction'] == .1
-    assert 'Not recovery or whole-model output' in manifest['scope']
-    assert 'cta_clarity' not in manifest['approved_features']
-    for feature in manifest['approved_features']:
-        assert manifest['measurements'][feature]['passed']
-        assert manifest['measurements'][feature]['max_normalized_spread'] <= .1 + 1e-9
-
-
-def test_saved_three_video_repeats_validate_visible_profile_not_frozen_core_outputs():
-    root = Path.home() / 'outputs'
-    repeat_dir = root / 'aipm3_compact_profile_20260908'
-    baseline_dir = root / 'aipm3_uvp_idea_20260908'
-    paths = [repeat_dir / f'video_{i}_repeat_{j}.json' for i in range(1, 4) for j in (1, 2)]
-    paths += [baseline_dir / f'video_{i}.json' for i in range(1, 4)]
-    if not all(path.exists() for path in paths):
-        pytest.skip('Private fresh extraction pilot available locally only')
-    visible_features = {f for f, spec in profile.CANDIDATES.items() if spec[0] in profile.GROUPS}
-    for video in range(1, 4):
-        baseline = json.loads((baseline_dir / f'video_{video}.json').read_text())
-        repeats = [json.loads((repeat_dir / f'video_{video}_repeat_{j}.json').read_text()) for j in (1, 2)]
-        for run in repeats:
-            assert run['fresh'] is True
-            assert run['source_sha'] == baseline['source_sha']
-            assert run['component_video_sha'] == baseline['component_video_sha']
-        measurements = [measured(run) for run in [baseline] + repeats]
-        displays = [profile.build_profile(run) for run in [baseline] + repeats]
-        assert all({r['feature'] for r in run['measurements']} == visible_features for run in displays)
-        assert all(not run['withheld'] for run in displays)
-        for feature in visible_features:
-            rows = [run[feature] for run in measurements]
-            assert all(row['value'] is not None for row in rows)
-            values = [row['value'] for row in rows]
-            assert (max(values) - min(values)) / rows[0]['maximum'] <= .1 + 1e-9
-            if rows[0]['kind'] == 'binary':
-                assert len(set(values)) == 1
-                assert all(row['within_stable'] for row in rows)
-        # Scores were not freshly extracted here: test deliberately makes no claim
-        # of full-model repeatability or equality from copied/absent score fields.
+def test_real_frozen_calibration_and_saved_baselines_when_available():
+    calibration_path = Path(__file__).resolve().parents[1] / 'aipm3/group_calibration.json'
+    baseline_dir = Path('/Users/asekorneev/outputs/aipm3_uvp_idea_20260908')
+    paths = [baseline_dir / f'video_{i}.json' for i in range(1, 5)]
+    if not calibration_path.exists() or not all(path.exists() for path in paths):
+        pytest.skip('Frozen calibration/private baseline fixtures not available in this environment')
+    calibration = json.loads(calibration_path.read_text())
+    assert calibration['profile_version'] == profile.VERSION
+    assert calibration['scoring_version'] == models.SCORING_VERSION
+    assert calibration['model_sha256'] == models.EXPECTED_ARTIFACT_SHA256
+    assert set(calibration['components']) == set(profile.GROUPS)
+    for path in paths:
+        result = json.loads(path.read_text())
+        before = deepcopy(result)
+        report = profile.build_profile(result, calibration)
+        assert report == profile.build_profile(result, calibration)
+        assert len(report['groups']) == 11
+        assert all(r['score'] is not None and 0 <= r['score'] <= 100 for r in report['groups'])
+        for row in report['groups']:
+            expected = sum(result[row['component']]['feature_effects'][f] for f in row['features'])
+            assert row['effect'] == pytest.approx(expected)
+            assert row['score'] == pytest.approx(profile.score_effect(expected, calibration['components'][row['component']]['scale']))
+        assert result == before
