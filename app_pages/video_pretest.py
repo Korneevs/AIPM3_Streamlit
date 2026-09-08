@@ -136,7 +136,8 @@ def show_result(result: dict, api_key: str = "", video_bytes: bytes | None = Non
         (col_md, "Считываемость · MD", result["message_delivery"]["percentile"]),
     ]
     for column, label, value in components:
-        column.metric(label, f"{value:.0f}/100", level_from_percentile(value))
+        column.metric(label, f"{value:.0f}/100")
+        column.caption(f"Уровень: {level_from_percentile(value).lower()}")
 
     st.plotly_chart(component_figure(result), use_container_width=True)
 
