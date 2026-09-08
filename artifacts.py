@@ -1,8 +1,10 @@
 import base64
 import functools
+import hashlib
 import os
 import tempfile
 import zlib
+from pathlib import Path
 
 import streamlit as st
 
@@ -24,10 +26,12 @@ def artifact_path(name: str) -> str:
     except zlib.error:
         # Backward compatible with an uncompressed artifact secret.
         raw = base64.b64decode(encoded)
-    cache_dir = os.path.join(tempfile.gettempdir(), "aipm3_artifacts")
+    # Same-sized replacement models must not reuse a stale file on disk.
+    digest = hashlib.sha256(raw).hexdigest()
+    cache_dir = os.path.join(tempfile.gettempdir(), "aipm3_artifacts", digest)
     os.makedirs(cache_dir, exist_ok=True)
     path = os.path.join(cache_dir, name)
-    if not os.path.exists(path) or os.path.getsize(path) != len(raw):
+    if not os.path.exists(path) or hashlib.sha256(Path(path).read_bytes()).hexdigest() != digest:
         with open(path, "wb") as stream:
             stream.write(raw)
     return path

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import hashlib
+from pathlib import Path
 from typing import Any
 
 import joblib
@@ -85,6 +87,7 @@ class FrozenModels:
     aipm1: CatBoostClassifier
     aipm2: CatBoostRegressor
     message_delivery_bundle: dict[str, Any]
+    artifact_sha256: dict[str, str] = field(default_factory=dict)
 
 
 def load_frozen_models(aipm1_path: str, aipm2_path: str, md_path: str) -> FrozenModels:
@@ -93,7 +96,19 @@ def load_frozen_models(aipm1_path: str, aipm2_path: str, md_path: str) -> Frozen
     aipm2 = CatBoostRegressor()
     aipm2.load_model(aipm2_path)
     md_bundle = joblib.load(md_path)
-    return FrozenModels(aipm1=aipm1, aipm2=aipm2, message_delivery_bundle=md_bundle)
+    for name, model, expected in [
+        ("AIPM1", aipm1, AIPM1_FEATURES), ("AIPM2", aipm2, AIPM2_FEATURES),
+    ]:
+        if list(model.feature_names_) != expected:
+            raise ValueError(f"{name}: модель в Secrets не соответствует выбранной версии признаков")
+    hashes = {
+        name: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+        for name, path in [("aipm1", aipm1_path), ("aipm2", aipm2_path), ("message_delivery", md_path)]
+    }
+    return FrozenModels(
+        aipm1=aipm1, aipm2=aipm2, message_delivery_bundle=md_bundle,
+        artifact_sha256=hashes,
+    )
 
 
 def _to_int(value: Any) -> int:

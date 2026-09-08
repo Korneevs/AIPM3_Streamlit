@@ -193,7 +193,7 @@ with st.spinner("Загрузка замороженных моделей..."):
 with st.sidebar:
     st.header("Настройки")
     uploaded_file = st.file_uploader("Загрузите ролик (MP4 / MOV)", type=["mp4", "mov"])
-    st.caption("Объективные признаки: 5 независимых просмотров. Message Delivery: 30 респондентов.")
+    st.caption("AIPM 1.0: 3 просмотра. AIPM 2.0: 2 просмотра. Message Delivery: 30 респондентов.")
     analyze_btn = st.button("Начать анализ", type="primary", use_container_width=True)
 
 if uploaded_file is not None:
