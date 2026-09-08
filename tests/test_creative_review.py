@@ -187,6 +187,9 @@ def test_manager_does_not_invent_positive_or_negative_signals():
 def test_ui_alignment_change_and_failure_do_not_change_scores(monkeypatch, brief, answers):
     from streamlit.testing.v1 import AppTest
     result = {"source_sha": "test", "video_sha": "test", "blind_answers": answers,
+              "main_idea": "Подобрать подходящую одежду",
+              "diagnostic_recovery": [{"condition_group": "full", "respondent_uid": f"g{i // 4 + 1}_full_p{i + 1:02}",
+                                       "raw_answer": answers[i % len(answers)]["answer"]} for i in range(12)],
               "aipm1": {"raw_score": 1}, "aipm2": {"raw_score": 2},
               "message_delivery": {"raw_score": .3}, "aipm3": {"index_100": 90},
               "diagnostics": {"current_brief": brief}}
@@ -197,8 +200,14 @@ from aipm3.review_ui import show_brief_review
 show_brief_review(st.session_state["result"], "test")
 ''')
     at.session_state["result"] = result
-    fake = MagicMock(side_effect=lambda b, a, k: review.combine_codings([coding(a)] * 2, b, a))
-    monkeypatch.setattr(review, "compare_brief", fake)
+    from aipm3 import message_alignment
+    def compare(idea, uvp, answers, key):
+        run = {"relation": {"status": "equivalent", "reason": "Один смысл"},
+               "answers": [{"respondent_id": a["respondent_id"], **{
+                   d: {"status": "absent", "quote": ""} for d in ["main_idea", "uvp"]}} for a in answers]}
+        return message_alignment.combine([run, run], idea, uvp, answers)
+    fake = MagicMock(side_effect=compare)
+    monkeypatch.setattr(message_alignment, "compare", fake)
     from aipm3 import brief_details
     monkeypatch.setattr(brief_details, "compare", MagicMock(side_effect=RuntimeError("details unavailable")))
     at.run()
@@ -206,9 +215,11 @@ show_brief_review(st.session_state["result"], "test")
     at.button[0].click().run()
     assert not at.exception
     assert len(at.dataframe) == 0
-    assert any("Что осталось от задуманного посыла" in m.value for m in at.markdown)
+    assert any("Основная идея совпадает" in m.value for m in at.success)
     assert fake.call_count == 1
-    assert at.button[0].disabled
+    assert not at.button[0].disabled  # failed RTB details can retry without regenerating comparison
+    at.button[0].click().run()
+    assert fake.call_count == 1
     at.text_area[0].set_value("другая выгода").run()
     assert len(at.dataframe) == 0
     assert any("Бриф изменён" in i.value for i in at.info)

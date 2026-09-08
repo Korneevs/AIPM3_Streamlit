@@ -202,7 +202,7 @@ def build_diagnosis(result):
         # A flat low curve is not called a strength.
         if full <= .6:
             add("full_recovery", "risk", "Даже полный просмотр не всегда даёт содержательный пересказ",
-                "В отдельной recovery-панели часть ответов не содержит самостоятельной идеи. "
+                "После полного просмотра часть синтетических респондентов не формулирует самостоятельную идею. "
                 "Наличие понятной ключевой реплики и её попадание в каждый пересказ — разные вещи.",
                 f"Сглаженная доля содержательных ответов полного просмотра: {full:.0%}. "
                 "Это показатель синтетической панели, не процент людей.", priority=115)
@@ -218,9 +218,9 @@ def build_diagnosis(result):
             if answers:
                 finding['answer_example'] = sorted(answers, key=lambda r: str(r.get('respondent_uid')))[0]['raw_answer']
     idea = str(result.get("main_idea") or "").strip()
-    headline = f"Самая частая идея в recovery-панели: «{idea}»." if idea else "Основная идея не определена однозначно."
+    headline = f"Самая частая идея в свободных ответах: «{idea}»." if idea else "Основная идея не определена однозначно."
     if selected["risk"]:
-        headline += " Главный диагностический риск: " + selected["risk"][0]["title"].lower() + "."
+        headline += " На что обратить внимание: " + selected["risk"][0]["title"].lower() + "."
     return {"version": VERSION, "headline": headline, "strengths": selected["strength"],
             "risks": selected["risk"], "uncertain": unstable,
             "has_panel": bool(result.get("diagnostic_panel")),
