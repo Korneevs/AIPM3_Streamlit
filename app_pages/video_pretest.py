@@ -6,14 +6,14 @@ import os
 import tempfile
 from pathlib import Path
 
-import plotly.graph_objects as go
 import streamlit as st
 
 from artifacts import artifact_path
-from aipm3.models import SCORING_VERSION, FrozenModels, level_from_percentile, load_frozen_models
+from aipm3.models import SCORING_VERSION, FrozenModels, load_frozen_models
 from aipm3.pipeline import run_analysis
-from aipm3.profile_ui import show_feature_profile
-from aipm3.feature_profile import build_profile
+from aipm3.objective_features import PROTOCOL_VERSION
+from aipm3.result_ui import show_manager_result, show_session_comparison
+from aipm3.result_history import remember_result
 from aipm3.result_export import export_result
 
 
@@ -26,101 +26,16 @@ def load_models(scoring_version: str) -> FrozenModels:
     )
 
 
-def component_figure(result: dict) -> go.Figure:
-    labels = ["Заметность", "Запоминаемость", "Считываемость"]
-    values = [
-        result["aipm1"]["percentile"],
-        result["aipm2"]["percentile"],
-        result["message_delivery"]["percentile"],
-    ]
-    colors = ["#1EA7FD" if value >= 67 else "#FFB020" if value >= 33 else "#E44D61" for value in values]
-    figure = go.Figure(go.Bar(
-        x=values,
-        y=labels,
-        orientation="h",
-        marker_color=colors,
-        text=[f"{value:.0f}/100" for value in values],
-        textposition="inside",
-        hovertemplate="%{y}: %{x:.0f}/100<extra></extra>",
-    ))
-    figure.add_vline(x=33, line_dash="dot", line_color="#B8C0CC")
-    figure.add_vline(x=67, line_dash="dot", line_color="#B8C0CC")
-    figure.update_layout(
-        height=285,
-        margin=dict(l=10, r=10, t=15, b=15),
-        xaxis=dict(range=[0, 100], title="Позиция относительно референсных роликов"),
-        yaxis=dict(autorange="reversed", title=""),
-        showlegend=False,
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-    )
-    return figure
-
-
-def recovery_figure(curve: dict[str, float]) -> go.Figure:
-    fractions = [25, 50, 75, 100]
-    full = float(curve["full"])
-    mask1 = [curve["nested_25_m1"], curve["nested_50_m1"], curve["nested_75_m1"], full]
-    mask2 = [curve["nested_25_m2"], curve["nested_50_m2"], curve["nested_75_m2"], full]
-    figure = go.Figure()
-    figure.add_trace(go.Scatter(
-        x=fractions, y=mask1, mode="lines+markers", name="Recovery-маска 1",
-        line=dict(color="#1EA7FD", width=3),
-    ))
-    figure.add_trace(go.Scatter(
-        x=fractions, y=mask2, mode="lines+markers", name="Recovery-маска 2",
-        line=dict(color="#7D5FFF", width=3),
-    ))
-    figure.update_layout(
-        height=330,
-        margin=dict(l=10, r=10, t=20, b=15),
-        xaxis=dict(title="Доля доступного ролика, %", range=[20, 105]),
-        yaxis=dict(title="Содержательные ответы (сглаженная доля)", tickformat=".0%", range=[0, 1]),
-        legend=dict(orientation="h", y=1.12),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-    )
-    return figure
-
-
-def show_result(result: dict, api_key: str = "", video_bytes: bytes | None = None, suffix: str = ".mp4") -> None:
-    aipm3 = result["aipm3"]
-    if aipm3["level"] == 2:
-        st.success(f"**AIPM 3.0: {aipm3['label']}**")
-    elif aipm3["level"] == 1:
-        st.warning(f"**AIPM 3.0: {aipm3['label']}**")
-    else:
-        st.error(f"**AIPM 3.0: {aipm3['label']}**")
-
-    main_idea = str(result.get("main_idea") or "").strip()
-    with st.container(border=True):
-        st.markdown("### Основная идея ролика")
-        st.write(main_idea or "Не удалось однозначно определить основную идею.")
-
-    col_total, col_aipm1, col_aipm2, col_md = st.columns(4)
-    col_total.metric(
-        "AIPM 3.0",
-        f"{aipm3['index_100']:.0f}",
-        help="Нормированный индекс: 100 — средний уровень референсной выборки.",
-    )
-    components = [
-        (col_aipm1, "Заметность · AIPM 1.0", result["aipm1"]["percentile"]),
-        (col_aipm2, "Запоминаемость · AIPM 2.0", result["aipm2"]["percentile"]),
-        (col_md, "Считываемость · MD", result["message_delivery"]["percentile"]),
-    ]
-    for column, label, value in components:
-        column.metric(label, f"{value:.0f}/100")
-        column.caption(f"Уровень: {level_from_percentile(value).lower()}")
-
-    st.plotly_chart(component_figure(result), use_container_width=True)
-
-    show_feature_profile(result)
+def show_result(result: dict, source_name: str = "Ролик") -> None:
+    explanation, profile = show_manager_result(result)
     downloadable = export_result(result)
-    downloadable['feature_profile'] = build_profile(result)
+    downloadable["feature_profile"] = profile
+    downloadable["manager_explanation"] = explanation
+    downloadable["source_name"] = Path(source_name).name
     st.download_button(
-        "Скачать результат JSON",
+        "Сохранить оценки и объяснение · JSON",
         data=json.dumps(downloadable, ensure_ascii=False, indent=2),
-        file_name="aipm3_result.json",
+        file_name=f"{Path(source_name).stem}_aipm3_result.json",
         mime="application/json",
     )
 
@@ -140,11 +55,12 @@ with st.spinner("Загрузка замороженных моделей..."):
 with st.sidebar:
     st.header("Настройки")
     uploaded_file = st.file_uploader("Загрузите ролик (MP4 / MOV)", type=["mp4", "mov"])
-    st.caption("AIPM 1.0: 3 просмотра. AIPM 2.0: 2 просмотра. Message Delivery: 30 респондентов.")
+    st.caption("Анализ выполняют модели ИИ. Ответы о посыле синтетические; опрос людей не проводится.")
     analyze_btn = st.button("Начать анализ", type="primary", use_container_width=True)
 
 if uploaded_file is not None:
-    st.video(uploaded_file)
+    with st.expander(f"Загруженный ролик: {uploaded_file.name}", expanded="aipm3_result" not in st.session_state):
+        st.video(uploaded_file)
 
 if analyze_btn:
     if uploaded_file is None:
@@ -165,6 +81,7 @@ if analyze_btn:
                     models=frozen_models,
                 )
                 status.update(label="Анализ завершён", state="complete", expanded=False)
+            result["source_name"] = uploaded_file.name
             st.session_state["aipm3_result"] = result
         except Exception as exc:
             st.exception(exc)
@@ -181,6 +98,18 @@ if "aipm3_result" in st.session_state:
         if video_bytes is not None and hashlib.sha256(video_bytes).hexdigest() != stored.get("source_sha"):
             st.warning("Загружен другой файл. Нажмите «Начать анализ»: прежние оценки относятся к предыдущему ролику.")
         else:
-            show_result(stored, api_key, video_bytes, suffix)
+            source_name = stored.get("source_name") or (
+                uploaded_file.name if uploaded_file is not None else "Ролик"
+            )
+            st.session_state["aipm3_history"] = remember_result(
+                st.session_state.get("aipm3_history", []), stored, source_name,
+            )
+            show_result(stored, source_name)
     else:
         st.warning("Обновлена нормировка AIPM 3.0. Запустите анализ заново: прежний результат относится к старой версии расчёта.")
+
+show_session_comparison(
+    st.session_state.get("aipm3_history", []),
+    scoring_version=SCORING_VERSION,
+    protocol_version=PROTOCOL_VERSION,
+)
