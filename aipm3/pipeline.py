@@ -10,7 +10,7 @@ import numpy as np
 
 from . import message_delivery_runtime as md_runtime
 from .interpretation import build_interpretation
-from .models import FrozenModels, aipm3_score, score_aipm1, score_aipm2, score_message_delivery
+from .models import SCORING_VERSION, FrozenModels, aipm3_score, score_aipm1, score_aipm2, score_message_delivery
 from .objective_features import PROTOCOL_VERSION, extract_component, prepare_legacy_video
 
 
@@ -152,6 +152,7 @@ def run_analysis(
 
     result = {
         "protocol_version": PROTOCOL_VERSION,
+        "scoring_version": SCORING_VERSION,
         "model_sha256": models.artifact_sha256,
         "component_video_sha": {
             "aipm1": a1_video_sha, "aipm2": a2_video_sha, "message_delivery": video_sha,

@@ -264,3 +264,17 @@ def test_whole_pipeline_routes_independent_features(tmp_path, monkeypatch):
     assert result["interpretation"]["group_rows"]
     saved = next((tmp_path / "out").rglob("result.json"))
     assert json.loads(saved.read_text())["aipm3"] == result["aipm3"]
+    # The Streamlit page renders exactly the same result and loads pinned models.
+    from streamlit.testing.v1 import AppTest
+    page = Path(__file__).resolve().parents[1] / "app_pages/video_pretest.py"
+    at = AppTest.from_file(str(page), default_timeout=20)
+    at.session_state["aipm3_result"] = result
+    at.run()
+    assert not at.exception
+    assert at.metric[0].value == f"{result['aipm3']['index_100']:.0f}"
+    assert at.metric[2].value == f"{result['aipm2']['percentile']:.0f}/100"
+    at.session_state["aipm3_result"] = {**result, "scoring_version": "previous"}
+    at.run()
+    assert not at.exception
+    assert len(at.metric) == 0
+    assert any("Обновлена нормировка" in warning.value for warning in at.warning)

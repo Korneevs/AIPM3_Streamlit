@@ -10,12 +10,12 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from artifacts import artifact_path
-from aipm3.models import FrozenModels, level_from_percentile, load_frozen_models
+from aipm3.models import SCORING_VERSION, FrozenModels, level_from_percentile, load_frozen_models
 from aipm3.pipeline import run_analysis
 
 
 @st.cache_resource(show_spinner=False)
-def load_models() -> FrozenModels:
+def load_models(scoring_version: str) -> FrozenModels:
     return load_frozen_models(
         artifact_path("aipm1_model.cbm"),
         artifact_path("aipm2_model.cbm"),
@@ -188,7 +188,7 @@ except Exception:
     st.stop()
 
 with st.spinner("Загрузка замороженных моделей..."):
-    frozen_models = load_models()
+    frozen_models = load_models(SCORING_VERSION)
 
 with st.sidebar:
     st.header("Настройки")
@@ -226,4 +226,7 @@ if analyze_btn:
 
 if "aipm3_result" in st.session_state:
     st.divider()
-    show_result(st.session_state["aipm3_result"])
+    if st.session_state["aipm3_result"].get("scoring_version") == SCORING_VERSION:
+        show_result(st.session_state["aipm3_result"])
+    else:
+        st.warning("Обновлена нормировка AIPM 3.0. Запустите анализ заново: прежний результат относится к старой версии расчёта.")

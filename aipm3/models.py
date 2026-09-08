@@ -80,6 +80,13 @@ MD_REFERENCE = np.asarray([
 AIPM3_PRODUCT_MEAN = 0.975021850969246
 AIPM3_Q33 = 0.7527663069338925
 AIPM3_Q67 = 1.2729990980210948
+SCORING_VERSION = "reference-product-20260908"
+AIPM2_REFERENCE_DECIMALS = 4
+EXPECTED_ARTIFACT_SHA256 = {
+    "aipm1": "58499a03ee0140a97f3114835e8f8c491c19505da070f74c46964f438380e98e",
+    "aipm2": "a394835ee873635530b6397c984487ef0e6ea42fa477000397df83c7ee9b1bfb",
+    "message_delivery": "3506bbaeb202a11d3716751a7c635f2f9a2aa46cc57fa9a0ea955aceb13f2c48",
+}
 
 
 @dataclass(frozen=True)
@@ -105,6 +112,12 @@ def load_frozen_models(aipm1_path: str, aipm2_path: str, md_path: str) -> Frozen
         name: hashlib.sha256(Path(path).read_bytes()).hexdigest()
         for name, path in [("aipm1", aipm1_path), ("aipm2", aipm2_path), ("message_delivery", md_path)]
     }
+    for name, expected_hash in EXPECTED_ARTIFACT_SHA256.items():
+        if hashes[name] != expected_hash:
+            raise ValueError(
+                f"{name}: артефакт не соответствует зафиксированной версии. "
+                "Загрузите эталонный bundle в Streamlit Secrets."
+            )
     return FrozenModels(
         aipm1=aipm1, aipm2=aipm2, message_delivery_bundle=md_bundle,
         artifact_sha256=hashes,
@@ -164,9 +177,10 @@ def score_aipm2(features: dict[str, Any], model: CatBoostRegressor) -> dict[str,
     pool = Pool(frame, cat_features=AIPM2_CAT_FEATURES)
     values = np.asarray(model.get_feature_importance(pool, type="ShapValues"), dtype=float)
     effects = values[0, :-1] if values.ndim == 2 else np.zeros(len(AIPM2_FEATURES))
-    index = percentile_index(score, AIPM2_REFERENCE, denominator=49.0)
+    index = aipm2_reference_index(score)
     return {
         "raw_score": score,
+        "reference_score": round(score, AIPM2_REFERENCE_DECIMALS),
         "reference_index": index,
         "percentile": 100.0 * (index - 0.5),
         "feature_values": row,
@@ -205,10 +219,20 @@ def score_message_delivery(
 
 
 def percentile_index(value: float, reference: np.ndarray, denominator: float) -> float:
-    less = int(np.sum(reference < value))
-    equal = int(np.sum(np.isclose(reference, value, rtol=0.0, atol=1e-12)))
+    # A number cannot count both as lower and as tied after float serialization.
+    equal_mask = np.isclose(reference, value, rtol=0.0, atol=1e-12)
+    less = int(np.sum((reference < value) & ~equal_mask))
+    equal = int(np.sum(equal_mask))
     rank = less + ((equal + 1.0) / 2.0 if equal else 0.5)
     return float(np.clip(0.5 + rank / denominator, 0.5, 1.5))
+
+
+def aipm2_reference_index(raw_score: float) -> float:
+    # The historical product used AIPM_v2(adrecall), stored to four decimals.
+    # Preserve the raw regression output separately; round only the rank input.
+    return percentile_index(
+        round(raw_score, AIPM2_REFERENCE_DECIMALS), AIPM2_REFERENCE, denominator=49.0,
+    )
 
 
 def aipm3_score(aipm1: dict[str, Any], aipm2: dict[str, Any], md: dict[str, Any]) -> dict[str, Any]:
