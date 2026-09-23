@@ -53,12 +53,9 @@ def show_metric_summary(result: dict) -> None:
             f'border-radius:10px;padding:18px 16px;color:{color};">'
             f'<div style="font-size:14px;min-height:42px;color:#343745;">{escape(card["label"])}</div>'
             f'<div style="font-size:36px;line-height:1.2;font-weight:700;">{value}</div>'
-            '<div style="font-size:13px;margin-top:4px;">к среднему</div>'
+            '<div style="font-size:13px;margin-top:4px;" '
+            'title="0% — средний индекс по референсным роликам. Цвет показывает положение относительно диапазона нормы.">к среднему</div>'
             f'<div style="font-size:15px;font-weight:600;margin-top:16px;">{status}</div>'
             '</div>',
             unsafe_allow_html=True,
         )
-    st.caption(
-        "0% — средний индекс по референсным роликам. Цвет показывает положение "
-        "относительно диапазона нормы: небольшое отклонение от среднего может быть в норме."
-    )

@@ -11,7 +11,7 @@ from .feature_profile import GROUPS
 from .models import EXPECTED_ARTIFACT_SHA256, SCORING_VERSION
 
 
-VERSION = "marketing-topics-v1"
+VERSION = "marketing-topics-v2"
 FEATURE_LABELS = {
     "main_character": "Один главный герой",
     "promo": "Акция или бонус",
@@ -39,64 +39,39 @@ FEATURE_LABELS = {
 }
 TOPICS = (
     {
-        "id": "message", "title": "Предложение и главная мысль",
-        "question": "Что предлагают, в чём выгода и что нужно сделать зрителю?",
-        "checks": "Ясность основной мысли, конкретное предложение, число разных предложений, "
-                  "условия и ограничения, понятный призыв к действию.",
-        "groups": {"aipm1": ("Выделение оффера", "Фокус сообщения"),
-                   "message_delivery": ("Полнота и конкретность предложения", "Смысловой фокус и CTA")},
-        "look_at": "Проверьте, можно ли пересказать предложение одной фразой: что, для кого, "
-                   "на каких условиях и какое действие предлагается.",
-        "combined_checks": "«Сложность и раскрытие» объединяет число условий, необходимость объяснять "
-                           "непривычное предложение, зависимость смысла от шутки и понятность звука. "
-                           "«Согласие о содержании идеи» — совпадение автоматических оценок числа "
-                           "элементов, нужных для пересказа: продукт, пользователь, действие, выгода. "
-                           "Это оценивается вместе с наличием призыва к действию.",
+        "id": "offer", "title": "Предложение и выгода",
+        "groups": {"aipm1": ("Выделение оффера",),
+                   "message_delivery": ("Полнота и конкретность предложения",)},
+        "combined_checks": "Сложность предложения учитывает его условия, необходимость объяснять "
+                           "непривычную выгоду, зависимость смысла от шутки и понятность звука.",
     },
     {
-        "id": "brand", "title": "Бренд в кадре",
-        "question": "Помогает ли оформление ролика запомнить рекламируемый бренд?",
-        "checks": "Сколько времени виден логотип или фирменный персонаж, как оформлен "
-                  "последний кадр с брендом и сколько он длится.",
-        "groups": {"aipm2": ("Видимость бренда",)},
-        "look_at": "Посмотрите, как бренд связан с историей и предложением, особенно в финале. "
-                   "Само по себе увеличение времени логотипа не гарантирует улучшения.",
+        "id": "message", "title": "Главная мысль и призыв к действию",
+        "groups": {"aipm1": ("Фокус сообщения",),
+                   "message_delivery": ("Смысловой фокус и CTA",)},
+        "combined_checks": "Призыв к действию оценивается вместе с совпадением автоматических "
+                           "оценок числа элементов, нужных для пересказа: продукт, пользователь, "
+                           "действие и выгода.",
     },
+    {"id": "brand", "title": "Бренд в кадре", "groups": {"aipm2": ("Видимость бренда",)}},
+    {"id": "music", "title": "Музыка", "groups": {"aipm2": ("Аудиальный крючок",)}},
     {
-        "id": "sound", "title": "Музыка и речь",
-        "question": "Как звук помогает запомнить ролик и понять предложение?",
-        "checks": "Короткая фирменная мелодия, песня со словами, время без речи, "
-                  "скорость речи и понятность предложения без изображения.",
-        "groups": {"aipm2": ("Аудиальный крючок",),
-                   "message_delivery": ("Речь и автономность звука",)},
-        "look_at": "Прослушайте ролик без картинки: понятны ли предложение и действие, "
-                   "не приходится ли спешить за речью? Отдельно оцените роль музыки.",
-        "combined_checks": "Скорость речи учитывается и сама по себе, и в сочетании с тем, "
-                           "насколько понятен посыл без изображения. Поэтому понятный звук "
-                           "сам по себе не гарантирует положительный вклад всей темы.",
+        "id": "speech", "title": "Речь и понятность на слух",
+        "groups": {"message_delivery": ("Речь и автономность звука",)},
+        "combined_checks": "Скорость речи учитывается сама по себе и в сочетании с понятностью "
+                           "посыла без изображения. Вклад относится к этому сочетанию.",
     },
     {
         "id": "story", "title": "Сюжет и подача",
-        "question": "Как герой, юмор и темп работают на внимание и запоминание?",
-        "checks": "Главный герой, переход от проблемы к решению, заметный юмор, "
-                  "обращение прямо к зрителю и скорость смены сцен.",
         "groups": {"aipm1": ("Фокус внимания", "Эмоциональный крючок"),
                    "aipm2": ("Подача и темп",)},
-        "look_at": "Посмотрите, помогают ли герой, шутка и монтаж следить за предложением. "
-                   "Наличие или отсутствие каждого приёма само по себе не означает ошибку.",
     },
     {
         "id": "partial", "title": "Понятность при неполном просмотре",
-        "question": "Что остаётся от смысла, если зритель пропустил часть ролика?",
-        "checks": "Как меняются ответы при показе разных фрагментов одной длины, "
-                  "и насколько конкретно сформулировано сообщение.",
         "groups": {"message_delivery": ("Устойчивость при неполном просмотре",)},
-        "look_at": "Проверьте отдельные фрагменты: остаётся ли понятным предложение, "
-                   "если пропустить начало или финал?",
         "combined_checks": "Сравниваются два набора фрагментов для каждой длительности: "
-                           "25%, 50% и 75% ролика. Программа учитывает различия в ответах "
-                           "и их сочетание с конкретностью сообщения. Это связанные измерения "
-                           "одной проверки, поэтому они собраны в одну тему.",
+                           "25%, 50% и 75% ролика. Учитываются различия в автоматических "
+                           "ответах и конкретность сообщения.",
     },
 )
 
@@ -139,13 +114,15 @@ def _observations(result):
     business = business if isinstance(business, dict) else {}
     yes_no = {0: "Не обнаружено", 1: "Есть"}
     return {
+        "offer": [
+            ("Акция или бонус", "Скидка, промокод, подарок или другая явная промо-выгода.", _choice(a1, "promo", yes_no)),
+            ("Конкретное предложение на экране", "Текст с ценой, скидкой, сроком или бесплатным предметом/услугой.", _choice(a1, "has_screen_offer_text", yes_no)),
+            ("Условия предложения", "Сколько ограничений нужно учесть: например, срок или условия получения выгоды. Среднее автоматических оценок.", _number(business, "offer_condition_count", digits=1)),
+        ],
         "message": [
             ("Основная мысль после просмотра", "Насколько легко сформулировать предложение одной фразой.",
              _choice(a1, "message_focus_seconds", {1: "Не удаётся сформулировать", 2: "Формулируется с усилием", 3: "Формулируется сразу"})),
-            ("Акция или бонус", "Скидка, промокод, подарок или другая явная промо-выгода.", _choice(a1, "promo", yes_no)),
-            ("Конкретное предложение на экране", "Текст с ценой, скидкой, сроком или бесплатным предметом/услугой.", _choice(a1, "has_screen_offer_text", yes_no)),
             ("Разные предложения", "Повтор одного предложения в речи и на экране считается один раз.", _number(a1, "unique_offer_count")),
-            ("Условия предложения", "Сколько ограничений нужно учесть: например, срок или условия получения выгоды. Среднее автоматических оценок.", _number(business, "offer_condition_count", digits=1)),
             ("Призыв к действию", "Конкретное следующее действие: например, найти специалиста или разместить объявление.", _choice(business, "cta_clarity", yes_no)),
         ],
         "brand": [
@@ -153,10 +130,12 @@ def _observations(result):
             ("Финальный кадр с брендом", "Последний кадр, где основное место занимают бренд, слоган или призыв к действию.", _number(a2, "pack_shot_duration_seconds", " сек.")),
             ("Финал только с брендом и призывом", "Без героев и продолжения сюжета.", _choice(a2, "ends_with_brand_logo_alone", yes_no)),
         ],
-        "sound": [
+        "music": [
             ("Фирменная мелодия", "Короткий узнаваемый мотив, связанный с брендом; обычная фоновая музыка не считается.", _choice(a2, "jingle_present", yes_no)),
             ("Песня со словами", "Вокальная музыка, а не обычная речь героя или диктора.", _choice(a2, "vocal_song_present", yes_no)),
             ("Время без речи", "Тишина, музыка или звуковые эффекты без речи; это длительность, а не оценка качества.", _number(a2, "silence_or_music_only_seconds", " сек.")),
+        ],
+        "speech": [
             ("Темп речи", "Среднее число произнесённых слов за секунду ролика.", _number(business, "words_per_second", " слова/сек.", digits=1)),
             ("Предложение без картинки", "Что можно понять только по звуку, по автоматическому разбору.", _choice(business, "audio_completeness", {0: "Посыл не определяется", 1: "Частично понятен (1 из 3)", 2: "Частично понятен (2 из 3)", 3: "Можно полностью пересказать"})),
         ],
@@ -172,6 +151,88 @@ def _observations(result):
             ("Конкретность сообщения", "От упоминания бренда до конкретного объекта, действия и результата. Среднее автоматических оценок по шкале 0–3.", _number(business, "message_specificity", " из 3", digits=1)),
         ],
     }
+
+
+def topic_finding(topic, result):
+    """Use recorded observations only; missing observations never become absence."""
+    known = {label: value for label, _, value in topic["observations"] if value != "Нет данных"}
+    if not known:
+        return "Недостаточно сохранённых данных, чтобы описать эту сторону ролика."
+    if topic["id"] == "partial":
+        records = result.get("diagnostic_recovery", [])
+        if isinstance(records, list):
+            conditions = {f"nested_{fraction}_m{mask}" for fraction in (25, 50, 75) for mask in (1, 2)}
+            rows = [row for row in records if isinstance(row, dict)]
+            full = [row for row in rows if row.get("condition_group") == "full"]
+            parts = [row for row in rows if row.get("condition_group") in conditions]
+            if (full and {row["condition_group"] for row in parts} == conditions
+                    and all(row.get("answer_type") in {"valid", "brand_only", "no_idea"}
+                            for row in full + parts)):
+                full_rate = sum(row["answer_type"] == "valid" for row in full) / len(full)
+                part_rate = sum(row["answer_type"] == "valid" for row in parts) / len(parts)
+                return (f"В автоматической проверке содержательный пересказ получился в {full_rate:.0%} "
+                        f"ответов на полный ролик и в {part_rate:.0%} ответов на фрагменты длиной 25–75% ролика.")
+        return "Полные данные автоматической проверки фрагментов не сохранились; сделать вывод о понятности при неполном просмотре нельзя."
+    binary_phrases = {
+        "Акция или бонус": ("Акция или бонус не обнаружены", "Есть акция или бонус"),
+        "Конкретное предложение на экране": ("Конкретное предложение текстом на экране не обнаружено", "Конкретное предложение вынесено на экран"),
+        "Призыв к действию": ("Явный призыв к действию не обнаружен", "Есть явный призыв к действию"),
+        "Фирменная мелодия": ("Фирменная мелодия не обнаружена", "Есть фирменная мелодия"),
+        "Песня со словами": ("Песня со словами не обнаружена", "Звучит песня со словами"),
+        "Главный герой": ("Единого главного героя не обнаружено", "История строится вокруг одного главного героя"),
+        "Переход «до — после»": ("Переход от проблемы к решению не обнаружен", "Показан переход от проблемы к решению"),
+        "Юмор": ("Выраженный юмор не обнаружен", "Есть юмор"),
+        "Обращение к зрителю": ("Прямого обращения героя к зрителю нет", "Герой обращается прямо к зрителю"),
+        "Быстрая смена кадров": ("Быстрая смена кадров не обнаружена", "Кадры сменяются быстро"),
+    }
+    phrases = {
+        "offer": [("Акция или бонус", "Акция или бонус — {}"),
+                  ("Конкретное предложение на экране", "конкретное предложение текстом на экране — {}")],
+        "message": [("Основная мысль после просмотра", "Главная мысль: {}"),
+                    ("Призыв к действию", "явный призыв к действию — {}")],
+        "brand": [("Время логотипа в кадре", "Логотип или фирменный персонаж видны {}"),
+                  ("Финальный кадр с брендом", "финальный кадр с брендом длится {}")],
+        "music": [("Фирменная мелодия", "Фирменная мелодия — {}"),
+                  ("Песня со словами", "песня со словами — {}")],
+        "speech": [("Предложение без картинки", "Посыл без изображения: {}"),
+                   ("Темп речи", "средний темп речи — {}")],
+        "story": [("Главный герой", "Главный герой — {}"),
+                  ("Переход «до — после»", "переход «до — после» — {}"),
+                  ("Юмор", "юмор — {}"),
+                  ("Обращение к зрителю", "обращение прямо к зрителю — {}"),
+                  ("Быстрая смена кадров", "быстрая смена кадров — {}")],
+    }
+    parts = []
+    for label, template in phrases[topic["id"]]:
+        if label not in known:
+            continue
+        if label in binary_phrases:
+            part = binary_phrases[label][known[label] == "Есть"]
+        else:
+            part = template.format(known[label].lower())
+        parts.append(part[0].upper() + part[1:].rstrip("."))
+    return ". ".join(parts) + "." if parts else "Для вывода по этой теме не хватает сохранённых наблюдений."
+
+
+def topic_conclusion(outcomes):
+    labels = {"aipm1": "заметность", "aipm2": "запоминаемость", "message_delivery": "считываемость"}
+    clauses = []
+    for direction, verb in [("up", "поддерживает"), ("down", "снижает")]:
+        names = [labels[row["component"]] for row in outcomes if row["available"] and row["direction"] == direction]
+        if names:
+            clauses.append(verb + " прогнозируемую " + " и ".join(names))
+    if clauses:
+        conclusion = "По расчёту модели, этот блок " + ", но ".join(clauses) + "."
+    elif any(row["available"] and row["importance"] > 0 for row in outcomes):
+        conclusion = "В расчёте модели плюсы и минусы этого блока уравновешены."
+    elif any(row["available"] for row in outcomes):
+        conclusion = "В этом ролике блок не меняет оценку модели."
+    else:
+        return "Недостаточно данных, чтобы оценить вклад этого блока."
+    if any(not row["available"] for row in outcomes):
+        missing = [row["label"].lower() for row in outcomes if not row["available"]]
+        conclusion += " Не хватает данных для остальных оценок: " + ", ".join(missing) + "."
+    return conclusion
 
 
 def build_marketing_profile(result):
@@ -223,21 +284,9 @@ def build_marketing_profile(result):
                     for name in features
                 ], key=lambda row: -row["importance"])
             topic["outcomes"].append(outcome)
+        topic["finding"] = topic_finding(topic, result)
+        topic["conclusion"] = topic_conclusion(topic["outcomes"])
         topics.append(topic)
 
-    priorities = []
-    for component, (label, _) in GROUPS.items():
-        candidates = [(topic, outcome) for topic in topics for outcome in topic["outcomes"]
-                      if outcome["component"] == component and outcome["available"]
-                      and outcome["direction"] == "down"]
-        priority = {"component": component, "label": label, "available": sources[component] is not None,
-                    "topics": []}
-        if candidates:
-            weakest = min(outcome["effect"] for _, outcome in candidates)
-            priority["topics"] = [{"id": topic["id"], "title": topic["title"]}
-                                  for topic, outcome in candidates
-                                  if math.isclose(outcome["effect"], weakest, rel_tol=1e-9, abs_tol=0.0)]
-        priorities.append(priority)
-    return {"version": VERSION, "topics": topics, "priorities": priorities,
-            "importance_basis": "Sum of absolute feature attributions within each creative topic / sum of absolute creative feature attributions within that outcome. Fixed brand context excluded.",
-            "priority_basis": "Most negative net topic attribution within each outcome; no cross-outcome ranking or causal improvement forecast."}
+    return {"version": VERSION, "topics": topics,
+            "importance_basis": "Sum of absolute feature attributions within each creative topic / sum of absolute creative feature attributions within that outcome. Fixed brand context excluded."}

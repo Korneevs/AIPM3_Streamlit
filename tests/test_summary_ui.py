@@ -53,7 +53,7 @@ def test_reference_means_match_independent_historical_pandas_ranks():
         assert (100 * (indices / REFERENCE_MEANS[name] - 1)).mean() == pytest.approx(0, abs=1e-12)
 
 
-def test_result_page_has_four_colored_cards_and_five_topics():
+def test_result_page_has_four_colored_cards_and_seven_topics():
     root = Path(__file__).resolve().parents[1]
     source = (root / "app_pages/video_pretest.py").read_text().split('\nst.title(')[0]
     app = AppTest.from_string(source + '\nshow_result(st.session_state["result"])\n')
@@ -67,7 +67,7 @@ def test_result_page_has_four_colored_cards_and_five_topics():
         assert value in text
     assert text.count("к среднему") == 4
     assert "Основная идея тестового ролика" in text
-    assert len(app.get("plotly_chart")) == 5
+    assert len(app.get("plotly_chart")) == 7
     assert len(app.get("download_button")) == 1
     assert app.session_state["result"] == before
 
