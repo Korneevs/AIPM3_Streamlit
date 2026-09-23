@@ -10,11 +10,12 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from artifacts import artifact_path
-from aipm3.models import SCORING_VERSION, FrozenModels, level_from_percentile, load_frozen_models
+from aipm3.models import SCORING_VERSION, FrozenModels, load_frozen_models
 from aipm3.pipeline import run_analysis
 from aipm3.profile_ui import show_feature_profile
 from aipm3.feature_profile import build_profile
 from aipm3.result_export import export_result
+from aipm3.summary_ui import show_metric_summary
 
 
 @st.cache_resource(show_spinner=False)
@@ -24,37 +25,6 @@ def load_models(scoring_version: str) -> FrozenModels:
         artifact_path("aipm2_model.cbm"),
         artifact_path("message_delivery_model_bundle.joblib"),
     )
-
-
-def component_figure(result: dict) -> go.Figure:
-    labels = ["Заметность", "Запоминаемость", "Считываемость"]
-    values = [
-        result["aipm1"]["percentile"],
-        result["aipm2"]["percentile"],
-        result["message_delivery"]["percentile"],
-    ]
-    colors = ["#1EA7FD" if value >= 67 else "#FFB020" if value >= 33 else "#E44D61" for value in values]
-    figure = go.Figure(go.Bar(
-        x=values,
-        y=labels,
-        orientation="h",
-        marker_color=colors,
-        text=[f"{value:.0f}/100" for value in values],
-        textposition="inside",
-        hovertemplate="%{y}: %{x:.0f}/100<extra></extra>",
-    ))
-    figure.add_vline(x=33, line_dash="dot", line_color="#B8C0CC")
-    figure.add_vline(x=67, line_dash="dot", line_color="#B8C0CC")
-    figure.update_layout(
-        height=285,
-        margin=dict(l=10, r=10, t=15, b=15),
-        xaxis=dict(range=[0, 100], title="Позиция относительно референсных роликов"),
-        yaxis=dict(autorange="reversed", title=""),
-        showlegend=False,
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-    )
-    return figure
 
 
 def recovery_figure(curve: dict[str, float]) -> go.Figure:
@@ -84,35 +54,12 @@ def recovery_figure(curve: dict[str, float]) -> go.Figure:
 
 
 def show_result(result: dict, api_key: str = "", video_bytes: bytes | None = None, suffix: str = ".mp4") -> None:
-    aipm3 = result["aipm3"]
-    if aipm3["level"] == 2:
-        st.success(f"**AIPM 3.0: {aipm3['label']}**")
-    elif aipm3["level"] == 1:
-        st.warning(f"**AIPM 3.0: {aipm3['label']}**")
-    else:
-        st.error(f"**AIPM 3.0: {aipm3['label']}**")
-
     main_idea = str(result.get("main_idea") or "").strip()
     with st.container(border=True):
         st.markdown("### Основная идея ролика")
         st.write(main_idea or "Не удалось однозначно определить основную идею.")
 
-    col_total, col_aipm1, col_aipm2, col_md = st.columns(4)
-    col_total.metric(
-        "AIPM 3.0",
-        f"{aipm3['index_100']:.0f}",
-        help="Нормированный индекс: 100 — средний уровень референсной выборки.",
-    )
-    components = [
-        (col_aipm1, "Заметность · AIPM 1.0", result["aipm1"]["percentile"]),
-        (col_aipm2, "Запоминаемость · AIPM 2.0", result["aipm2"]["percentile"]),
-        (col_md, "Считываемость · MD", result["message_delivery"]["percentile"]),
-    ]
-    for column, label, value in components:
-        column.metric(label, f"{value:.0f}/100")
-        column.caption(f"Уровень: {level_from_percentile(value).lower()}")
-
-    st.plotly_chart(component_figure(result), use_container_width=True)
+    show_metric_summary(result)
 
     show_feature_profile(result)
     downloadable = export_result(result)
