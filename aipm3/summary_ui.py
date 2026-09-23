@@ -28,9 +28,9 @@ def metric_summaries(result: dict) -> list[dict]:
     cards = [{"label": "AIPM 3.0", "delta": (float(total["index"]) - 1.0) * 100.0,
               "level": int(total["level"])}]
     for component, label in [
-        ("aipm1", "Заметность · AIPM 1.0"),
-        ("aipm2", "Запоминаемость · AIPM 2.0"),
-        ("message_delivery", "Считываемость · MD"),
+        ("aipm1", "Заметность"),
+        ("aipm2", "Запоминаемость"),
+        ("message_delivery", "Считываемость основной идеи"),
     ]:
         score = result[component]
         percentile = float(score["percentile"])

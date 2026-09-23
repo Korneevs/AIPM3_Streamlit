@@ -70,6 +70,10 @@ def test_result_page_has_overall_card_above_three_components():
     assert len(app.get("plotly_chart")) == 11
     assert text.index('data-metric="overall"') < text.index('data-metric="component"')
     assert text.count('data-metric="component"') == 3
+    for label in ["Заметность", "Запоминаемость", "Считываемость основной идеи"]:
+        assert label in text
+    for retired in ["AIPM 1.0", "AIPM 2.0", "Считываемость · MD"]:
+        assert retired not in text
     assert "font-size:60px" in text
     assert len(app.get("download_button")) == 1
     assert app.session_state["result"] == before
