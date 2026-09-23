@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import hashlib
 import json
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 
@@ -13,6 +11,7 @@ from .interpretation import build_interpretation
 from .creative_review import manager_readout
 from .models import SCORING_VERSION, FrozenModels, aipm3_score, score_aipm1, score_aipm2, score_message_delivery
 from .objective_features import PROTOCOL_VERSION, extract_component, prepare_legacy_video
+from .runtime_resources import analysis_slot, file_sha256, log_stage
 
 
 def _legacy_extract(component: str, source: Path, output_dir: Path, api_key: str):
@@ -31,39 +30,27 @@ def _message_delivery_extract(
     duration: float,
     output_dir: Path,
     api_key: str,
+    progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     md_runtime.configure_api_key(api_key)
     placeholder_secrets = output_dir / "unused-secrets.toml"
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        panel_future = executor.submit(
-            md_runtime.extract_panel30,
-            video_base64,
-            video_sha,
-            output_dir / "panel30",
-            placeholder_secrets,
-            False,
-        )
-        transcript_future = executor.submit(
-            md_runtime.extract_transcript,
-            video_base64,
-            video_sha,
-            duration,
-            output_dir / "transcript",
-            placeholder_secrets,
-            False,
-        )
-        recovery_future = executor.submit(
-            md_runtime.extract_recovery,
-            prepared,
-            video_base64,
-            video_sha,
-            output_dir / "recovery",
-            placeholder_secrets,
-            False,
-        )
-        panel_frame, panel = panel_future.result()
-        transcript_frame, words_per_second = transcript_future.result()
-        recovery_frame, recovery = recovery_future.result()
+    def stage(message):
+        log_stage(message)
+        if progress:
+            progress(message)
+
+    stage("Проверяем понимание ролика: 30 автоматических ответов")
+    panel_frame, panel = md_runtime.extract_panel30(
+        video_base64, video_sha, output_dir / "panel30", placeholder_secrets, False,
+    )
+    stage("Разбираем речь")
+    transcript_frame, words_per_second = md_runtime.extract_transcript(
+        video_base64, video_sha, duration, output_dir / "transcript", placeholder_secrets, False,
+    )
+    stage("Проверяем понимание фрагментов")
+    recovery_frame, recovery = md_runtime.extract_recovery(
+        prepared, video_base64, video_sha, output_dir / "recovery", placeholder_secrets, False,
+    )
     return {
         "panel_frame": panel_frame,
         "panel": panel,
@@ -80,34 +67,46 @@ def run_analysis(
     output_root: Path,
     api_key: str,
     models: FrozenModels,
+    progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
-    source_hash = hashlib.sha256(source_video.read_bytes()).hexdigest()
+    with analysis_slot():
+        try:
+            return _run_analysis(source_video=source_video, output_root=output_root,
+                                 api_key=api_key, models=models, progress=progress)
+        except Exception:
+            log_stage("Ошибка анализа")
+            raise
+
+
+def _run_analysis(
+    *, source_video: Path, output_root: Path, api_key: str, models: FrozenModels,
+    progress: Callable[[str], None] | None,
+) -> dict[str, Any]:
+    def stage(message):
+        log_stage(message)
+        if progress:
+            progress(message)
+
+    stage("Подготавливаем видео")
+    source_hash = file_sha256(source_video)
     # Separate the restored protocol from cached results of the merged prompt.
     output_dir = output_root / PROTOCOL_VERSION / source_hash[:16]
     output_dir.mkdir(parents=True, exist_ok=True)
     prepared = md_runtime.prepare_video(source_video, output_dir / "prepared_media")
-    video_base64, video_sha = md_runtime.encode_video(prepared)
     duration = md_runtime.video_duration(prepared)
 
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        aipm1_future = executor.submit(
-            _legacy_extract, "aipm1", source_video, output_dir, api_key,
-        )
-        aipm2_future = executor.submit(
-            _legacy_extract, "aipm2", source_video, output_dir, api_key,
-        )
-        md_future = executor.submit(
-            _message_delivery_extract,
-            prepared,
-            video_base64,
-            video_sha,
-            duration,
-            output_dir / "message_delivery",
-            api_key,
-        )
-        a1_features, a1_runs, a1_video_sha = aipm1_future.result()
-        a2_features, a2_runs, a2_video_sha = aipm2_future.result()
-        md_extracted = md_future.result()
+    # Each stage releases its encoded video and request buffers before the next.
+    stage("Оцениваем заметность")
+    a1_features, a1_runs, a1_video_sha = _legacy_extract("aipm1", source_video, output_dir, api_key)
+    stage("Оцениваем запоминаемость")
+    a2_features, a2_runs, a2_video_sha = _legacy_extract("aipm2", source_video, output_dir, api_key)
+    video_base64, video_sha = md_runtime.encode_video(prepared)
+    md_extracted = _message_delivery_extract(
+        prepared, video_base64, video_sha, duration,
+        output_dir / "message_delivery", api_key, progress,
+    )
+    del video_base64
+    stage("Рассчитываем оценки и профиль ролика")
 
     panel = md_extracted["panel"]
     recovery = md_extracted["recovery"]
@@ -187,4 +186,5 @@ def run_analysis(
     (output_dir / "result.json").write_text(
         json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8",
     )
+    stage("Анализ завершён")
     return result

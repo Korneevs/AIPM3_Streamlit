@@ -17,6 +17,7 @@ from aipm3.feature_profile import build_profile
 from aipm3.result_export import export_result
 from aipm3.summary_ui import show_metric_summary
 from aipm3.marketing_profile import build_marketing_profile
+from aipm3.runtime_resources import AnalysisBusy
 
 
 @st.cache_resource(show_spinner=False)
@@ -92,7 +93,7 @@ with st.sidebar:
     st.caption("AIPM 1.0: 3 просмотра. AIPM 2.0: 2 просмотра. Message Delivery: 30 респондентов.")
     analyze_btn = st.button("Начать анализ", type="primary", use_container_width=True)
 
-if uploaded_file is not None:
+if uploaded_file is not None and not analyze_btn:
     st.video(uploaded_file)
 
 if analyze_btn:
@@ -102,19 +103,22 @@ if analyze_btn:
         st.session_state.pop("aipm3_result", None)
         suffix = Path(uploaded_file.name).suffix.lower() or ".mp4"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as stream:
-            stream.write(uploaded_file.getvalue())
+            with uploaded_file.getbuffer() as buffer:
+                stream.write(buffer)
             source_path = Path(stream.name)
         try:
             with st.status("Анализируем ролик", expanded=True) as status:
-                st.write("Подготавливаем видео и запускаем компоненты AIPM 3.0 параллельно.")
                 result = run_analysis(
                     source_video=source_path,
                     output_root=Path(tempfile.gettempdir()) / "aipm3_analysis_cache",
                     api_key=api_key,
                     models=frozen_models,
+                    progress=lambda message: status.update(label=message),
                 )
                 status.update(label="Анализ завершён", state="complete", expanded=False)
             st.session_state["aipm3_result"] = result
+        except AnalysisBusy as exc:
+            st.warning(str(exc))
         except Exception as exc:
             st.exception(exc)
         finally:
@@ -125,11 +129,13 @@ if "aipm3_result" in st.session_state:
     st.divider()
     if st.session_state["aipm3_result"].get("scoring_version") == SCORING_VERSION:
         stored = st.session_state["aipm3_result"]
-        video_bytes = uploaded_file.getvalue() if uploaded_file is not None else None
-        suffix = Path(uploaded_file.name).suffix.lower() if uploaded_file is not None else ".mp4"
-        if video_bytes is not None and hashlib.sha256(video_bytes).hexdigest() != stored.get("source_sha"):
+        current_sha = None
+        if uploaded_file is not None:
+            with uploaded_file.getbuffer() as buffer:
+                current_sha = hashlib.sha256(buffer).hexdigest()
+        if current_sha is not None and current_sha != stored.get("source_sha"):
             st.warning("Загружен другой файл. Нажмите «Начать анализ»: прежние оценки относятся к предыдущему ролику.")
         else:
-            show_result(stored, api_key, video_bytes, suffix)
+            show_result(stored)
     else:
         st.warning("Обновлена нормировка AIPM 3.0. Запустите анализ заново: прежний результат относится к старой версии расчёта.")

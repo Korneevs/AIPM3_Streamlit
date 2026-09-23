@@ -39,6 +39,11 @@ import pandas as pd
 from openai import OpenAI
 from scipy import stats
 
+if __package__:
+    from .runtime_resources import file_sha256, run_video_command
+else:  # Keep the standalone command-line entry point available.
+    from runtime_resources import file_sha256, run_video_command
+
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 DEFAULT_BUNDLE = PACKAGE_DIR / "message_delivery_model_bundle.joblib"
@@ -47,7 +52,7 @@ LOCAL_PROJECT_ROOT = PACKAGE_DIR.parent
 MODEL_NAME = "google/gemini-3.1-pro-preview"
 BASE_URL = "https://litellm.data-light.ru/v1"
 MAX_BINARY_MB = 13.0
-MAX_WORKERS = 4
+MAX_WORKERS = 2
 _API_KEY: str | None = None
 
 CLASS_LABELS = {
@@ -303,7 +308,8 @@ def ffmpeg_executable() -> str:
 
 def video_duration(path: Path) -> float:
     result = subprocess.run(
-        [ffmpeg_executable(), "-i", str(path)], capture_output=True, text=True
+        [ffmpeg_executable(), "-threads", "1", "-i", str(path)],
+        capture_output=True, text=True, timeout=30,
     )
     match = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", result.stderr)
     if not match:
@@ -329,9 +335,7 @@ def prepare_video(source: Path, output_dir: Path) -> Path:
         "-vf", "scale='min(1280,iw)':-2", "-c:v", "libx264", "-crf", "28",
         "-preset", "veryfast", "-c:a", "aac", "-b:a", "96k", str(output),
     ]
-    result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode:
-        raise RuntimeError(result.stderr[-1600:])
+    run_video_command(command)
     if output.stat().st_size / 1024 / 1024 > MAX_BINARY_MB:
         raise RuntimeError("Prepared video is still above 13 MB")
     return output
@@ -370,12 +374,13 @@ def call_json(
     last_error: Exception | None = None
     for attempt in range(1, retries + 1):
         try:
-            response = create_client(secrets_path).chat.completions.create(
-                model=MODEL_NAME,
-                messages=[{"role": "user", "content": content}],
-                temperature=temperature,
-                response_format=schema,
-            )
+            with create_client(secrets_path) as client:
+                response = client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=[{"role": "user", "content": content}],
+                    temperature=temperature,
+                    response_format=schema,
+                )
             payload = json.loads(response.choices[0].message.content)
             returned = str(payload.get("request_token", "")).strip()
             prefix_match = (
@@ -489,7 +494,7 @@ def extract_transcript(
         count = len(re.findall(r"[A-Za-zА-Яа-яЁё0-9]+", transcript))
         return {"iteration": iteration, "transcript": transcript, "word_count": count}
 
-    with ThreadPoolExecutor(max_workers=3) as executor:
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         rows = [future.result() for future in as_completed(
             [executor.submit(one, iteration) for iteration in [1, 2, 3]]
         )]
@@ -527,9 +532,7 @@ def make_nested_clip(
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "30",
         "-c:a", "aac", "-b:a", "72k", str(output),
     ]
-    result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode:
-        raise RuntimeError(result.stderr[-1600:])
+    run_video_command(command)
     return output
 
 
@@ -589,7 +592,7 @@ def extract_recovery(
     prepared: Path, b64: str, sha: str, output_dir: Path,
     secrets: Path, fresh: bool,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
-    variants: dict[str, tuple[Path, str]] = {"full": (prepared, b64)}
+    variants: dict[str, Path] = {"full": prepared}
     for mask_id in [1, 2]:
         for fraction in [0.25, 0.50, 0.75]:
             condition = f"nested_{int(fraction * 100)}_m{mask_id}"
@@ -597,16 +600,18 @@ def extract_recovery(
                 prepared, output_dir / "variants" / f"{condition}.mp4",
                 fraction, mask_id, sha,
             )
-            variants[condition] = (path, base64.b64encode(path.read_bytes()).decode("ascii"))
+            variants[condition] = path
 
     tasks = []
     groups = [RECOVERY_PERSONAS[:4], RECOVERY_PERSONAS[4:8], RECOVERY_PERSONAS[8:12]]
-    for condition, (path, encoded) in variants.items():
-        condition_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+    for condition, path in variants.items():
+        condition_sha = file_sha256(path)
         for group_id, personas in enumerate(groups, start=1):
-            tasks.append((condition, condition_sha, encoded, group_id, personas))
+            tasks.append((condition, condition_sha, path, group_id, personas))
 
-    def one(condition, condition_sha, encoded, group_id, personas):
+    def one(condition, condition_sha, path, group_id, personas):
+        # Encode only active requests, not all six variants held for the whole run.
+        encoded = b64 if condition == "full" else encode_video(path)[0]
         payload = call_json(
             task_key=f"recovery_{condition}_g{group_id}",
             prompt=recovery_prompt(condition, personas), schema=RECOVERY_SCHEMA,
@@ -625,7 +630,7 @@ def extract_recovery(
         } for key, description in personas]
 
     rows: list[dict[str, Any]] = []
-    with ThreadPoolExecutor(max_workers=3) as executor:
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = [executor.submit(one, *task) for task in tasks]
         for future in as_completed(futures):
             rows.extend(future.result())

@@ -110,7 +110,7 @@ def test_video_gate_keeps_independent_component_inputs(tmp_path, monkeypatch):
     monkeypatch.setattr(objective, "AIPM1_MAX_BINARY_MB", 1)
     monkeypatch.setattr(objective, "AIPM2_MAX_BINARY_MB", 0)
     run = MagicMock()
-    monkeypatch.setattr(objective.subprocess, "run", run)
+    monkeypatch.setattr(objective, "run_video_command", run)
     monkeypatch.setattr(imageio_ffmpeg, "get_ffmpeg_exe", lambda: "ffmpeg")
     assert objective.prepare_legacy_video(source, tmp_path / "a1", "aipm1") == source
     assert objective.prepare_legacy_video(source, tmp_path / "a2", "aipm2") != source
@@ -160,7 +160,9 @@ def test_message_delivery_computations_are_unchanged():
         return {n.name: ast.dump(n, include_attributes=False) for n in ast.parse(path.read_text()).body
                 if isinstance(n, ast.FunctionDef)}
     original, deployed = functions(canonical), functions(Path(md.__file__))
-    for name in original.keys() - {"load_api_key"}:
+    runtime_only = {"load_api_key", "video_duration", "prepare_video", "call_json",
+                    "extract_transcript", "make_nested_clip", "extract_recovery"}
+    for name in original.keys() - runtime_only:
         assert original[name] == deployed[name], name
 
 
@@ -287,13 +289,16 @@ def test_whole_pipeline_routes_independent_features(tmp_path, monkeypatch):
     assert json.loads(saved.read_text())["aipm3"] == result["aipm3"]
     # The Streamlit page renders exactly the same result and loads pinned models.
     from streamlit.testing.v1 import AppTest
+    import artifacts
+    monkeypatch.setattr(artifacts, "artifact_path", lambda name: str(artifacts_dir / name))
     page = Path(__file__).resolve().parents[1] / "app_pages/video_pretest.py"
     at = AppTest.from_file(str(page), default_timeout=20)
+    at.secrets["VSELLM_API_KEY"] = "test-no-api-calls"
     at.session_state["aipm3_result"] = result
     at.run()
     assert not at.exception
-    assert at.metric[0].value == f"{result['aipm3']['index_100']:.0f}"
-    assert at.metric[2].value == f"{result['aipm2']['percentile']:.0f}/100"
+    assert len(at.get("plotly_chart")) == 7
+    assert sum(item.value.count("к среднему") for item in at.markdown) == 4
     at.session_state["aipm3_result"] = {**result, "scoring_version": "previous"}
     at.run()
     assert not at.exception

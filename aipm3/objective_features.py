@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
 import time
 from collections import Counter
 from pathlib import Path
@@ -15,6 +14,8 @@ from typing import Any
 
 import numpy as np
 from openai import OpenAI
+
+from .runtime_resources import run_video_command
 
 from .legacy_contracts import (
     AIPM1_ANALYSIS_PROMPT, AIPM1_FEATURES_JSON_SCHEMA, AIPM1_GEMINI_MODEL,
@@ -58,7 +59,8 @@ def prepare_legacy_video(source: Path, output_dir: Path, component: str) -> Path
     """Keep each local app's size gate and FFmpeg arguments, not MD's encoding.
 
     Safe private output names replace local AIPM1's .replace('.mp4', ...),
-    which could otherwise overwrite a MOV input. Media settings are unchanged.
+    which could otherwise overwrite a MOV input. Codec settings are unchanged;
+    encoder/decoder concurrency is bounded for Community Cloud.
     """
     if component not in {"aipm1", "aipm2"}:
         raise ValueError(f"Unknown component: {component}")
@@ -82,7 +84,7 @@ def prepare_legacy_video(source: Path, output_dir: Path, component: str) -> Path
         "-c:v", "libx264", "-crf", "28", "-preset", "fast",
         "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", str(output),
     ]
-    subprocess.run(command, check=True, capture_output=True, timeout=180)
+    run_video_command(command, timeout=180)
     return output
 
 

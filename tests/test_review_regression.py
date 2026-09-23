@@ -43,10 +43,27 @@ def frozen():
     )
 
 
-def test_prompts_extraction_models_and_normalization_are_byte_identical():
-    for path in ["aipm3/models.py", "aipm3/objective_features.py", "aipm3/legacy_contracts.py",
-                 "aipm3/message_delivery_runtime.py", "artifacts.py"]:
+def test_models_prompts_and_normalization_are_byte_identical():
+    for path in ["aipm3/models.py", "aipm3/legacy_contracts.py", "artifacts.py"]:
         assert (ROOT / path).read_bytes() == before_source(path), path
+
+
+def test_extraction_semantics_unchanged_outside_explicit_memory_fixes():
+    import ast
+    for path, allowed in {
+        "aipm3/objective_features.py": {"prepare_legacy_video"},
+        "aipm3/message_delivery_runtime.py": {
+            "video_duration", "prepare_video", "call_json", "extract_transcript",
+            "make_nested_clip", "extract_recovery",
+        },
+    }.items():
+        def functions(source):
+            return {n.name: ast.dump(n, include_attributes=False)
+                    for n in ast.parse(source).body if isinstance(n, ast.FunctionDef)}
+        before, after = functions(before_source(path)), functions((ROOT / path).read_bytes())
+        assert before.keys() == after.keys()
+        for name in before.keys() - allowed:
+            assert before[name] == after[name], (path, name)
 
 
 def test_aipm1_and_aipm2_58_saved_inputs_match_pre_review(baseline, frozen):
