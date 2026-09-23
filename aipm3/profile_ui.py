@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from .marketing_profile import build_marketing_profile
+from .celebrity_ui import show_celebrity
 
 
 DIRECTIONS = {
@@ -56,6 +57,10 @@ def show_feature_profile(result):
                   ("message_delivery", "Считываемость")]
     for tab, (component, label) in zip(st.tabs([label for _, label in components]), components):
         with tab:
+            if component == "aipm2":
+                show_celebrity(result)
+            manual_recall = component == "aipm2" and "celebrity_adjustment" in result
+            weight_label = "Вес среди свойств ролика" if manual_recall else "Вес в этой оценке"
             for topic in [t for t in profile["topics"] if t["component"] == component]:
                 row = topic["outcomes"][0]
                 with st.container(border=True):
@@ -77,7 +82,7 @@ def show_feature_profile(result):
                             st.markdown(
                                 f'<div style="color:{color};font-weight:600;margin:12px 0 5px;">'
                                 f'{escape(status)} · {escape(label.lower())}</div>'
-                                f'<div style="font-size:14px;">Вес в этой оценке: '
+                                f'<div style="font-size:14px;">{weight_label}: '
                                 f'<strong>{escape(share_text(row["importance"]))}</strong></div>',
                                 unsafe_allow_html=True)
                             st.plotly_chart(topic_figure([row]), use_container_width=True,
@@ -96,11 +101,14 @@ def show_feature_profile(result):
                         st.caption("Вес — доля этого свойства в силе всех вкладов в одну оценку данного ролика. "
                                    "Более высокий вес означает больший вклад в расчёт, а не гарантированный рост после правки.")
     with st.expander("Как рассчитан вклад"):
-        st.write("В каждой вкладке сначала показаны свойства, снижающие её оценку, затем поддерживающие. "
+        st.write("Свойства ролика в каждой вкладке показаны по порядку: сначала снижающие её оценку, затем поддерживающие. "
                  "Внутри этих групп карточки упорядочены по весу. Разные направления и разные оценки показаны отдельно; "
                  "ни один вклад не скрыт и не учтён дважды.")
         st.write("Веса внутри одной оценки составляют 100% до округления; если все вклады нулевые, все веса равны нулю. "
                  "Фиксированный контекст бренда исключён. Веса разных оценок не складываются.")
+        if "celebrity_adjustment" in result:
+            st.write("Вес участия селебрити — его доля в итоговой запоминаемости. "
+                     "Веса остальных свойств показывают их соотношение между собой и считаются отдельно.")
         st.caption("Это сохранённые SHAP-вклады: для заметности — перевес высокого класса над низким, "
                    "для запоминаемости и считываемости — непрерывный прогноз. Они объясняют расчёт модели, "
                    "а не доказывают причинное влияние. Варианты правок нужно проверять сравнением роликов.")

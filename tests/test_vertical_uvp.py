@@ -139,7 +139,7 @@ def test_page_selection_never_reruns_models_and_uvp_failure_keeps_previous_score
     app.run()
     assert not app.exception
     app.selectbox[0].select('Товары').run()
-    assert len(app.selectbox) == 2
+    assert len(app.selectbox) == 3  # vertical, goods, manual celebrity
     app.selectbox[1].select('Ресейл').run()
     assert not app.exception
     assert app.session_state['aipm3_result'] == original
@@ -152,5 +152,5 @@ def test_page_selection_never_reruns_models_and_uvp_failure_keeps_previous_score
     assert saved['vertical_uvp']['target']['goods'] == 'Ресейл'
     assert saved['vertical_uvp']['status'] == 'error'
     app.selectbox[0].select('Работа').run()
-    assert len(app.selectbox) == 1
+    assert len(app.selectbox) == 2  # vertical and manual celebrity
     assert app.session_state['aipm3_result']['vertical_uvp']['target']['goods'] == 'Ресейл'

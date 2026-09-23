@@ -20,6 +20,7 @@ from aipm3.marketing_profile import build_marketing_profile
 from aipm3.runtime_resources import AnalysisBusy
 from aipm3.vertical_uvp import VERTICALS, GOODS, make_target, evaluate_uvp
 from aipm3.uvp_ui import show_uvp
+from aipm3.manual_celebrity import CELEBRITIES, apply_celebrity, selected_celebrity
 
 
 def with_uvp(result: dict, target: dict, api_key: str) -> dict:
@@ -109,6 +110,10 @@ with st.sidebar:
     if target:
         st.caption("Целевой UVP: " + target["label"] + " — " + target["meaning"]
                    + (" · " + target["period"] if target["period"] else ""))
+    celebrity = st.selectbox(
+        "Селебрити в ролике", list(CELEBRITIES), format_func=CELEBRITIES.get,
+        key="selected_celebrity", help="Укажите участника вручную. Если никого из списка нет, выберите «Нет».",
+    )
     uploaded_file = st.file_uploader("Загрузите ролик (MP4 / MOV)", type=["mp4", "mov"])
     st.caption("AIPM 1.0: 3 просмотра. AIPM 2.0: 2 просмотра. Message Delivery: 30 респондентов.")
     analyze_btn = st.button("Начать анализ", type="primary", use_container_width=True)
@@ -137,6 +142,7 @@ if analyze_btn:
                     models=frozen_models,
                     progress=lambda message: status.update(label=message),
                 )
+                result = apply_celebrity(result, celebrity)
                 st.session_state["aipm3_result"] = result
                 status.update(label="Проверяем попадание в UVP выбранной вертикали")
                 result = with_uvp(result, target, api_key)
@@ -161,6 +167,12 @@ if "aipm3_result" in st.session_state:
         if current_sha is not None and current_sha != stored.get("source_sha"):
             st.warning("Загружен другой файл. Нажмите «Начать анализ»: прежние оценки относятся к предыдущему ролику.")
         else:
+            if celebrity != selected_celebrity(stored):
+                st.info("Выбор селебрити изменён. Ниже сохранена оценка для прежнего выбора.")
+                if st.button("Применить выбор селебрити"):
+                    stored = apply_celebrity(stored, celebrity)
+                    st.session_state["aipm3_result"] = stored
+                    st.rerun()
             current_assessment = stored.get("vertical_uvp", {})
             if target and (current_assessment.get("target") != target or current_assessment.get("status") == "error"):
                 if current_assessment and current_assessment.get("target") != target:

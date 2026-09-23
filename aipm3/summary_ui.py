@@ -1,4 +1,4 @@
-"""Display frozen scores relative to their reference means, without rescoring."""
+"""Display effective scores relative to fixed reference means, without rescoring."""
 from __future__ import annotations
 
 from html import escape
@@ -37,7 +37,7 @@ def metric_summaries(result: dict) -> list[dict]:
         cards.append({
             "label": label,
             "delta": (float(score["reference_index"]) / REFERENCE_MEANS[component] - 1.0) * 100.0,
-            "level": 0 if percentile < 33.0 else 1 if percentile < 67.0 else 2,
+            "level": score.get("norm_level", 0 if percentile < 33.0 else 1 if percentile < 67.0 else 2),
         })
     return cards
 
