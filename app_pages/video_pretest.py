@@ -18,6 +18,18 @@ from aipm3.result_export import export_result
 from aipm3.summary_ui import show_metric_summary
 from aipm3.marketing_profile import build_marketing_profile
 from aipm3.runtime_resources import AnalysisBusy
+from aipm3.vertical_uvp import VERTICALS, GOODS, make_target, evaluate_uvp
+from aipm3.uvp_ui import show_uvp
+
+
+def with_uvp(result: dict, target: dict, api_key: str) -> dict:
+    try:
+        assessment = evaluate_uvp(result, target, api_key,
+                                  Path(tempfile.gettempdir()) / "aipm3_uvp_cache")
+    except Exception:
+        # A failed optional diagnostic must never discard finished model scores.
+        assessment = {"target": dict(target), "status": "error", "source_sha": result.get("source_sha")}
+    return {**result, "vertical_uvp": assessment}
 
 
 @st.cache_resource(show_spinner=False)
@@ -56,13 +68,13 @@ def recovery_figure(curve: dict[str, float]) -> go.Figure:
 
 
 def show_result(result: dict, api_key: str = "", video_bytes: bytes | None = None, suffix: str = ".mp4") -> None:
+    show_metric_summary(result)
     main_idea = str(result.get("main_idea") or "").strip()
     with st.container(border=True):
         st.markdown("### Основная идея ролика")
         st.write(main_idea or "Не удалось однозначно определить основную идею.")
 
-    show_metric_summary(result)
-
+    show_uvp(result)
     show_feature_profile(result)
     downloadable = export_result(result)
     downloadable['feature_profile'] = build_profile(result)
@@ -89,6 +101,14 @@ with st.spinner("Загрузка замороженных моделей..."):
 
 with st.sidebar:
     st.header("Настройки")
+    vertical = st.selectbox("Вертикаль", list(VERTICALS), index=None, placeholder="Выберите вертикаль")
+    goods = None
+    if vertical == "Товары":
+        goods = st.selectbox("Направление товаров", list(GOODS), index=None, placeholder="Ресейл или распродажа")
+    target = make_target(vertical, goods) if vertical and (vertical != "Товары" or goods) else None
+    if target:
+        st.caption("Целевой UVP: " + target["label"] + " — " + target["meaning"]
+                   + (" · " + target["period"] if target["period"] else ""))
     uploaded_file = st.file_uploader("Загрузите ролик (MP4 / MOV)", type=["mp4", "mov"])
     st.caption("AIPM 1.0: 3 просмотра. AIPM 2.0: 2 просмотра. Message Delivery: 30 респондентов.")
     analyze_btn = st.button("Начать анализ", type="primary", use_container_width=True)
@@ -99,6 +119,8 @@ if uploaded_file is not None and not analyze_btn:
 if analyze_btn:
     if uploaded_file is None:
         st.warning("Сначала загрузите ролик.")
+    elif target is None:
+        st.warning("Выберите вертикаль; для товаров также укажите ресейл или распродажу.")
     else:
         st.session_state.pop("aipm3_result", None)
         suffix = Path(uploaded_file.name).suffix.lower() or ".mp4"
@@ -115,6 +137,9 @@ if analyze_btn:
                     models=frozen_models,
                     progress=lambda message: status.update(label=message),
                 )
+                st.session_state["aipm3_result"] = result
+                status.update(label="Проверяем попадание в UVP выбранной вертикали")
+                result = with_uvp(result, target, api_key)
                 status.update(label="Анализ завершён", state="complete", expanded=False)
             st.session_state["aipm3_result"] = result
         except AnalysisBusy as exc:
@@ -136,6 +161,14 @@ if "aipm3_result" in st.session_state:
         if current_sha is not None and current_sha != stored.get("source_sha"):
             st.warning("Загружен другой файл. Нажмите «Начать анализ»: прежние оценки относятся к предыдущему ролику.")
         else:
+            current_assessment = stored.get("vertical_uvp", {})
+            if target and (current_assessment.get("target") != target or current_assessment.get("status") == "error"):
+                if current_assessment and current_assessment.get("target") != target:
+                    st.info("Выбрана другая вертикаль или направление. Ниже сохранена проверка для прежнего выбора.")
+                if st.button("Проверить UVP для выбранной вертикали"):
+                    with st.spinner("Проверяем UVP по сохранённым ответам"):
+                        stored = with_uvp(stored, target, api_key)
+                    st.session_state["aipm3_result"] = stored
             show_result(stored)
     else:
         st.warning("Обновлена нормировка AIPM 3.0. Запустите анализ заново: прежний результат относится к старой версии расчёта.")

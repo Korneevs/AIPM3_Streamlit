@@ -297,7 +297,8 @@ def test_whole_pipeline_routes_independent_features(tmp_path, monkeypatch):
     at.session_state["aipm3_result"] = result
     at.run()
     assert not at.exception
-    assert len(at.get("plotly_chart")) == 7
+    from aipm3.marketing_profile import build_marketing_profile
+    assert len(at.get("plotly_chart")) == len(build_marketing_profile(result)["topics"])
     assert sum(item.value.count("к среднему") for item in at.markdown) == 4
     at.session_state["aipm3_result"] = {**result, "scoring_version": "previous"}
     at.run()

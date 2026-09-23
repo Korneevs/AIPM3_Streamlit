@@ -43,19 +43,26 @@ def metric_summaries(result: dict) -> list[dict]:
 
 
 def show_metric_summary(result: dict) -> None:
-    for column, card in zip(st.columns(4), metric_summaries(result)):
+    cards = metric_summaries(result)
+    def render(column, card, primary):
         status, color, background, border = STYLES[card["level"]]
         rounded = round(card["delta"])
         value = f"{rounded:+d}%" if rounded else "0%"
         value = value.replace("-", "−")
         column.markdown(
             f'<div style="background:{background};border:1px solid {border};'
-            f'border-radius:10px;padding:18px 16px;color:{color};">'
-            f'<div style="font-size:14px;min-height:42px;color:#343745;">{escape(card["label"])}</div>'
-            f'<div style="font-size:36px;line-height:1.2;font-weight:700;">{value}</div>'
+            f'border-radius:12px;padding:{"24px" if primary else "18px 16px"};color:{color};'
+            f'margin-bottom:{"16px" if primary else "0"};" data-metric="{"overall" if primary else "component"}">'
+            f'<div style="font-size:{18 if primary else 14}px;color:#343745;">'
+            f'{"Общая оценка · " if primary else ""}{escape(card["label"])}</div>'
+            f'<div style="font-size:{60 if primary else 34}px;line-height:1.2;font-weight:700;margin-top:8px;">{value}</div>'
             '<div style="font-size:13px;margin-top:4px;" '
             'title="0% — средний индекс по референсным роликам. Цвет показывает положение относительно диапазона нормы.">к среднему</div>'
             f'<div style="font-size:15px;font-weight:600;margin-top:16px;">{status}</div>'
             '</div>',
             unsafe_allow_html=True,
         )
+
+    render(st, cards[0], True)
+    for column, card in zip(st.columns(3), cards[1:]):
+        render(column, card, False)

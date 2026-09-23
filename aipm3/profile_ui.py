@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from html import escape
 
-import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -11,9 +10,9 @@ from .marketing_profile import build_marketing_profile
 
 
 DIRECTIONS = {
-    "up": ("В сумме помогает", "#137547"),
-    "down": ("В сумме снижает", "#B42332"),
-    "balanced": ("Плюсы и минусы уравновешены", "#667085"),
+    "up": ("Поддерживает", "#137547"),
+    "down": ("Снижает", "#B42332"),
+    "balanced": ("Нет вклада", "#667085"),
 }
 
 
@@ -53,64 +52,55 @@ def topic_figure(outcomes):
 def show_feature_profile(result):
     profile = build_marketing_profile(result)
     st.subheader("Профиль ролика")
-
-    for topic in profile["topics"]:
-        with st.container(border=True):
-            st.markdown(f'<div id="profile-{topic["id"]}" style="scroll-margin-top:80px;"></div>', unsafe_allow_html=True)
-            description, effects = st.columns([1, 1.15], gap="large")
-            with description:
-                st.markdown("#### " + topic["title"])
-                st.write(topic["finding"])
-                st.markdown("**" + topic["conclusion"] + "**")
-            with effects:
-                for row in topic["outcomes"]:
-                    if not row["available"]:
-                        st.markdown(f'**{row["label"]}** · недостаточно данных')
-                        continue
-                    status, color = DIRECTIONS[row["direction"]]
-                    if row["importance"] == 0:
-                        status = "Нет вклада в эту оценку"
-                    st.markdown(
-                        f'<div style="margin:5px 0 8px;line-height:1.5;font-size:14px;">'
-                        f'<strong>{escape(row["label"])}</strong> · '
-                        f'<span style="color:{color};font-weight:600;">{status}</span>'
-                        f'<span> · Важность: '
-                        f'<strong>{escape(share_text(row["importance"]))}</strong></span></div>',
-                        unsafe_allow_html=True,
-                    )
-                if any(row["available"] for row in topic["outcomes"]):
-                    st.plotly_chart(topic_figure(topic["outcomes"]), use_container_width=True,
-                                    config={"displayModeBar": False}, key="topic_" + topic["id"])
-            with st.expander("Что учтено в оценке"):
-
-                if not topic["observations"]:
-                    st.write("Нет совместимых данных для подробного разбора.")
-                for label, definition, value in topic["observations"]:
-                    st.markdown(f"**{label}: {value}**")
-                    st.caption(definition)
-                if topic.get("combined_checks"):
-                    st.markdown("**Что оценивается в сочетании**")
-                    st.write(topic["combined_checks"])
-                st.markdown("**Вклад отдельных свойств в этом ролике**")
-                st.caption("Сверху — самые весомые свойства внутри темы. Проценты относятся ко всей "
-                           "соответствующей оценке, а не только к этой теме. Отсутствие приёма тоже может "
-                           "помогать прогнозу — наличие всех приёмов не является целью.")
-                for row in topic["outcomes"]:
-                    if row["available"]:
-                        st.markdown("**" + row["label"] + "**")
-                        details = [{"Что учитывается": driver["label"],
-                                    "Направление": {"up": "Помогает", "down": "Снижает", "balanced": "Нет вклада"}[driver["direction"]],
-                                    "Важность": share_text(driver["importance"])} for driver in row["drivers"]]
-                        st.table(pd.DataFrame(details).set_index("Что учитывается"))
-
+    components = [("aipm1", "Заметность"), ("aipm2", "Запоминаемость"),
+                  ("message_delivery", "Считываемость")]
+    for tab, (component, label) in zip(st.tabs([label for _, label in components]), components):
+        with tab:
+            for topic in [t for t in profile["topics"] if t["component"] == component]:
+                row = topic["outcomes"][0]
+                with st.container(border=True):
+                    description, effects = st.columns([1.5, 1], gap="large")
+                    with description:
+                        st.markdown("#### " + topic["title"])
+                        st.write(topic["finding"])
+                        if any(d["feature"].startswith("eng__") for d in row["drivers"]):
+                            st.caption("Здесь оценено сочетание свойств. Его вклад нельзя приписать одному из них.")
+                        if row["available"] and row["direction"] == "down":
+                            check = next((d["check"] for d in row["drivers"] if d["check"]), None)
+                            if check:
+                                st.markdown("**Вариант для проверки:** " + check)
+                    with effects:
+                        if not row["available"]:
+                            st.write("Недостаточно данных для оценки вклада")
+                        else:
+                            status, color = DIRECTIONS[row["direction"]]
+                            st.markdown(
+                                f'<div style="color:{color};font-weight:600;margin:12px 0 5px;">'
+                                f'{escape(status)} · {escape(label.lower())}</div>'
+                                f'<div style="font-size:14px;">Вес в этой оценке: '
+                                f'<strong>{escape(share_text(row["importance"]))}</strong></div>',
+                                unsafe_allow_html=True)
+                            st.plotly_chart(topic_figure([row]), use_container_width=True,
+                                            config={"displayModeBar": False}, key="topic_" + topic["id"])
+                    with st.expander("Что учтено и что означает вес"):
+                        st.write(topic["conclusion"])
+                        for driver in row["drivers"]:
+                            st.markdown("**" + driver["label"] + "**")
+                            for name, definition, value in driver["observations"]:
+                                st.write(name + ": " + value)
+                                st.caption(definition)
+                            if row["available"]:
+                                st.caption("Вес свойства в оценке «" + label + "»: " + share_text(driver["importance"]))
+                            if driver["feature"].startswith("eng__"):
+                                st.caption("Это сочетание свойств: модель оценивает их вместе. Разделить этот вклад между отдельными приёмами без изменения модели нельзя.")
+                        st.caption("Вес — доля этого свойства в силе всех вкладов в одну оценку данного ролика. "
+                                   "Более высокий вес означает больший вклад в расчёт, а не гарантированный рост после правки.")
     with st.expander("Как рассчитан вклад"):
-        st.write("Важность темы — её доля в суммарной силе положительных и отрицательных "
-                 "вкладов свойств этого ролика. Внутри одной оценки доли тем составляют 100% "
-                 "до округления; если все вклады нулевые, все доли равны нулю. "
-                 "Фиксированный контекст бренда в профиль не входит.")
-        st.write("Зелёная часть поддерживает прогноз, красная — снижает. Подпись показывает "
-                 "их суммарный результат. Веса отдельных свойств приведены в подробностях каждой темы. "
-                 "Вклады заметности, запоминаемости и считываемости не складываются между собой.")
-        st.caption("Используются сохранённые SHAP-вклады: для заметности — перевес высокого класса "
-                   "над низким, для двух других оценок — непрерывный прогноз. Это объяснение модели "
-                   "для данного ролика, а не доля зрителей и не прогноз роста после правки.")
+        st.write("В каждой вкладке сначала показаны свойства, снижающие её оценку, затем поддерживающие. "
+                 "Внутри этих групп карточки упорядочены по весу. Разные направления и разные оценки показаны отдельно; "
+                 "ни один вклад не скрыт и не учтён дважды.")
+        st.write("Веса внутри одной оценки составляют 100% до округления; если все вклады нулевые, все веса равны нулю. "
+                 "Фиксированный контекст бренда исключён. Веса разных оценок не складываются.")
+        st.caption("Это сохранённые SHAP-вклады: для заметности — перевес высокого класса над низким, "
+                   "для запоминаемости и считываемости — непрерывный прогноз. Они объясняют расчёт модели, "
+                   "а не доказывают причинное влияние. Варианты правок нужно проверять сравнением роликов.")
