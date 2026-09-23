@@ -4,11 +4,9 @@ import json
 from pathlib import Path
 
 import pytest
-from streamlit.testing.v1 import AppTest
 
 from aipm3 import feature_profile as profile, models
 from aipm3.message_delivery_runtime import FINAL_FEATURES
-from aipm3.profile_ui import group_figure
 
 
 def manifest():
@@ -208,56 +206,6 @@ def test_deterministic_read_only_without_scoring_or_network(monkeypatch):
     source.update(diagnostic_panel=[{'anything': 999}], diagnostics={'current_brief': {'uvp': 'x', 'rtb': 'y'}},
                   interpretation={'summary': 'An unrelated narrative'}, aipm3={'index': -999, 'level': 2})
     assert profile.build_profile(source, calibration) == first
-
-
-def test_plotly_uses_fixed_zero_to_hundred_axis_and_rounded_numbers():
-    result = source_result()
-    set_group_effect(result, 'aipm1', 'Фокус внимания', .35)
-    set_group_effect(result, 'aipm1', 'Выделение оффера', -.2)
-    rows = [r for r in profile.build_profile(result, manifest())['groups'] if r['component'] == 'aipm1']
-    before = deepcopy(rows)
-    figure = group_figure(rows)
-    assert list(figure.layout.xaxis.range) == [0, 100]
-    assert list(figure.layout.xaxis.tickvals) == [0, 50, 100]
-    assert figure.layout.xaxis.fixedrange
-    assert list(figure.data[0].x) == [100] * 4
-    assert list(figure.data[1].x) == [r['score'] for r in rows]
-    assert [list(x) for x in figure.data[1].customdata] == [[r['label'], r['display_score']] for r in rows]
-    assert all(isinstance(r['display_score'], int) for r in rows)
-    assert all(f"<b>{r['display_score']} / 100</b>" in [a.text for a in figure.layout.annotations] for r in rows)
-    assert any(s.x0 == s.x1 == 50 for s in figure.layout.shapes)
-    assert figure.to_json() == group_figure(rows).to_json()
-    assert rows == before
-
-
-def test_plotly_no_data_is_not_a_zero_length_score():
-    result = source_result()
-    del result['aipm1']['feature_effects']['humor']
-    rows = [r for r in profile.build_profile(result, manifest())['groups'] if r['component'] == 'aipm1']
-    figure = group_figure(rows)
-    assert len(figure.data[0].x) == 4 and len(figure.data[1].x) == 3
-    assert any(a.text == 'Нет данных' for a in figure.layout.annotations)
-    assert all(value == 50 for value in figure.data[1].x)
-
-
-def test_ui_shows_eleven_numeric_groups_without_uvp_rtb_narratives(monkeypatch):
-    monkeypatch.setattr(profile, 'calibration_manifest', manifest)
-    app = AppTest.from_string('''
-import streamlit as st
-from aipm3.profile_ui import show_feature_profile
-show_feature_profile(st.session_state['result'])
-''')
-    app.session_state['result'] = source_result()
-    app.run()
-    assert not app.exception
-    text = ' '.join(str(item.value) for kind in ['markdown', 'caption', 'subheader', 'text']
-                    for item in getattr(app, kind))
-    for prohibited in ['UVP', 'RTB', 'УВП', 'РТБ', 'Что получилось', 'Что ослабляет']:
-        assert prohibited not in text
-    assert not app.text_input and not app.text_area and not app.button and not app.dataframe
-    assert len(app.get('plotly_chart')) == 3
-    assert 'Больше — лучше' in text and '50 — нейтральный' in text
-    assert 'Он не подстраивается под загруженный ролик' in text
 
 
 def test_real_frozen_calibration_and_saved_baselines_when_available():

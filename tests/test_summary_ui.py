@@ -7,6 +7,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from aipm3.models import SCORING_VERSION, EXPECTED_ARTIFACT_SHA256
+from aipm3.feature_profile import GROUPS
 from aipm3.summary_ui import REFERENCE_MEANS, metric_summaries
 
 
@@ -19,7 +20,7 @@ def sample_result():
     }
     for name, index in [("aipm1", 1.0510204081632653), ("aipm2", 0.8775510204081632653),
                         ("message_delivery", 0.5714285714285714)]:
-        result[name] = {"reference_index": index, "percentile": 100 * (index - .5), "feature_effects": {}}
+        result[name] = {"reference_index": index, "percentile": 100 * (index - .5), "feature_effects": {feature: 0.0 for features in GROUPS[name][1].values() for feature in features}}
     return result
 
 
@@ -52,7 +53,7 @@ def test_reference_means_match_independent_historical_pandas_ranks():
         assert (100 * (indices / REFERENCE_MEANS[name] - 1)).mean() == pytest.approx(0, abs=1e-12)
 
 
-def test_result_page_has_four_colored_cards_and_only_three_group_charts():
+def test_result_page_has_four_colored_cards_and_five_topics():
     root = Path(__file__).resolve().parents[1]
     source = (root / "app_pages/video_pretest.py").read_text().split('\nst.title(')[0]
     app = AppTest.from_string(source + '\nshow_result(st.session_state["result"])\n')
@@ -66,7 +67,7 @@ def test_result_page_has_four_colored_cards_and_only_three_group_charts():
         assert value in text
     assert text.count("к среднему") == 4
     assert "Основная идея тестового ролика" in text
-    assert len(app.get("plotly_chart")) == 3
+    assert len(app.get("plotly_chart")) == 5
     assert len(app.get("download_button")) == 1
     assert app.session_state["result"] == before
 

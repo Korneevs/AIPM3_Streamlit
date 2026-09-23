@@ -16,6 +16,7 @@ from aipm3.profile_ui import show_feature_profile
 from aipm3.feature_profile import build_profile
 from aipm3.result_export import export_result
 from aipm3.summary_ui import show_metric_summary
+from aipm3.marketing_profile import build_marketing_profile
 
 
 @st.cache_resource(show_spinner=False)
@@ -64,6 +65,7 @@ def show_result(result: dict, api_key: str = "", video_bytes: bytes | None = Non
     show_feature_profile(result)
     downloadable = export_result(result)
     downloadable['feature_profile'] = build_profile(result)
+    downloadable['marketing_profile'] = build_marketing_profile(result)
     st.download_button(
         "Скачать результат JSON",
         data=json.dumps(downloadable, ensure_ascii=False, indent=2),
