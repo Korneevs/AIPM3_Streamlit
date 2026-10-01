@@ -1,0 +1,160 @@
+{
+  "heads": {
+    "n": {
+      "task": "n",
+      "mode": "all",
+      "learner": "svr",
+      "fixed": [
+        "character_close_up_seconds",
+        "is_celeb",
+        "monologue_to_camera",
+        "pack_shot_duration_seconds",
+        "panel__first_core_claim_time_band",
+        "phys__audio_dynamic_range_db",
+        "phys__motion_mean",
+        "product_demo_seconds",
+        "state_transformation_present"
+      ],
+      "C": 10,
+      "gamma": 0.1,
+      "target": "rank",
+      "step": 0,
+      "repeat_training": true,
+      "clip_quantile": 0,
+      "scaler": "robust",
+      "round_time_band": true,
+      "audio_definition": "active_relative40",
+      "motion_definition": "pixel8_median",
+      "time_exposure_share": [
+        "character_close_up_seconds"
+      ]
+    },
+    "m": {
+      "task": "m",
+      "fixed": [
+        "fresh__audiovisual_claim_alignment",
+        "main_character",
+        "numeric_offer_on_screen",
+        "panel__distinct_benefit_count",
+        "panel__mandatory_inference_chain_length",
+        "panel__message_specificity_level",
+        "panel__offer_novelty_explanation_need",
+        "panel__product_role_reveal_time_band",
+        "promo"
+      ],
+      "mode": "expanded",
+      "learner": "ridge",
+      "alpha": 1,
+      "target": "log",
+      "step": 0.5,
+      "calibration": "train_affine",
+      "repeat_training": true,
+      "panel_consensus": true,
+      "md_refinement": true,
+      "noticeability_weight_power": 2
+    },
+    "r": {
+      "task": "r",
+      "learner": "ensemble",
+      "target": "raw",
+      "mode": "select_history_hs0_geo_hier_firstshare",
+      "fixed": [
+        "brand_first_mention_seconds",
+        "brand_history",
+        "has_callback_to_opening",
+        "human_characters_count",
+        "jingle_present",
+        "problem_solution_arc_present",
+        "scene_pace_high"
+      ],
+      "members": [
+        {
+          "task": "r",
+          "mode": "select_history_hs0_geo_hier_firstshare",
+          "fixed": [
+            "brand_first_mention_seconds",
+            "brand_history",
+            "human_characters_count",
+            "jingle_present",
+            "problem_solution_arc_present",
+            "scene_pace_high"
+          ],
+          "target": "log",
+          "step": "recall_stable",
+          "avito_weight": 2.0,
+          "learner": "svr",
+          "C": 3,
+          "gamma": 0.03,
+          "epsilon": 0.1,
+          "consensus_features": [
+            "has_callback_to_opening",
+            "jingle_present",
+            "problem_solution_arc_present",
+            "scene_pace_high"
+          ],
+          "consensus_rule": "two_thirds",
+          "recall_measurement_version": "binary_consensus_v2_preserve_missing"
+        },
+        {
+          "task": "r",
+          "mode": "select_history_hs0_geo_hier_firstshare",
+          "fixed": [
+            "brand_first_mention_seconds",
+            "brand_history",
+            "human_characters_count",
+            "jingle_present",
+            "problem_solution_arc_present",
+            "scene_pace_high",
+            "has_callback_to_opening"
+          ],
+          "target": "log",
+          "step": "recall_stable",
+          "avito_weight": 3,
+          "learner": "svr",
+          "C": 10,
+          "gamma": 0.03,
+          "consensus_features": [
+            "has_callback_to_opening",
+            "jingle_present",
+            "problem_solution_arc_present",
+            "scene_pace_high"
+          ],
+          "consensus_rule": "two_thirds",
+          "recall_measurement_version": "binary_consensus_v2_preserve_missing"
+        }
+      ],
+      "recall_measurement_version": "binary_consensus_v2_preserve_missing"
+    }
+  },
+  "feature_changes": {
+    "n": {
+      "removed": [
+        "panel__action_object_pair_clarity",
+        "phys__saturation_variation"
+      ],
+      "added": [
+        "phys__audio_dynamic_range_db",
+        "phys__motion_mean"
+      ]
+    },
+    "m": {
+      "removed": [
+        "panel__audio_only_message_completeness",
+        "panel__demonstrated_user_outcome_count"
+      ],
+      "added": [
+        "fresh__audiovisual_claim_alignment",
+        "panel__mandatory_inference_chain_length"
+      ]
+    },
+    "r": {
+      "removed": [],
+      "added": [
+        "has_callback_to_opening"
+      ]
+    }
+  },
+  "status": "Separate candidate, accepted 48.02/12.38 model preserved",
+  "formula": "Q=mean10(N*MD*R); C=2/(1+exp(-(Q/mu_other_families-1)))",
+  "independent_validation": false
+}

@@ -1,3 +1,5 @@
+import os
+
 import streamlit as st
 
 
@@ -55,4 +57,6 @@ pages = [
     st.Page(home, title="Главная", icon="🏠", default=True),
     st.Page("app_pages/video_pretest.py", title="Видео-претест", icon="🎬"),
 ]
+if os.environ.get("AIPM_ENABLE_LATEST_PRETEST") == "1":
+    pages.append(st.Page("app_pages/latest_pretest.py", title="Модель от 1 октября", icon="🔎"))
 st.navigation(pages).run()
