@@ -157,7 +157,16 @@ def test_message_delivery_computations_are_unchanged():
         pytest.skip("Local MD source not installed")
     from aipm3 import message_delivery_runtime as md
     def functions(path):
-        return {n.name: ast.dump(n, include_attributes=False) for n in ast.parse(path.read_text()).body
+        class CacheValidationMetadata(ast.NodeTransformer):
+            def visit_Call(self, node):
+                self.generic_visit(node)
+                if isinstance(node.func, ast.Name) and node.func.id == "call_json":
+                    # Domain IDs are now checked before a response enters cache.
+                    # All original model computations and request arguments stay exact.
+                    node.keywords = [kw for kw in node.keywords if kw.arg != "expected_ids"]
+                return node
+        tree = CacheValidationMetadata().visit(ast.parse(path.read_text()))
+        return {n.name: ast.dump(n, include_attributes=False) for n in tree.body
                 if isinstance(n, ast.FunctionDef)}
     original, deployed = functions(canonical), functions(Path(md.__file__))
     runtime_only = {"load_api_key", "video_duration", "prepare_video", "call_json",

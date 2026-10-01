@@ -36,6 +36,7 @@ from typing import Any
 import joblib
 import numpy as np
 import pandas as pd
+from jsonschema import Draft202012Validator, ValidationError
 from openai import OpenAI
 from scipy import stats
 
@@ -358,13 +359,40 @@ def call_json(
     *, task_key: str, prompt: str, schema: dict[str, Any], cache_dir: Path,
     secrets_path: Path, video_b64: str | None, video_sha: str | None,
     temperature: float, fresh: bool, retries: int = 5,
+    expected_ids: tuple[str, str, set[str]] | None = None,
 ) -> dict[str, Any]:
     cache_dir.mkdir(parents=True, exist_ok=True)
     token = hashlib.sha256(f"md-final-v1|{video_sha}|{task_key}".encode()).hexdigest()[:16]
     full_prompt = f"{prompt}\n\nREQUEST_TOKEN: {token}\nВерни request_token дословно."
     path = cache_path(cache_dir, task_key, full_prompt, video_sha)
+    validator = Draft202012Validator(schema.get("json_schema", {}).get("schema", {}))
+
+    def validate(payload):
+        if not isinstance(payload, dict):
+            raise ValueError("Response must be a JSON object")
+        validator.validate(payload)
+        returned = str(payload.get("request_token", "")).strip()
+        prefix_match = (len(returned) >= 12
+                        and (returned.startswith(token) or token.startswith(returned)))
+        if not (returned == token or prefix_match):
+            raise ValueError("request_token mismatch")
+        if expected_ids is not None:
+            collection, field, expected = expected_ids
+            ids = [row[field] for row in payload[collection]]
+            if len(ids) != len(expected) or set(ids) != expected:
+                raise ValueError(f"{field} IDs mismatch")
+
     if path.exists() and not fresh:
-        return json.loads(path.read_text(encoding="utf-8"))["response"]
+        try:
+            saved = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(saved, dict) or saved.get("task") != task_key:
+                raise ValueError("Cached task mismatch")
+            validate(saved["response"])
+            return saved["response"]
+        except (KeyError, TypeError, ValueError, ValidationError):
+            # Preserve only this invalid response for diagnosis. Other completed
+            # requests in the same repeat remain available for resumption.
+            path.replace(path.with_name(f"{path.name}.invalid-{time.time_ns()}"))
     content: list[dict[str, Any]] = [{"type": "text", "text": full_prompt}]
     if video_b64 is not None:
         content.append({
@@ -382,13 +410,7 @@ def call_json(
                     response_format=schema,
                 )
             payload = json.loads(response.choices[0].message.content)
-            returned = str(payload.get("request_token", "")).strip()
-            prefix_match = (
-                len(returned) >= 12
-                and (returned.startswith(token) or token.startswith(returned))
-            )
-            if not (returned == token or prefix_match):
-                raise ValueError("request_token mismatch")
+            validate(payload)
             path.write_text(
                 json.dumps({"task": task_key, "response": payload}, ensure_ascii=False, indent=2),
                 encoding="utf-8",
@@ -436,6 +458,7 @@ def extract_panel30(
             task_key=f"panel30_{call_id:02d}", prompt=panel_prompt(personas),
             schema=schema, cache_dir=output_dir / "cache", secrets_path=secrets,
             video_b64=b64, video_sha=sha, temperature=0.2, fresh=fresh,
+            expected_ids=("answers", "respondent_id", {key for key, _ in personas}),
         )
         by_id = {str(item["respondent_id"]): item for item in payload["answers"]}
         expected = {key for key, _ in personas}
@@ -581,6 +604,7 @@ def cluster_recovery(
         task_key="recovery_cluster", prompt=prompt, schema=CLUSTER_SCHEMA,
         cache_dir=output_dir / "cache", secrets_path=secrets,
         video_b64=None, video_sha=sha, temperature=0.0, fresh=fresh,
+        expected_ids=("assignments", "respondent_uid", {row["respondent_uid"] for row in rows}),
     )
     assignments = {item["respondent_uid"]: item for item in payload["assignments"]}
     if set(assignments) != {row["respondent_uid"] for row in rows}:
@@ -618,6 +642,7 @@ def extract_recovery(
             cache_dir=output_dir / "cache", secrets_path=secrets,
             video_b64=encoded, video_sha=condition_sha,
             temperature=0.0, fresh=fresh,
+            expected_ids=("answers", "respondent_id", {key for key, _ in personas}),
         )
         by_id = {str(item["respondent_id"]): item for item in payload["answers"]}
         return [{

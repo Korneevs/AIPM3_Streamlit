@@ -11,7 +11,10 @@ import streamlit as st
 
 from artifacts import artifact_path
 from aipm3.models import SCORING_VERSION, FrozenModels, load_frozen_models
-from aipm3.pipeline import run_analysis
+from aipm3.repeated_pipeline import (
+    run_repeated_analysis, apply_repeated_celebrity, evaluate_repeated_uvp,
+    is_repeated_result,
+)
 from aipm3.profile_ui import show_feature_profile
 from aipm3.feature_profile import build_profile
 from aipm3.result_export import export_result
@@ -20,13 +23,14 @@ from aipm3.marketing_profile import build_marketing_profile
 from aipm3.runtime_resources import AnalysisBusy
 from aipm3.vertical_uvp import VERTICALS, GOODS, make_target, evaluate_uvp
 from aipm3.uvp_ui import show_uvp
-from aipm3.manual_celebrity import CELEBRITIES, apply_celebrity, selected_celebrity
+from aipm3.manual_celebrity import CELEBRITIES, selected_celebrity
 
 
 def with_uvp(result: dict, target: dict, api_key: str) -> dict:
     try:
-        assessment = evaluate_uvp(result, target, api_key,
-                                  Path(tempfile.gettempdir()) / "aipm3_uvp_cache")
+        evaluator = evaluate_repeated_uvp if is_repeated_result(result) else evaluate_uvp
+        assessment = evaluator(result, target, api_key,
+                               Path(tempfile.gettempdir()) / "aipm3_uvp_cache")
     except Exception:
         # A failed optional diagnostic must never discard finished model scores.
         assessment = {"target": dict(target), "status": "error", "source_sha": result.get("source_sha")}
@@ -70,6 +74,9 @@ def recovery_figure(curve: dict[str, float]) -> go.Figure:
 
 def show_result(result: dict, api_key: str = "", video_bytes: bytes | None = None, suffix: str = ".mp4") -> None:
     show_metric_summary(result)
+    if is_repeated_result(result):
+        st.caption("Оценки и вклады усреднены по 10 полным прогонам. "
+                   "Категориальные наблюдения показаны по наиболее частому ответу.")
     main_idea = str(result.get("main_idea") or "").strip()
     with st.container(border=True):
         st.markdown("### Основная идея ролика")
@@ -115,7 +122,8 @@ with st.sidebar:
         key="selected_celebrity", help="Укажите участника вручную. Если никого из списка нет, выберите «Нет».",
     )
     uploaded_file = st.file_uploader("Загрузите ролик (MP4 / MOV)", type=["mp4", "mov"])
-    st.caption("AIPM 1.0: 3 просмотра. AIPM 2.0: 2 просмотра. Message Delivery: 30 респондентов.")
+    st.caption("10 полных прогонов с усреднением оценок. В каждом: AIPM 1.0 — 3 просмотра, "
+               "AIPM 2.0 — 2 просмотра, Message Delivery — 30 автоматических ответов.")
     analyze_btn = st.button("Начать анализ", type="primary", use_container_width=True)
 
 if uploaded_file is not None and not analyze_btn:
@@ -135,14 +143,14 @@ if analyze_btn:
             source_path = Path(stream.name)
         try:
             with st.status("Анализируем ролик", expanded=True) as status:
-                result = run_analysis(
+                result = run_repeated_analysis(
                     source_video=source_path,
                     output_root=Path(tempfile.gettempdir()) / "aipm3_analysis_cache",
                     api_key=api_key,
                     models=frozen_models,
+                    celebrity=celebrity,
                     progress=lambda message: status.update(label=message),
                 )
-                result = apply_celebrity(result, celebrity)
                 st.session_state["aipm3_result"] = result
                 status.update(label="Проверяем попадание в UVP выбранной вертикали")
                 result = with_uvp(result, target, api_key)
@@ -158,7 +166,8 @@ if analyze_btn:
 
 if "aipm3_result" in st.session_state:
     st.divider()
-    if st.session_state["aipm3_result"].get("scoring_version") == SCORING_VERSION:
+    if (st.session_state["aipm3_result"].get("scoring_version") == SCORING_VERSION
+            and is_repeated_result(st.session_state["aipm3_result"])):
         stored = st.session_state["aipm3_result"]
         current_sha = None
         if uploaded_file is not None:
@@ -170,7 +179,7 @@ if "aipm3_result" in st.session_state:
             if celebrity != selected_celebrity(stored):
                 st.info("Выбор селебрити изменён. Ниже сохранена оценка для прежнего выбора.")
                 if st.button("Применить выбор селебрити"):
-                    stored = apply_celebrity(stored, celebrity)
+                    stored = apply_repeated_celebrity(stored, celebrity)
                     st.session_state["aipm3_result"] = stored
                     st.rerun()
             current_assessment = stored.get("vertical_uvp", {})
@@ -183,4 +192,5 @@ if "aipm3_result" in st.session_state:
                     st.session_state["aipm3_result"] = stored
             show_result(stored)
     else:
-        st.warning("Обновлена нормировка AIPM 3.0. Запустите анализ заново: прежний результат относится к старой версии расчёта.")
+        st.warning("Теперь оценки усредняются по 10 полным прогонам. Запустите анализ: "
+                   "прежний результат не содержит десяти прогонов этой версии.")

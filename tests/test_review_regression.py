@@ -58,8 +58,16 @@ def test_extraction_semantics_unchanged_outside_explicit_memory_fixes():
         },
     }.items():
         def functions(source):
+            class CacheValidationMetadata(ast.NodeTransformer):
+                def visit_Call(self, node):
+                    self.generic_visit(node)
+                    if isinstance(node.func, ast.Name) and node.func.id == "call_json":
+                        # Only pre-cache ID validation metadata may differ.
+                        node.keywords = [kw for kw in node.keywords if kw.arg != "expected_ids"]
+                    return node
+            tree = CacheValidationMetadata().visit(ast.parse(source))
             return {n.name: ast.dump(n, include_attributes=False)
-                    for n in ast.parse(source).body if isinstance(n, ast.FunctionDef)}
+                    for n in tree.body if isinstance(n, ast.FunctionDef)}
         before, after = functions(before_source(path)), functions((ROOT / path).read_bytes())
         assert before.keys() == after.keys()
         for name in before.keys() - allowed:

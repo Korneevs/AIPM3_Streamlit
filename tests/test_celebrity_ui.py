@@ -48,17 +48,21 @@ show_feature_profile(st.session_state['result'])
 
 def test_choice_only_changes_saved_scores_on_apply_without_inference_or_uvp(monkeypatch):
     import artifacts
-    from aipm3 import models, pipeline, vertical_uvp
+    from aipm3 import models, pipeline, repeated_pipeline, vertical_uvp
+    from test_repeated_pipeline import child
     root = Path(__file__).resolve().parents[1]
     monkeypatch.setattr(artifacts, 'artifact_path', lambda name: name)
     monkeypatch.setattr(models, 'load_frozen_models', lambda *args: object())
     def forbidden(*args, **kwargs):
         pytest.fail('Manual choice must not call inference or UVP')
     monkeypatch.setattr(pipeline, 'run_analysis', forbidden)
+    monkeypatch.setattr(repeated_pipeline, 'run_repeated_analysis', forbidden)
+    monkeypatch.setattr(repeated_pipeline, 'evaluate_uvp', forbidden)
     monkeypatch.setattr(vertical_uvp, 'evaluate_uvp', forbidden)
     app = AppTest.from_file(str(root / 'app_pages/video_pretest.py'), default_timeout=30)
     app.secrets['VSELLM_API_KEY'] = 'test'
-    original = source()
+    original = repeated_pipeline.aggregate_repeats([child(i, 'same-video') for i in range(1, 11)])
+    original['vertical_uvp'] = {'status': 'error', 'target': make_target('Работа')}
     app.session_state['aipm3_result'] = deepcopy(original)
     app.run()
     assert not app.exception
@@ -67,7 +71,7 @@ def test_choice_only_changes_saved_scores_on_apply_without_inference_or_uvp(monk
     assert any('Выбор селебрити изменён' in info.value for info in app.info)
     next(b for b in app.button if b.label == 'Применить выбор селебрити').click().run()
     adjusted = deepcopy(app.session_state['aipm3_result'])
-    assert adjusted == apply_celebrity(original, 'fomenko')
+    assert adjusted == repeated_pipeline.apply_repeated_celebrity(original, 'fomenko')
     assert adjusted['vertical_uvp'] == original['vertical_uvp']
     app.run()
     assert app.session_state['aipm3_result'] == adjusted

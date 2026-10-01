@@ -4,7 +4,7 @@ from __future__ import annotations
 from copy import deepcopy
 
 
-_PRIVATE_MEDIA_FIELDS = {"objective_runs", "transcripts", "prepared_video"}
+_PRIVATE_MEDIA_FIELDS = {"objective_runs", "transcripts", "prepared_video", "repeat_cache"}
 _RETIRED_PRESENTATION_FIELDS = {"interpretation", "manager_readout"}
 _RETIRED_BRIEF_FIELDS = {
     "brief", "current_brief", "brief_alignment", "message_alignment",
@@ -18,6 +18,8 @@ def export_result(result: dict) -> dict:
     exported = deepcopy(result)
     for key in _PRIVATE_MEDIA_FIELDS | _RETIRED_BRIEF_FIELDS | _RETIRED_PRESENTATION_FIELDS:
         exported.pop(key, None)
+    if isinstance(exported.get("repeat_results"), list):
+        exported["repeat_results"] = [export_result(row) for row in exported["repeat_results"]]
     diagnostics = exported.get("diagnostics")
     if isinstance(diagnostics, dict):
         for key in _RETIRED_BRIEF_FIELDS:

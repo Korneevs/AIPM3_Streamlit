@@ -3,6 +3,7 @@ pandas>=2.1,<3
 numpy>=1.26,<3
 plotly>=5.24,<7
 openai>=1.58,<3
+jsonschema>=4.23,<5
 catboost>=1.2.7,<2
 scikit-learn==1.5.1
 scipy>=1.12,<2
