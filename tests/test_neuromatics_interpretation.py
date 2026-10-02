@@ -95,6 +95,32 @@ def test_neuromatics_explanation_selects_adapted_heads_and_leaves_message_delive
                            frozen.heads["r"].predict(rows["r"]))
 
 
+def test_display_transfer_preserves_scores_and_uses_paired_prototype_reference(neuro_result, neuro_explanation):
+    from aipm3.display_calibration import neuromatics_reference
+    ref = neuromatics_reference(runtime.NEUROMATICS_SCORING_VERSION)
+    assert ref['pair_count'] == 12
+    for c in neuro_explanation['cards']:
+        assert c['score'] == pytest.approx(neuro_result['scores'][runtime.SCORE_NAMES[c['task']]], abs=1e-12)
+        assert c['index'] == pytest.approx(100*c['score']/ref['references'][c['task']]['mean'])
+    assert neuro_explanation['overall']['index'] == pytest.approx(100*neuro_result['scores']['Q']/ref['references']['Q']['mean'])
+
+
+def test_incomplete_voice_withholds_norms_without_imputing_or_changing_scores(neuro_result):
+    from aipm3.manager_report import report_cards
+    before = deepcopy(neuro_result)
+    result = deepcopy(neuro_result)
+    result['source_sha'] = 'd'*64
+    result['audio_review'] = dict(status='partial', source_sha='d'*64)
+    explained = interpretation.build_latest_interpretation(result)
+    assert not explained['overall']['assessment_available']
+    assert all(not c['assessment_available'] for c in explained['cards'])
+    assert neuro_result == before
+    assert result['scores'] == neuro_result['scores']
+    assert explained['audio_status'] == 'partial'
+    assert all(item['feature'] not in {'jingle_present','brand_first_mention_seconds','fresh__audiovisual_claim_alignment'}
+               for c in report_cards(explained) for g in ['strengths','limitations'] for item in c[g])
+
+
 def test_physical_evidence_describes_original_file_not_clipped_input(neuro_explanation):
     drivers = {driver["feature"]: driver for driver in neuro_explanation["details"]["n"]["drivers"]}
     audio = drivers["phys__audio_dynamic_range_db"]

@@ -1,0 +1,69 @@
+{
+  "version": "neuromatics-display-pairs12-median-log-v1",
+  "scoring_version": "neuromatics-nclip-ridge100-20261002-c9e7282c127d",
+  "method": "fixed_median_log_finished_over_prototype",
+  "pair_count": 12,
+  "validation": "paired_family_excluded_scale_transfer_conditional_on_selected_model",
+  "references": {
+    "n": {
+      "mean": 0.35468517868338056,
+      "cuts": [
+        0.3164985376612246,
+        0.3899714124754375
+      ],
+      "finished_scale_factor": 1.09898165573463,
+      "finished_reference": {
+        "mean": 0.38979250493399464,
+        "cuts": [
+          0.34782608695652173,
+          0.4285714285714286
+        ]
+      }
+    },
+    "m": {
+      "mean": 0.2406480103614778,
+      "cuts": [
+        0.21018683055852724,
+        0.26151777219426237
+      ],
+      "finished_scale_factor": 1.0300775392783936,
+      "finished_reference": {
+        "mean": 0.2478861103453924,
+        "cuts": [
+          0.21650873321045241,
+          0.2693835832594333
+        ]
+      }
+    },
+    "r": {
+      "mean": 0.11812169834347307,
+      "cuts": [
+        0.07875155844837764,
+        0.11468783408033799
+      ],
+      "finished_scale_factor": 0.9321835311129543,
+      "finished_reference": {
+        "mean": 0.11011110186287792,
+        "cuts": [
+          0.07341090583505687,
+          0.10691011014870608
+        ]
+      }
+    },
+    "Q": {
+      "mean": 0.010915407315672797,
+      "cuts": [
+        0.009334895741792377,
+        0.01169126364240798
+      ],
+      "finished_scale_factor": 0.9420553913901035,
+      "finished_reference": {
+        "mean": 0.010282918310948536,
+        "cuts": [
+          0.008793988861620028,
+          0.011013817946493537
+        ]
+      }
+    }
+  }
+}

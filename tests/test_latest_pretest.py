@@ -24,7 +24,7 @@ def interpretation():
     driver = dict(feature="fresh__audiovisual_claim_alignment", value=3, label="Связь изображения и озвучки", evidence={"verified": True,
         "observation": "Изображение показывает заявленное действие.",
         "episodes": [{"start": 3., "end": 5.}]},
-        usable=True, direction="limits", interpretation_kind="association_only", why="Это связь в обученной модели.", check=None)
+        index_points=5, usable=True, direction="limits", interpretation_kind="association_only", why="Это связь в обученной модели.", check=None)
     return dict(cards=[dict(title=title, index=index, level="Типичный уровень",
                            repeat_index_range=[95., 105.], strengths=[], limitations=[driver], unresolved=[])
                       for title, index in [("Заметность", 101), ("Считываемость", 92), ("Запоминаемость", 98)]],
@@ -49,8 +49,8 @@ def test_result_page_shows_three_indices_and_preserves_associations(repeat_count
     assert [item.value for item in app.metric] == ["101", "92", "98"]
     text = " ".join(item.value for item in app.markdown)
     captions = " ".join(item.value for item in app.caption)
-    assert "Что видно в ролике" in text
-    assert "Изображение показывает заявленное действие." in text
+    assert "Что нельзя уверенно объяснить" in text
+    assert "Изображение показывает заявленное действие." not in text
     assert "На что обратить внимание" not in text
     assert "100 - средняя оценка" in captions
     for forbidden in ["Сравнение и разброс", "Версия расчёта", "пункта индекса", "SHAP", "исходные признаки", "Q", "OPM", "Особенность модели", "замороженная"]:
