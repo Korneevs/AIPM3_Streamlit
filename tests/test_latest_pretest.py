@@ -7,7 +7,7 @@ import sys
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from aipm3 import latest_pipeline, latest_interpretation, latest_runtime
+from aipm3 import latest_pipeline, latest_interpretation, latest_runtime, latest_manual_inputs
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +18,9 @@ def isolate_page_import(monkeypatch):
     # The wrapper imports this module; refresh it so each AppTest receives its own mocked dependencies.
     sys.modules.pop("app_pages.latest_pretest", None)
     monkeypatch.delenv("AIPM_NEUROMATICS_RESULT_JSON", raising=False)
+    # These page-routing fixtures intentionally contain no feature rows.
+    # Real scoring/export and checkbox transitions are covered separately.
+    monkeypatch.setattr(latest_manual_inputs, "with_celebrity_review", lambda result, present: result)
 
 
 def interpretation():

@@ -6,7 +6,10 @@ from __future__ import annotations
 
 import re
 
-from .latest_interpretation import LABELS
+from .latest_interpretation import LABELS, observed_label
+
+NEGATIVE_MIN_INDEX_POINTS = .5
+NEGATIVE_MIN_STABILITY = 2 / 3
 
 
 LEVELS = {
@@ -196,6 +199,19 @@ def brief_evidence(text):
     return first
 
 
+def negative_takeaway(feature, value, label, task, directional):
+    """Local score attribution does not imply a universal creative rule."""
+    if directional and feature in {
+        'fresh__audiovisual_claim_alignment', 'panel__mandatory_inference_chain_length',
+        'panel__message_specificity_level', 'panel__offer_novelty_explanation_need',
+        'panel__first_core_claim_time_band', 'panel__product_role_reveal_time_band',
+        'brand_first_mention_seconds',
+    }:
+        return 'В конкретном ролике: ' + takeaway(feature, value, 'limits')
+    metric = {'n': 'заметности', 'm': 'считываемости', 'r': 'запоминаемости'}.get(task, 'ролика')
+    return f'В конкретном ролике «{label}» снижает оценку {metric}.'
+
+
 def report_cards(interpretation):
     cards = []
     incomplete = interpretation.get('audio_status') in {'partial', 'absent'}
@@ -208,7 +224,9 @@ def report_cards(interpretation):
         uncertain = {k: [] for k in ['audio', 'unverified', 'unstable', 'association', 'production']}
         for d in drivers:
             feature = d.get('feature', '')
-            if feature == 'brand_history' or abs(d.get('index_points', 0)) < 1:
+            negative = d.get('direction') == 'limits'
+            minimum = NEGATIVE_MIN_INDEX_POINTS if negative else 1
+            if feature in {'brand_history', 'is_celeb'} or abs(d.get('index_points', 0)) < minimum:
                 continue
             label = LABELS.get(feature, d.get('label', feature))
             if feature.startswith('phys__'):
@@ -223,7 +241,9 @@ def report_cards(interpretation):
                 if abs(d.get('index_points', 0)) >= 2:
                     uncertain['unverified'].append(label)
                 continue
-            if not d.get('usable'):
+            supported = d.get('usable') or (negative and
+                d.get('stable_fraction', 0) >= NEGATIVE_MIN_STABILITY)
+            if not supported:
                 if abs(d.get('index_points', 0)) >= 2:
                     uncertain['unstable'].append(label)
                 continue
@@ -240,16 +260,26 @@ def report_cards(interpretation):
                     'product_demo_seconds', 'panel__distinct_benefit_count'} or
                     (feature == 'panel__message_specificity_level' and value >= 1.5)):
                 directional = False
-            if not directional:
+            local_negative = negative and (feature in ABSENCE or feature == 'pack_shot_duration_seconds'
+                                          or (feature == 'panel__distinct_benefit_count' and value >= 1.5))
+            if not directional and not local_negative:
                 if abs(d.get('index_points', 0)) >= 2:
                     uncertain['association'].append(label)
                 continue
             group = 'strengths' if d.get('direction') == 'supports' else 'limitations'
+            if negative:
+                label = observed_label(feature, value)
             groups[group].append(dict(feature=feature, label=label,
-                takeaway=takeaway(feature, value, d.get('direction')),
+                takeaway=(negative_takeaway(feature, value, label, task, directional) if negative
+                          else takeaway(feature, value, d.get('direction'))),
                 evidence=brief_evidence(observation_text(feature, support, value)),
                 episodes=support.get('episodes', [])[:1],
                 check=plain_text(d.get('check')) if group == 'limitations' else ''))
+        if task == 'r' and interpretation.get('celebrity_present') is True:
+            groups['strengths'].insert(0, dict(
+                feature='manual_celebrity', label='Участие медийной персоны',
+                takeaway='В конкретном ролике участие медийной персоны положительно влияет на оценку запоминаемости.',
+                evidence='Участие медийной персоны отмечено вами.', episodes=[], check=''))
         notes = []
         reasons = {
             'audio': 'Без полной озвучки нельзя уверенно оценить эти стороны сообщения. Выводы по ним стоит отложить до версии с речью.',
