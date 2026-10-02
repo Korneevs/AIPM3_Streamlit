@@ -16,6 +16,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from .latest_manual_inputs import effective_feature_rows, recall_multiplier
+
 BUNDLE_DIR = Path(__file__).resolve().parent / "latest_bundle" / "20261001"
 SCORING_VERSION = "three-heads-effect15-20261001-979fdba8b527-f0aa4e015216-6d75e5e23d76"
 NEUROMATICS_SCORING_VERSION = "neuromatics-nclip-ridge100-20261002-c9e7282c127d"
@@ -179,6 +181,10 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
     if metadata and metadata.get("source_sha") and "sha" in frames["n"]:
         if metadata["source_sha"] != frames["n"].sha.iloc[0]:
             raise ValueError("Result source hash differs from feature rows")
+    original_frames = frames
+    effective_rows = effective_feature_rows(
+        {task: frame.to_dict("records") for task, frame in frames.items()}, metadata or {})
+    frames = {task: pd.DataFrame(rows) for task, rows in effective_rows.items()}
     predictions = {task: model.heads[task].predict(frame)
                    for task, frame in frames.items()}
     if not all(np.isfinite(value).all() for value in predictions.values()):
@@ -196,6 +202,10 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
     for name, value in scores.items():
         if not np.isclose(value, per_repeat[name].mean(), rtol=1e-12, atol=1e-14):
             raise AssertionError("Frozen score aggregation changed")
+    factor = recall_multiplier(metadata or {})
+    for name in ("norm_ad_recall", "Q"):
+        per_repeat[name] *= factor
+        scores[name] *= factor
     result = dict(metadata or {})
     result["metadata"] = {**dict(metadata or {}), "material_kind": material_kind}
     result.update(
@@ -207,10 +217,17 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
         record=str(keys.record.iloc[0]),
         scores=scores,
         per_repeat=per_repeat.to_dict("records"),
-        feature_rows={task: frame.to_dict("records") for task, frame in frames.items()},
+        feature_rows={task: frame.to_dict("records") for task, frame in original_frames.items()},
         model_inputs={task: model.heads[task].state["columns"] for task in MODEL_TASKS},
     )
     return clean_json(result)
+
+
+def result_metadata(result: dict) -> dict:
+    reserved = {"metadata", "scores", "per_repeat", "feature_rows", "model_inputs",
+                "scoring_version", "protocol_version", "model_sha256", "interpretation", "repeat_count",
+                "manager_cards"}
+    return {k: v for k, v in result.items() if k not in reserved}
 
 
 def validate_cached_result(result: dict, *, material_kind: str | None = None) -> dict:
@@ -228,9 +245,7 @@ def validate_cached_result(result: dict, *, material_kind: str | None = None) ->
     extraction = result.get("extraction", {})
     if extraction.get("repeats", repeat_count) != repeat_count:
         raise ValueError("Число прогонов не совпадает с протоколом результата.")
-    reserved = {"metadata", "scores", "per_repeat", "feature_rows", "model_inputs",
-                "scoring_version", "protocol_version", "model_sha256", "interpretation", "repeat_count"}
-    metadata = {k: v for k, v in result.items() if k not in reserved}
+    metadata = result_metadata(result)
     recomputed = score_feature_rows(result["feature_rows"], metadata=metadata, material_kind=actual_kind,
                                     repeat_count=repeat_count)
     for name, actual in recomputed["scores"].items():

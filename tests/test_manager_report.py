@@ -31,15 +31,36 @@ def test_conflicting_fact_and_unstable_effect_are_never_score_reasons():
     assert {item['reason'] for item in card['unassessed']}=={'unverified','unstable'}
 
 
-def test_optional_absence_specific_offer_and_duration_are_not_defects():
+def test_local_negative_associations_are_visible_without_generic_edit_advice():
     ds=[driver('panel__message_specificity_level',value=2,direction='limits'),
         driver('product_demo_seconds',value=0,direction='limits'),
         driver('pack_shot_duration_seconds',value=4,direction='limits'),
         driver('jingle_present',value=0,kind='association_only',direction='limits')]
     card=report(ds)
-    assert not card['limitations']
-    assert len(card['unassessed'])==1 and card['unassessed'][0]['reason']=='association'
-    assert 'только ради балла не стоит' in card['unassessed'][0]['text']
+    assert len(card['limitations'])==3
+    assert all('В конкретном ролике' in item['takeaway'] for item in card['limitations'])
+    assert all('снижает оценку' in item['takeaway'] for item in card['limitations'])
+    assert card['unassessed'][0]['reason']=='association'
+    assert 'Конкретность предложения' in card['unassessed'][0]['features']
+
+
+def test_lower_threshold_does_not_call_clear_alignment_or_simple_offer_bad():
+    ds=[driver('fresh__audiovisual_claim_alignment',value=3,kind='association_only',direction='limits'),
+        driver('panel__offer_novelty_explanation_need',value=0,kind='association_only',direction='limits')]
+    assert not report(ds)['limitations']
+
+
+def test_negative_threshold_accepts_two_of_three_and_half_an_index_point():
+    d=driver('product_demo_seconds',value=0,usable=False,kind='association_only',direction='limits')
+    d.update(stable_fraction=2/3,index_points=-.5)
+    assert len(report([d])['limitations'])==1
+    d['stable_fraction']=1/3
+    assert not report([d])['limitations']
+    d.update(stable_fraction=1,index_points=-.49)
+    assert not report([d])['limitations']
+    d.update(index_points=-5)
+    d['evidence']['verified']=False
+    assert not report([d])['limitations']
 
 
 def test_partial_voice_blocks_audio_conclusions_but_preserves_visual_evidence():

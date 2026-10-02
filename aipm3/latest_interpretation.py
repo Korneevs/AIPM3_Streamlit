@@ -13,8 +13,9 @@ import re
 import sys
 import numpy as np
 import pandas as pd
+from .latest_manual_inputs import effective_feature_rows, celebrity_presence, recall_multiplier
 
-VERSION = 'manager-decisions-v7-neuromatics-pairs12'
+VERSION = 'manager-decisions-v8-local-criticism-manual-celebrity'
 NAMES = {'n':'Заметность', 'm':'Считываемость', 'r':'Запоминаемость'}
 LABELS = {
  'character_close_up_seconds':'Крупные планы героя',
@@ -320,8 +321,9 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
                 requests.add(row['request_id']);valid.append(row)
             except (ValueError,KeyError,TypeError):rejected+=1
         evidence=valid
+    effective_rows=effective_feature_rows(result['feature_rows'],result)
     for task in 'nmr':
-        frame=pd.DataFrame(result['feature_rows'][task]);head=model.heads[task]
+        frame=pd.DataFrame(effective_rows[task]);head=model.heads[task]
         train=pd.read_csv(Path(bundle_dir)/'data'/f'fit_{task}.csv',float_precision='round_trip')
         # One real cached reading per family, selected without outcomes or query.
         order=[c for c in ['family','record','repeat'] if c in train]
@@ -367,6 +369,9 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
             not d['evidence']['verified'] or d['stable_fraction']<.8)
         coverage=1-missed_mass/total_mass if total_mass else 1.
         partial=coverage<.75 or any(abs(d['index_points'])>=5 for d in unresolved)
+        unadjusted_score=score
+        factor=recall_multiplier(result) if task=='r' else 1.
+        score*=factor;spread*=factor
         bgpred=predict(bg);q1,q2=np.quantile(bgpred,[1/3,2/3])
         level='Выше типичного уровня' if score>q2 else 'Ниже типичного уровня' if score<q1 else 'Типичный уровень'
         card=dict(task=task,title=NAMES[task],score=score,index=100*score/base,level=level,
@@ -380,8 +385,11 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
             card.update(display_values(score,display))
             card['repeat_index_range']=[100*float(z)/display['mean'] for z in spread]
         card['assessment_available']=voice not in {'partial','absent'}
-        details[task]=dict(drivers=drivers,expected=base,actual=score,additivity_error=float(abs(base+vals.sum()-score)),
-              per_repeat_scores=p.tolist(),per_repeat_shap=phi.tolist(),feature_order=columns)
+        adjustment=score-unadjusted_score
+        details[task]=dict(drivers=drivers,expected=base,actual=score,
+              manual_adjustment=adjustment,base_actual=unadjusted_score,
+              additivity_error=float(abs(base+vals.sum()+adjustment-score)),
+              per_repeat_scores=(p*factor).tolist(),per_repeat_shap=phi.tolist(),feature_order=columns)
         cards.append(card)
     reference=json.loads(Path(__file__).with_name('latest_display_reference.json').read_text())
     q=float(result['scores']['Q']);lo,hi=reference['Q_tertiles']
@@ -390,6 +398,7 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
     if calibration:overall.update(display_values(q,calibration['references']['Q']))
     overall['assessment_available']=voice not in {'partial','absent'}
     return dict(version=VERSION,material_kind=material_kind,cards=cards,details=details,overall=overall,
+      celebrity_present=celebrity_presence(result),
       display_calibration=calibration['version'] if calibration else None,audio_status=voice,audio_note=audio_note(voice),
       scale_note='100 - средняя оценка исторических роликов в этом компоненте. Это индекс модели, а не процент зрителей.',
       interpretation_note='Плюсы и ограничения объясняют расчет модели относительно исторических роликов. Проверки ниже помогут обсудить правки с Марком и ресерчем; эффект отдельной правки нужно проверить на новой версии.',

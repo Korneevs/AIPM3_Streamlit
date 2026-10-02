@@ -18,6 +18,7 @@ from aipm3.latest_runtime import (
 from aipm3.runtime_resources import AnalysisBusy
 from aipm3.manager_report import LEVELS, report_cards
 from aipm3.display_calibration import audio_status
+from aipm3.latest_manual_inputs import celebrity_presence, with_celebrity_review
 
 
 VERTICALS = {"Товары": "Goods", "Авто": "Auto", "Работа": "Jobs",
@@ -215,6 +216,13 @@ def main(material_kind: str = "finished") -> None:
             st.error("Сохранённый результат относится к другому типу материала. Откройте соответствующий раздел.")
             st.stop()
         st.caption(result.get("source_name", result.get("name", result.get("record", ""))))
+        present = celebrity_presence(result)
+        selected_celebrity = st.checkbox(
+            "В ролике есть медийная персона", value=present is True,
+            key=prefix + "celebrity_" + str(result.get("source_sha", result.get("record", ""))))
+        if selected_celebrity != present:
+            result = with_celebrity_review(result, selected_celebrity)
+            st.session_state[result_key] = result
         if material_kind == "neuromatics":
             choices = {"Полнота озвучки не подтверждена": "unknown", "Вся речь есть (можно черновую)": "complete",
                        "Есть только часть речи": "partial", "Речи нет": "absent"}
