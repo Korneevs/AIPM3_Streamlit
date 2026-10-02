@@ -1,7 +1,7 @@
 """Rerunnable exact-protocol extraction for the accepted 9–9–7 model.
 
 Every successful request has its own immutable repeat/stage cache. Inference
-uses ten complete repeats; a retry does not count as another observation.
+uses the configured complete repeats; a retry is not another observation.
 Paid calls are disabled unless the caller explicitly passes allow_live=True.
 """
 from __future__ import annotations
@@ -22,7 +22,8 @@ import numpy as np
 from . import latest_contracts as fresh_contract
 from . import message_delivery_runtime as md
 from .latest_physical import physical_updates
-from .latest_runtime import (PROTOCOL_VERSION, clean_json, scoring_version_for,
+from .latest_runtime import (ANALYSIS_REPEATS, PROTOCOL_VERSION, clean_json, scoring_version_for,
+                             validate_repeat_count,
                              family_for_video, rows_from_measurements, score_feature_rows)
 from .objective_features import (aggregate_aipm1, aggregate_aipm2,
                                   prepare_legacy_video, request_kwargs)
@@ -233,9 +234,10 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
                         record: str | None = None, allow_live: bool = False,
                         progress: Callable[[str], None] | None = None,
                         evidence_collector: Callable | None = None,
-                        material_kind: str = "finished"):
-    """Extract once, resume any completed stage, then score exactly ten runs."""
+                        material_kind: str = "finished", repeat_count: int = ANALYSIS_REPEATS):
+    """Resume completed stages and score the requested number of full runs."""
     version = scoring_version_for(material_kind)
+    validate_repeat_count(repeat_count)
     if brand != "Avito":
         raise ValueError("This exact application protocol is calibrated for Avito uploads")
     source_video = Path(source_video).resolve()
@@ -250,9 +252,9 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
         prepared = _prepare_inputs(source_video, root)
         prepared_hash = {key: file_sha256(path) for key, path in prepared.items()}
         measurements = []
-        for repeat in range(1, 11):
+        for repeat in range(1, repeat_count + 1):
             if progress:
-                progress(f"Повтор {repeat}/10: проверяем свойства ролика")
+                progress(f"Повтор {repeat}/{repeat_count}: проверяем свойства ролика")
             folder = root / f"repeat_{repeat:02d}"
             objective, objective_runs = {}, {}
             for kind in ("aipm1", "aipm2"):
@@ -275,7 +277,7 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
         rows = rows_from_measurements(measurements, source_sha=sha, physical=physical,
                                       duration=physical["phys__duration"], brand=brand,
                                       vertical=vertical, family=family, record=record,
-                                      material_kind=material_kind)
+                                      material_kind=material_kind, repeat_count=repeat_count)
         result = score_feature_rows(rows, metadata=dict(
             source_sha=sha, source_name=source_video.name, brand=brand, vertical=vertical,
             family=family, duration_seconds=md.video_duration(source_video),
@@ -284,11 +286,11 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
                           panel=[m["diagnostic_panel"] for m in measurements],
                           objective_runs={k: [m["objective_runs"][k] for m in measurements]
                                           for k in ("aipm1", "aipm2")}),
-            extraction=dict(repeats=10, calls_per_repeat=16, independent_stage_caches=True,
+            extraction=dict(repeats=repeat_count, calls_per_repeat=16, independent_stage_caches=True,
                             transcript_and_recovery_used=False),
-        ), material_kind=material_kind)
+        ), material_kind=material_kind, repeat_count=repeat_count)
         identity = _fingerprint(dict(scoring=version, material_kind=material_kind, brand=brand, vertical=vertical,
-                                    family=family, record=record))[:16]
+                                    family=family, record=record, repeat_count=repeat_count))[:16]
         _write_json(root / f"result_{identity}.json", result)
         if evidence_collector is not None:
             try:

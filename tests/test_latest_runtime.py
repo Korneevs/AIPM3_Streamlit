@@ -188,7 +188,8 @@ def test_request_cache_reuses_exact_contract_and_rejects_changes(tmp_path, monke
         pipeline._request(kwargs, path, video_sha="other", api_key="", allow_live=False)
 
 
-def test_exact_160_requests_without_transcript_or_recovery(tmp_path, monkeypatch):
+@pytest.mark.parametrize("material_kind", ["finished", "neuromatics"])
+def test_three_runs_reuse_ten_run_stage_paths_without_overwriting_results(tmp_path, monkeypatch, material_kind):
     source = tmp_path / "source.mp4"
     source.write_bytes(b"test video")
     monkeypatch.setattr(pipeline, "_physical", lambda *_: {
@@ -220,16 +221,32 @@ def test_exact_160_requests_without_transcript_or_recovery(tmp_path, monkeypatch
         return payload
 
     monkeypatch.setattr(pipeline, "_request", request)
-    result = pipeline.run_latest_analysis(source_video=source, output_root=tmp_path / "cache")
-    assert len(requests) == len(set(requests)) == 160
-    assert len(result["per_repeat"]) == 10
+    progress = []
+    result = pipeline.run_latest_analysis(source_video=source, output_root=tmp_path / "cache",
+                                         material_kind=material_kind, progress=progress.append)
+    assert len(requests) == len(set(requests)) == 48
+    assert len(result["per_repeat"]) == result["repeat_count"] == result["extraction"]["repeats"] == 3
+    assert any("3/3" in message for message in progress)
     assert result["extraction"]["transcript_and_recovery_used"] is False
-    for repeat in range(1, 11):
+    for repeat in range(1, 4):
         paths = [p for p in requests if f"repeat_{repeat:02d}" in p.parts]
         assert len(paths) == 16
         assert sum(p.parent.name == "aipm1" for p in paths) == 3
         assert sum(p.parent.name == "aipm2" for p in paths) == 2
         assert sum(p.parent.name == "panel" for p in paths) == 10
+    short_paths = set(requests)
+    short_results = {p: p.read_bytes() for p in (tmp_path / "cache").rglob("result_*.json")}
+    assert len(short_results) == 1
+    requests.clear()
+    long_result = pipeline.run_latest_analysis(source_video=source, output_root=tmp_path / "cache",
+                                              material_kind=material_kind, repeat_count=10)
+    assert len(requests) == len(set(requests)) == 160
+    assert short_paths.issubset(set(requests))
+    assert len(long_result["per_repeat"]) == long_result["repeat_count"] == 10
+    assert len(list((tmp_path / "cache").rglob("result_*.json"))) == 2
+    assert all(path.read_bytes() == data for path, data in short_results.items())
+    assert runtime.validate_cached_result(result)["scores"] == result["scores"]
+    assert runtime.validate_cached_result(long_result)["scores"] == long_result["scores"]
 
 
 def test_prepared_media_resume_uses_saved_bytes_even_for_renamed_upload(tmp_path, monkeypatch):
