@@ -33,10 +33,12 @@ def interpretation():
                 interpretation_note="Отдельную правку нужно проверить на новой версии.", evidence_runs=3)
 
 
-def test_result_page_shows_three_indices_and_preserves_associations():
+@pytest.mark.parametrize("repeat_count", [3, 10])
+def test_result_page_shows_three_indices_and_preserves_associations(repeat_count):
     source = (ROOT / "app_pages/latest_pretest.py").read_text().split('\nif __name__ in {')[0]
     app = AppTest.from_string(source + '\nshow_latest_result(st.session_state["result"], st.session_state["interpretation"])\n')
     result = {"scores": {"Q": .04, "OPM": .2}, "scoring_version": latest_runtime.SCORING_VERSION}
+    result["repeat_count"] = repeat_count
     content = interpretation()
     before = deepcopy(content)
     app.session_state["result"] = result
@@ -51,6 +53,7 @@ def test_result_page_shows_three_indices_and_preserves_associations():
     assert "Особенность модели, не рекомендация" in captions
     assert "Что проверить в следующей версии" not in text
     assert "не процент зрителей" in captions
+    assert f"по {repeat_count} повторам" in captions
     assert len(app.get("plotly_chart")) == 1
     assert len(app.get("download_button")) == 1
     assert app.session_state["interpretation"] == before
@@ -149,7 +152,7 @@ def test_saved_result_of_wrong_material_is_rejected(kind, page, monkeypatch):
     ("finished", "latest_pretest.py"),
     ("neuromatics", "neuromatics_pretest.py"),
 ])
-def test_live_action_passes_material_kind_and_keeps_ten_run_notice(kind, page, monkeypatch):
+def test_live_action_passes_material_kind_and_uses_three_runs(kind, page, monkeypatch):
     from io import BytesIO
     import streamlit as st
 
@@ -172,11 +175,12 @@ def test_live_action_passes_material_kind_and_keeps_ten_run_notice(kind, page, m
     app.run(timeout=30)
     assert not app.exception
     assert not calls
-    assert any("10 повторов разбора" in caption.value for caption in app.caption)
+    assert any("3 полных прогона" in caption.value for caption in app.caption)
     app.button(key=f"latest_{kind}_live").click().run(timeout=30)
     assert not app.exception
     assert len(calls) == 1
     assert calls[0]["material_kind"] == kind
+    assert calls[0]["repeat_count"] == 3
     assert calls[0]["allow_live"] is True
     assert app.session_state[f"latest_{kind}_result"]["source_name"] == "clip.mp4"
     assert len(app.metric) == 3

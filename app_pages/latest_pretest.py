@@ -13,7 +13,7 @@ import streamlit as st
 from aipm3.latest_interpretation import VERSION, build_latest_interpretation, public_result
 from aipm3.latest_pipeline import MissingMeasurement, run_latest_analysis
 from aipm3.latest_runtime import (
-    MATERIAL_LABELS, clean_json, material_kind_for_result, scoring_version_for, validate_cached_result,
+    ANALYSIS_REPEATS, MATERIAL_LABELS, clean_json, material_kind_for_result, scoring_version_for, validate_cached_result,
 )
 from aipm3.runtime_resources import AnalysisBusy
 
@@ -91,12 +91,13 @@ def _show_partial_explanation(card: dict) -> None:
 
 def show_latest_result(result: dict, interpretation: dict | None = None) -> None:
     material_kind = material_kind_for_result(result)
+    repeat_count = result.get("repeat_count", 10)
     interpretation = interpretation or interpret_result(result)
     overall=interpretation.get('overall')
     if overall:
         st.subheader('Общая оценка · ' + MATERIAL_LABELS[material_kind])
         st.metric(overall['title'],f'{overall["index"]:.0f}')
-        st.caption(overall['level']+' · Среднее по 10 полным прогонам')
+        st.caption(overall['level']+f' · Среднее по {repeat_count} полным прогонам')
     st.subheader("Результат по трём компонентам")
     st.caption(interpretation["scale_note"])
     for column, card in zip(st.columns(3), interpretation["cards"]):
@@ -143,12 +144,12 @@ def show_latest_result(result: dict, interpretation: dict | None = None) -> None
         st.code(result.get("scoring_version", scoring_version_for(material_kind)), language=None)
         model_note = ("Замороженная модель от 1 октября 2026: 9 / 9 / 7 признаков. "
                       if material_kind == "finished" else "Модель для нейроматиков: 9 / 9 / 7 признаков. ")
-        st.caption(model_note + "Итог Q — среднее произведение трёх оценок по десяти повторам. "
+        st.caption(model_note + f"Итог Q — среднее произведение трёх оценок по {repeat_count} повторам. "
                    "Независимая проверка качества модели на отложенной выборке ещё не завершена.")
         st.write({"Q": result["scores"]["Q"], "OPM": result["scores"]["OPM"]})
     st.download_button("Скачать результат и интерпретацию", data=json.dumps(
         exported, ensure_ascii=False, indent=2, allow_nan=False),
-        file_name=f"aipm3_{material_kind}_{scoring_version_for(material_kind)}_result.json",
+        file_name=f"aipm3_{material_kind}_{scoring_version_for(material_kind)}_{repeat_count}runs_result.json",
         mime="application/json", key=f"latest_{material_kind}_download")
 
 
@@ -212,7 +213,7 @@ def main(material_kind: str = "finished") -> None:
                                    key=prefix + "cached")
         live_btn = live.button("Запустить AI-анализ", type="primary", use_container_width=True,
                                key=prefix + "live")
-        st.caption("AI-анализ отправляет видео на проверку: 10 повторов разбора "
+        st.caption(f"AI-анализ отправляет видео на проверку: {ANALYSIS_REPEATS} полных прогона "
                    "и отдельные проверки наблюдений. Готовые этапы используются повторно.")
         if cached_btn or live_btn:
             if uploaded is None:
@@ -230,6 +231,7 @@ def main(material_kind: str = "finished") -> None:
                         result = run_latest_analysis(
                             source_video=source, output_root=cache, api_key=_api_key() if live_btn else "",
                             vertical=VERTICALS[vertical], allow_live=bool(live_btn), material_kind=material_kind,
+                            repeat_count=ANALYSIS_REPEATS,
                             progress=lambda message: status.update(label=message),
                             evidence_collector=_review_collector())
                         result["source_name"] = uploaded.name

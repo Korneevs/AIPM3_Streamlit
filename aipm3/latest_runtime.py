@@ -20,10 +20,18 @@ BUNDLE_DIR = Path(__file__).resolve().parent / "latest_bundle" / "20261001"
 SCORING_VERSION = "three-heads-effect15-20261001-979fdba8b527-f0aa4e015216-6d75e5e23d76"
 NEUROMATICS_SCORING_VERSION = "neuromatics-nclip-ridge100-20261002-c9e7282c127d"
 PROTOCOL_VERSION = "latest-exact-inputs-20261001-v1"
+# Temporary throughput setting. Frozen ten-run results remain importable.
+ANALYSIS_REPEATS = 3
 MODEL_TASKS = ("n", "m", "r")
 SCORE_NAMES = {"n": "noticeability", "m": "message_delivery", "r": "norm_ad_recall"}
 MATERIAL_LABELS = {"finished": "AIPM3.0 (для готовых)",
                    "neuromatics": "AIPM3.0 (для нейроматиков)"}
+
+
+def validate_repeat_count(repeat_count: int) -> int:
+    if type(repeat_count) is not int or repeat_count not in (3, 10):
+        raise ValueError("Поддерживаются только 3 или 10 полных прогонов.")
+    return repeat_count
 
 
 def scoring_version_for(material_kind: str = "finished") -> str:
@@ -129,8 +137,8 @@ def clean_json(value):
 
 def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
                        metadata: dict | None = None, model=None,
-                       *, material_kind: str = "finished") -> dict[str, Any]:
-    """Score one video's ten independent measurement repeats exactly.
+                       *, material_kind: str = "finished", repeat_count: int = 10) -> dict[str, Any]:
+    """Score one video's explicitly requested complete measurement repeats.
 
     Input seconds remain seconds; the accepted model applies its own duration
     normalization, panel rounding and recall consensus once, during inference.
@@ -138,6 +146,7 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
     video. For a new upload use a new family rather than borrowing another one.
     """
     version = scoring_version_for(material_kind)
+    validate_repeat_count(repeat_count)
     if metadata and metadata.get("material_kind", material_kind) != material_kind:
         raise ValueError("Метаданные относятся к другому типу материала.")
     model = model or load_models(material_kind)
@@ -151,10 +160,10 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
     if len({"sha" in frame for frame in frames.values()}) != 1:
         raise ValueError("Source hashes must be present for all components or none")
     keys = frames["n"][["record", "repeat"]]
-    if len(keys) != 10 or keys.record.nunique() != 1:
-        raise ValueError("Exactly one video with ten repeats is required")
-    if keys.repeat.tolist() != list(range(1, 11)) or keys.duplicated().any():
-        raise ValueError("Repeat IDs must be exactly 1 through 10")
+    if len(keys) != repeat_count or keys.record.nunique() != 1:
+        raise ValueError(f"Exactly one video with {repeat_count} repeats is required")
+    if keys.repeat.tolist() != list(range(1, repeat_count + 1)) or keys.duplicated().any():
+        raise ValueError(f"Repeat IDs must be exactly 1 through {repeat_count}")
     for task, frame in frames.items():
         if not keys.equals(frame[["record", "repeat"]]):
             raise ValueError("The three component measurement keys differ")
@@ -179,9 +188,10 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
         per_repeat[column] = predictions[task]
     per_repeat["OPM"] = predictions["n"] * predictions["m"]
     per_repeat["Q"] = per_repeat.OPM * predictions["r"]
-    # Check against the frozen public entry point, including its exact average
-    # of products (which is not a product of the three displayed averages).
-    scored = model.score(frames["n"], frames["m"], frames["r"]).iloc[0]
+    # Keep the frozen package untouched: its public entry point requires ten
+    # rows. The shorter run uses the same heads and mean-of-products rule.
+    scored = (model.score(frames["n"], frames["m"], frames["r"]).iloc[0]
+              if repeat_count == 10 else per_repeat.groupby("record").mean(numeric_only=True).iloc[0])
     scores = {name: float(scored[name]) for name in [*SCORE_NAMES.values(), "OPM", "Q"]}
     for name, value in scores.items():
         if not np.isclose(value, per_repeat[name].mean(), rtol=1e-12, atol=1e-14):
@@ -190,6 +200,7 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
     result["metadata"] = {**dict(metadata or {}), "material_kind": material_kind}
     result.update(
         material_kind=material_kind,
+        repeat_count=repeat_count,
         scoring_version=version,
         protocol_version=PROTOCOL_VERSION,
         model_sha256=artifact_hashes_for(material_kind),
@@ -213,10 +224,15 @@ def validate_cached_result(result: dict, *, material_kind: str | None = None) ->
         raise ValueError("Сохранённый результат использует другой протокол измерений.")
     if result.get("model_sha256") != artifact_hashes_for(actual_kind):
         raise ValueError("Артефакты сохранённого результата не совпадают с текущей моделью.")
+    repeat_count = validate_repeat_count(result.get("repeat_count", 10))
+    extraction = result.get("extraction", {})
+    if extraction.get("repeats", repeat_count) != repeat_count:
+        raise ValueError("Число прогонов не совпадает с протоколом результата.")
     reserved = {"metadata", "scores", "per_repeat", "feature_rows", "model_inputs",
-                "scoring_version", "protocol_version", "model_sha256", "interpretation"}
+                "scoring_version", "protocol_version", "model_sha256", "interpretation", "repeat_count"}
     metadata = {k: v for k, v in result.items() if k not in reserved}
-    recomputed = score_feature_rows(result["feature_rows"], metadata=metadata, material_kind=actual_kind)
+    recomputed = score_feature_rows(result["feature_rows"], metadata=metadata, material_kind=actual_kind,
+                                    repeat_count=repeat_count)
     for name, actual in recomputed["scores"].items():
         if not np.isclose(result.get("scores", {}).get(name, np.nan), actual,
                           rtol=1e-12, atol=1e-14):
@@ -228,11 +244,12 @@ def rows_from_measurements(measurements: list[dict], *, source_sha: str,
                            physical: dict[str, float], duration: float,
                            brand: str = "Avito", vertical: str = "Goods",
                            family: str | None = None, record: str | None = None,
-                           material_kind: str = "finished"):
+                           material_kind: str = "finished", repeat_count: int = 10):
     """Convert the original observation protocols into canonical model inputs."""
     model = load_models(material_kind)
-    if len(measurements) != 10:
-        raise ValueError("Exactly ten complete measurements are required")
+    validate_repeat_count(repeat_count)
+    if len(measurements) != repeat_count:
+        raise ValueError(f"Exactly {repeat_count} complete measurements are required")
     family = family or family_for_video(source_sha)
     record = record or source_sha
     rows = {task: [] for task in MODEL_TASKS}
