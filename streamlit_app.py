@@ -3,6 +3,9 @@ import os
 import streamlit as st
 
 
+LATEST_PRETEST_ENABLED = os.environ.get("AIPM_ENABLE_LATEST_PRETEST", "1") == "1"
+
+
 st.set_page_config(page_title="AI-Pretest MesSage · AIPM 3.0", page_icon="🎬", layout="wide")
 
 
@@ -27,22 +30,19 @@ def require_login() -> None:
 
 def home() -> None:
     st.title("🎬 AI-Pretest MesSage · AIPM 3.0")
-    st.caption("Предтест рекламных креативов по заметности, запоминаемости и считываемости")
+    st.caption("Предтест рекламных креативов по заметности, считываемости и запоминаемости")
     st.markdown(
         """
         Загрузите готовый ролик в разделе **Видео-претест**. AIPM 3.0 объединяет
-        три независимых сигнала: AIPM 1.0, AIPM 2.0 и Message Delivery.
+        три оценки: заметность, считываемость главной идеи и запоминаемость.
 
-        Приложение показывает, **что в ролике работает** и
-        **что ограничивает результат**. В профиле отдельно разобраны заметность,
-        запоминаемость и считываемость: конкретные свойства ролика, их вклад и варианты для проверки.
-        До анализа выберите вертикаль. После расчёта появится отдельная проверка попадания
-        в её UVP с примерами из автоматических пересказов.
-
-        ---
-        Ключи и замороженные модели хранятся в Streamlit Secrets и не находятся в коде.
+        Приложение показывает, **что модель учла в плюс и в минус**:
+        наблюдения по ролику, их вклад в оценку и варианты для проверки.
+        Неподтверждённые причины отмечены отдельно.
         """
     )
+    if LATEST_PRETEST_ENABLED:
+        st.markdown("Проверка попадания в UVP доступна в разделе **Предыдущая версия**.")
 
 
 require_login()
@@ -55,8 +55,12 @@ with st.sidebar:
 
 pages = [
     st.Page(home, title="Главная", icon="🏠", default=True),
-    st.Page("app_pages/video_pretest.py", title="Видео-претест", icon="🎬"),
 ]
-if os.environ.get("AIPM_ENABLE_LATEST_PRETEST") == "1":
-    pages.append(st.Page("app_pages/latest_pretest.py", title="Модель от 1 октября", icon="🔎"))
+if LATEST_PRETEST_ENABLED:
+    pages.extend([
+        st.Page("app_pages/latest_pretest.py", title="Видео-претест", icon="🎬", url_path="video_pretest"),
+        st.Page("app_pages/video_pretest.py", title="Предыдущая версия", icon="📂", url_path="previous_pretest"),
+    ])
+else:
+    pages.append(st.Page("app_pages/video_pretest.py", title="Видео-претест", icon="🎬", url_path="video_pretest"))
 st.navigation(pages).run()

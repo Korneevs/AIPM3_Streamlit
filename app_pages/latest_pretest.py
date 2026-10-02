@@ -1,4 +1,4 @@
-"""Opt-in local page for the October 1 model and evidence-based review."""
+"""Main pretest page for the frozen latest model and evidence-based review."""
 from __future__ import annotations
 
 import hashlib
@@ -166,7 +166,7 @@ def _review_collector():
 
 
 def main() -> None:
-    st.title("Видео-претест · модель от 1 октября")
+    st.title("Видео-претест · AIPM 3.0")
     st.caption("Заметность, считываемость и запоминаемость — с наблюдениями для обсуждения ролика.")
     mode = st.radio("Источник результата", ["Загрузить ролик", "Открыть сохранённый результат"],
                     horizontal=True)
@@ -248,5 +248,5 @@ def main() -> None:
             show_latest_result(result)
 
 
-if __name__ == "__main__":
+if __name__ in {"__main__", "__page__"}:
     main()
