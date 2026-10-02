@@ -18,9 +18,31 @@ import pandas as pd
 
 BUNDLE_DIR = Path(__file__).resolve().parent / "latest_bundle" / "20261001"
 SCORING_VERSION = "three-heads-effect15-20261001-979fdba8b527-f0aa4e015216-6d75e5e23d76"
+NEUROMATICS_SCORING_VERSION = "neuromatics-nclip-ridge100-20261002-c9e7282c127d"
 PROTOCOL_VERSION = "latest-exact-inputs-20261001-v1"
 MODEL_TASKS = ("n", "m", "r")
 SCORE_NAMES = {"n": "noticeability", "m": "message_delivery", "r": "norm_ad_recall"}
+MATERIAL_LABELS = {"finished": "AIPM3.0 (для готовых)",
+                   "neuromatics": "AIPM3.0 (для нейроматиков)"}
+
+
+def scoring_version_for(material_kind: str = "finished") -> str:
+    if material_kind not in MATERIAL_LABELS:
+        raise ValueError("Неизвестный тип материала.")
+    return SCORING_VERSION if material_kind == "finished" else NEUROMATICS_SCORING_VERSION
+
+
+def material_kind_for_result(result: dict) -> str:
+    metadata = result.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        raise ValueError("Некорректные метаданные результата.")
+    kind = result.get("material_kind", metadata.get("material_kind", "finished"))
+    expected = scoring_version_for(kind)
+    if result.get("scoring_version") != expected:
+        raise ValueError("Сохранённый результат рассчитан другой версией модели.")
+    if metadata.get("material_kind", kind) != kind:
+        raise ValueError("Тип материала в результате и метаданных не совпадает.")
+    return kind
 
 
 def artifact_hashes() -> dict[str, str]:
@@ -48,6 +70,25 @@ def model_module():
 def load_latest_models():
     """Return the original AIPM3 runtime object, without refitting."""
     return model_module().AIPM3(BUNDLE_DIR / "models")
+
+
+@lru_cache(maxsize=2)
+def load_models(material_kind: str = "finished"):
+    scoring_version_for(material_kind)
+    if material_kind == "finished":
+        return load_latest_models()
+    from .neuromatics_models import NeuromaticsModels
+    return NeuromaticsModels(load_latest_models(), model_module().coefficient)
+
+
+def artifact_hashes_for(material_kind: str = "finished") -> dict[str, str]:
+    scoring_version_for(material_kind)
+    original = artifact_hashes()
+    if material_kind == "finished":
+        return original
+    from .neuromatics_models import artifact_hashes as neuro_hashes
+    return {**{"finished/" + k: v for k, v in original.items()},
+            **{"neuromatics/" + k: v for k, v in neuro_hashes().items()}}
 
 
 @lru_cache(maxsize=1)
@@ -87,7 +128,8 @@ def clean_json(value):
 
 
 def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
-                       metadata: dict | None = None, model=None) -> dict[str, Any]:
+                       metadata: dict | None = None, model=None,
+                       *, material_kind: str = "finished") -> dict[str, Any]:
     """Score one video's ten independent measurement repeats exactly.
 
     Input seconds remain seconds; the accepted model applies its own duration
@@ -95,7 +137,10 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
     ``family`` must identify an already known family if this is a reference
     video. For a new upload use a new family rather than borrowing another one.
     """
-    model = model or load_latest_models()
+    version = scoring_version_for(material_kind)
+    if metadata and metadata.get("material_kind", material_kind) != material_kind:
+        raise ValueError("Метаданные относятся к другому типу материала.")
+    model = model or load_models(material_kind)
     if any(task not in feature_rows for task in MODEL_TASKS):
         raise ValueError("All three component measurements are required")
     if any(not {"record", "repeat"}.issubset(pd.DataFrame(feature_rows[task]).columns)
@@ -142,11 +187,12 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
         if not np.isclose(value, per_repeat[name].mean(), rtol=1e-12, atol=1e-14):
             raise AssertionError("Frozen score aggregation changed")
     result = dict(metadata or {})
-    result["metadata"] = dict(metadata or {})
+    result["metadata"] = {**dict(metadata or {}), "material_kind": material_kind}
     result.update(
-        scoring_version=SCORING_VERSION,
+        material_kind=material_kind,
+        scoring_version=version,
         protocol_version=PROTOCOL_VERSION,
-        model_sha256=artifact_hashes(),
+        model_sha256=artifact_hashes_for(material_kind),
         record=str(keys.record.iloc[0]),
         scores=scores,
         per_repeat=per_repeat.to_dict("records"),
@@ -156,16 +202,21 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
     return clean_json(result)
 
 
-def validate_cached_result(result: dict) -> dict:
+def validate_cached_result(result: dict, *, material_kind: str | None = None) -> dict:
     """Recompute a portable result with the same accepted model, offline."""
-    if result.get("scoring_version") != SCORING_VERSION:
-        raise ValueError("Сохранённый результат рассчитан другой версией модели.")
-    if result.get("model_sha256") != artifact_hashes():
+    actual_kind = material_kind_for_result(result)
+    if material_kind is not None:
+        scoring_version_for(material_kind)
+        if actual_kind != material_kind:
+            raise ValueError("Результат относится к другому типу материала. Откройте соответствующий раздел.")
+    if result.get("protocol_version") != PROTOCOL_VERSION:
+        raise ValueError("Сохранённый результат использует другой протокол измерений.")
+    if result.get("model_sha256") != artifact_hashes_for(actual_kind):
         raise ValueError("Артефакты сохранённого результата не совпадают с текущей моделью.")
     reserved = {"metadata", "scores", "per_repeat", "feature_rows", "model_inputs",
                 "scoring_version", "protocol_version", "model_sha256", "interpretation"}
     metadata = {k: v for k, v in result.items() if k not in reserved}
-    recomputed = score_feature_rows(result["feature_rows"], metadata=metadata)
+    recomputed = score_feature_rows(result["feature_rows"], metadata=metadata, material_kind=actual_kind)
     for name, actual in recomputed["scores"].items():
         if not np.isclose(result.get("scores", {}).get(name, np.nan), actual,
                           rtol=1e-12, atol=1e-14):
@@ -176,9 +227,10 @@ def validate_cached_result(result: dict) -> dict:
 def rows_from_measurements(measurements: list[dict], *, source_sha: str,
                            physical: dict[str, float], duration: float,
                            brand: str = "Avito", vertical: str = "Goods",
-                           family: str | None = None, record: str | None = None):
+                           family: str | None = None, record: str | None = None,
+                           material_kind: str = "finished"):
     """Convert the original observation protocols into canonical model inputs."""
-    model = load_latest_models()
+    model = load_models(material_kind)
     if len(measurements) != 10:
         raise ValueError("Exactly ten complete measurements are required")
     family = family or family_for_video(source_sha)
@@ -218,5 +270,12 @@ def rows_from_measurements(measurements: list[dict], *, source_sha: str,
                 if value is None or not np.isfinite(float(value)):
                     raise ValueError(f"Unavailable fresh observation: {feature}")
                 row[feature] = float(value)
+            if task == "n" and material_kind == "neuromatics":
+                # One semantic input, measured by the original conservative A1
+                # rubric. Preserve it beside raw A2 for audit, never overwrite.
+                value = a1.get("state_transformation")
+                if value is None or float(value) not in (0., 1.):
+                    raise ValueError("Unavailable AIPM1 state transformation observation")
+                row["state_transformation"] = float(value)
             rows[task].append(row)
     return rows

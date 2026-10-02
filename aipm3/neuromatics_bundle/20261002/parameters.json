@@ -1,0 +1,816 @@
+{
+  "version": "neuromatics_recall_ridge100_20261002",
+  "features": [
+    "brand_first_mention_seconds",
+    "brand_history",
+    "has_callback_to_opening",
+    "human_characters_count",
+    "jingle_present",
+    "problem_solution_arc_present",
+    "scene_pace_high"
+  ],
+  "binary_consensus_features": [
+    "has_callback_to_opening",
+    "jingle_present",
+    "problem_solution_arc_present",
+    "scene_pace_high"
+  ],
+  "binary_consensus_threshold": 0.6666666666666666,
+  "history_mode": "select_history_hs0_geo_hier_firstshare",
+  "median": [
+    0.0,
+    0.10960536590871006,
+    0.0,
+    3.0,
+    1.0,
+    0.0,
+    0.0
+  ],
+  "center": [
+    0.037310231023102325,
+    0.12280540888366236,
+    0.18316831683168314,
+    4.01683168316832,
+    0.6980198019801978,
+    0.27722772277227714,
+    0.33663366336633654
+  ],
+  "scale": [
+    0.1005035370642888,
+    0.09169113455363408,
+    0.3868044525864867,
+    3.3898821296407298,
+    0.459116715034122,
+    0.44762988338444776,
+    0.4725583985656127
+  ],
+  "coef": [
+    0.07077548695054423,
+    0.21223700425086034,
+    -0.04791744138500007,
+    -0.1998144607174511,
+    0.05125450861322746,
+    0.17891364373313498,
+    -0.22250162163954157
+  ],
+  "intercept": 1.792978542676328e-15,
+  "target_mu": -2.3863859392297857,
+  "target_sd": 0.5459577306664757,
+  "log_output_clip": [
+    -12,
+    1
+  ],
+  "history": [
+    {
+      "family": "ae52959cd22ff5305a05997d33d123f3e0d861ea2fd666396fadd44d41b719e6",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.0981663445671835
+    },
+    {
+      "family": "854eb7ee0ddc7d0ff99ce6f913013ab5c69b55ecdad77c0366c12f63d1d0dd62",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.0838602848073055
+    },
+    {
+      "family": "c7add44daf9f9ae91da61f2730bb0f21ec337f3141c3c18c9262c11fbb3013e2",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.1832843547788753
+    },
+    {
+      "family": "02ca14065c443b269a4a9ef92030af0996a2bfd71143050e27db83b31f6a32e0",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.2317832826307402
+    },
+    {
+      "family": "fa51ebb28596e074bd467f0305c8113f285b9b0a9fc15571c75905b14f7033d2",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.1120570354330046
+    },
+    {
+      "family": "c1e18cfabf1670921901e4f9eaceeda86a85cb487681713ef993b1fa1cb31ac0",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.0905818693237348
+    },
+    {
+      "family": "5af87eeabeaca396e1089dce39548cea6ea9c01a6a46c5e2d59c2f223d47f06f",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.1222493887530562
+    },
+    {
+      "family": "491f84b3d6722950dace3f711e10da267580113e784bdc15ee9904db379cb519",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.1099914845302299
+    },
+    {
+      "family": "auto_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.1078562491910781
+    },
+    {
+      "family": "92172eab5425019d2d9bb0fb7cc4fd85fd63cd0db128b5c053396c70ac5dbdb1",
+      "brand": "Avito",
+      "vertical": "Autoteka",
+      "y": 0.1001602564102564
+    },
+    {
+      "family": "d15d1a67a31a8405d9fc090aba43c2accd8ab631740f25cf22e90f157a001563",
+      "brand": "Avito",
+      "vertical": "Autoteka",
+      "y": 0.6100622067008623
+    },
+    {
+      "family": "garage_2024_2025",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.1510092164056815
+    },
+    {
+      "family": "4578099cb8a697f8a169117a375baa1ab7e211d736477922af0e6981886ad977",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.0465896761334627
+    },
+    {
+      "family": "136d8eac968682f70c3799042ccaf3cc1bc5a96e7658621a17b6300cc18971b6",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.0798601063896337
+    },
+    {
+      "family": "6c6aa7b34fe4cf118ef61383fc7aa3179e98267ba85fa5d100e33f0e4b148c35",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.0915126429244703
+    },
+    {
+      "family": "5a39e29f0e9382307832c0c3decd102e31e97ac583d5b0e40a02c54084dbb0e4",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.1116742754388463
+    },
+    {
+      "family": "140bcab25cbb9038b2b7bb99dfbb9f99f37cdd5485885d8cbeb32c04bdeeea76",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.108489663321858
+    },
+    {
+      "family": "d9bc612a8cba0509b54ddd79ce54720e0f6e8a4f79142a9918374d050b632cef",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.1137067075235311
+    },
+    {
+      "family": "6d0b288ea504dd7d5e78cf019a9c1cf4be01216783f9d0462ffe1967d1540fb6",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.061415828136791
+    },
+    {
+      "family": "e315d2710c865cf8653a263095145102512d8c729e85f6d4c61db0f02a0f2b3a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.0700077048468677
+    },
+    {
+      "family": "2fc574a8f16fc29933b9a065f9a179c99d8e0bdb3f6e1df6d53a9bb1c5d34008",
+      "brand": "Avito",
+      "vertical": "Horizontal",
+      "y": 0.0294694031748168
+    },
+    {
+      "family": "bea8d38b9598c1c6907269d3802d8a305d1e73a59a4c394180c4dd1bc8e58901",
+      "brand": "Avito",
+      "vertical": "Job",
+      "y": 0.0749424549007012
+    },
+    {
+      "family": "jobs_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Job",
+      "y": 0.051451931585548
+    },
+    {
+      "family": "jobs_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Job",
+      "y": 0.0720756665792534
+    },
+    {
+      "family": "e60ddee904fe581126612a69be92f2b122e29c3bd5d46e0fe3fc687c8f892e14",
+      "brand": "Аскона",
+      "vertical": "Goods",
+      "y": 0.0968038842364942
+    },
+    {
+      "family": "21a9de8f698623020efafcf7c2623526307731f068a7137a96da2a73395253eb",
+      "brand": "Аскона",
+      "vertical": "Goods",
+      "y": 0.2014391046624265
+    },
+    {
+      "family": "3efef00e18ff8be75c34ac99f3799b3b427ca2220d968146de252e4a861de5a3",
+      "brand": "Аскона",
+      "vertical": "Goods",
+      "y": 0.0675562524024692
+    },
+    {
+      "family": "a77cccdd75afd3960b7a418ba12ebbe27da47ace3a6c0b5a80477aecba35bd7d",
+      "brand": "Аскона",
+      "vertical": "Goods",
+      "y": 0.1018254981139315
+    },
+    {
+      "family": "65d9ede0dbcf32e442202c1954e6b45cf7904b90a30a102a854b4dd2f4da4825",
+      "brand": "Вкусно и точка",
+      "vertical": "Job",
+      "y": 0.0949305148449412
+    },
+    {
+      "family": "65d9ede0dbcf32e442202c1954e6b45cf7904b90a30a102a854b4dd2f4da4825",
+      "brand": "Вкусно и точка",
+      "vertical": "Job",
+      "y": 0.2363290117656986
+    },
+    {
+      "family": "01f7fef0d337aea56cf4f11b9c477eb9c14e0857eaa40940a426c04329fb9dbc",
+      "brand": "ВТБ",
+      "vertical": "Job",
+      "y": 0.0352081107857384
+    },
+    {
+      "family": "d443619419d32848a4337fa4b2876041cd8011d9e5220058ce6ebdee71f251db",
+      "brand": "Детский мир",
+      "vertical": "Goods",
+      "y": 0.0573778020288245
+    },
+    {
+      "family": "204b160ed5c5a661dd536c26a943f93e63751a93cba0fd425a2f9bd97b004151",
+      "brand": "Детский мир",
+      "vertical": "Goods",
+      "y": 0.1356785135611153
+    },
+    {
+      "family": "2bfd2edc964824aeca687df7908837616600c7c2ae3bbffe1e249f1caf2f4685",
+      "brand": "Детский мир",
+      "vertical": "Goods",
+      "y": 0.0557579561620075
+    },
+    {
+      "family": "e785382b5d69efc151f8619d2ea528d46f92ce827d0094a8d0e817a72634b9f6",
+      "brand": "Детский мир",
+      "vertical": "Goods",
+      "y": 0.0244870372787104
+    },
+    {
+      "family": "763c99bd4700447403980ae8dbb7f5b028dee274a788eb91147a600059d88762",
+      "brand": "Детский мир",
+      "vertical": "Goods",
+      "y": 0.0418797306689392
+    },
+    {
+      "family": "2225d13ba30018bbd6ef32aada0a7d41d82ce13219c43a062b7e0cd83eea1421",
+      "brand": "Детский мир",
+      "vertical": "Goods",
+      "y": 0.1691344089071093
+    },
+    {
+      "family": "ebc911d6b90c0da1c875de22a7434e0d967407baa1892f53c6e7c46d3a64eb41",
+      "brand": "Детский мир",
+      "vertical": "Goods",
+      "y": 0.1394642979207323
+    },
+    {
+      "family": "cdd0c8e65738fbeeea097da0bf94620b412ee4371e2a767cd5dc8b7e3a15b16d",
+      "brand": "Домклик",
+      "vertical": "RE",
+      "y": 0.0387401612228862
+    },
+    {
+      "family": "85fd69731249ab53116eaa295487471af2f39ac12652f8f1689f7a57f169f357",
+      "brand": "Домклик",
+      "vertical": "RE",
+      "y": 0.0558498738759363
+    },
+    {
+      "family": "bf3861e2aebb54637ccc56ba7417f02507e61460cba3a94a18191d5410ec9917",
+      "brand": "DROM.RU",
+      "vertical": "Goods",
+      "y": 0.1343690203602442
+    },
+    {
+      "family": "bbbb04a883e9a54a6368b3ce85e04f63c1da4c7ea89a008e9c67a6484a817fb8",
+      "brand": "М.Видео / Эльдорадо",
+      "vertical": "Goods",
+      "y": 0.1526542864231195
+    },
+    {
+      "family": "97bf50947819ca16981a2fbd9e6fea8b608f75381c70fd49307f8f3b4c5c08aa",
+      "brand": "М.Видео / Эльдорадо",
+      "vertical": "Goods",
+      "y": 0.451087459092006
+    },
+    {
+      "family": "3d28b6d441eb64aef510c1afd2f67562ae0776616aced51126f53095d8ecdd00",
+      "brand": "OZON",
+      "vertical": "Goods",
+      "y": 0.0784130753625885
+    },
+    {
+      "family": "98ea960b1af1978154b997d5638975173a0b111b9871f41725290178835e1cd4",
+      "brand": "OZON",
+      "vertical": "Goods",
+      "y": 0.1190946877915287
+    },
+    {
+      "family": "a08a72cb1afcd7944466c42a1950d46e1f88d45f00b620f7d954fbc28a1ef22e",
+      "brand": "OZON",
+      "vertical": "Goods",
+      "y": 0.0847010756681093
+    },
+    {
+      "family": "1a6a2c06b56c8a8f3e67230167b8519b07b2f627048c25944497b33627d06c90",
+      "brand": "OZON",
+      "vertical": "Job",
+      "y": 0.0901458030388033
+    },
+    {
+      "family": "783f640d88cbeee2a1e109b8daafa4594d46d922b259f494a49f728ea4f9b879",
+      "brand": "Спортмастер",
+      "vertical": "Goods",
+      "y": 0.0721179208778424
+    },
+    {
+      "family": "70d183caf7611dd4be9c7a9bc5d706fd8f26da66d51c589d12ee2874335108a0",
+      "brand": "Спортмастер",
+      "vertical": "Goods",
+      "y": 0.3139184084462259
+    },
+    {
+      "family": "5ce03ad1f966c57274221e32d4bf33d96caa645f5a4b1749e84926ef834bebd7",
+      "brand": "Спортмастер",
+      "vertical": "Goods",
+      "y": 0.0385805326953039
+    },
+    {
+      "family": "cf0483b782aa6c034ecf5c4f6df32b0d8d70510f7ec4d1e9cbd736084b7cfdeb",
+      "brand": "Спортмастер",
+      "vertical": "Goods",
+      "y": 0.102338626204235
+    },
+    {
+      "family": "8b60e5fb02cda4006e186644b6ec518dd704f52b0b0a8dcae1c6e502be86c657",
+      "brand": "Суточно",
+      "vertical": "Travel",
+      "y": 0.1184834123222748
+    },
+    {
+      "family": "3fc114e6471f397222ff755b168436891ff91e5d0930a29d17636d3af7012c0d",
+      "brand": "Т-Банк",
+      "vertical": "Job",
+      "y": 0.1539611861922536
+    },
+    {
+      "family": "7e3a745abcb3340bacc5565271cc10027f22eba71b3b2470d5cb23b35df05647",
+      "brand": "Т-Банк",
+      "vertical": "Job",
+      "y": 0.0832791562765013
+    },
+    {
+      "family": "e16d63b8a2e729707c519369ac27649370d45553ade29cb991fe2d1bd1cabdfb",
+      "brand": "Т Путешествия",
+      "vertical": "RE (STR)",
+      "y": 0.1444386083397017
+    },
+    {
+      "family": "7d47dd5f04de3738a8564861a4205120229f87726cfab7a6c83c44eff3e26669",
+      "brand": "Т-Авто",
+      "vertical": "Auto",
+      "y": 0.1037770218915152
+    },
+    {
+      "family": "06345e3d04dda6e18c95948390045569c38ceb77fe667af458034ae8d33eb34a",
+      "brand": "Циан",
+      "vertical": "RE",
+      "y": 0.3393138335457391
+    },
+    {
+      "family": "014960e74578516603880b32b0751b2fce046a951e9eeaafe9208f5e1ded0d8d",
+      "brand": "Циан",
+      "vertical": "RE",
+      "y": 0.1652124955431798
+    },
+    {
+      "family": "6ec43a4a4292a4debb614c170fb4ea88b1bf025291bba6e56c99178b04f5d102",
+      "brand": "Циан",
+      "vertical": "RE",
+      "y": 0.6621896293920084
+    },
+    {
+      "family": "14fb7fb0e649210733a84f00c8f173272039d78dd9e7130fc6cbcc9997452c0f",
+      "brand": "Яндекс Еда",
+      "vertical": "Job",
+      "y": 0.0606605540037406
+    },
+    {
+      "family": "24016f39850f5b22f34f9635c2c8c0fe68f2a11e698ad0f7acbdf628954bb372",
+      "brand": "Яндекс Еда",
+      "vertical": "Job",
+      "y": 0.137908969047711
+    },
+    {
+      "family": "a5ed6c752b1362495247196cd92167fe23c309041120bf0cf15cdeac9814710b",
+      "brand": "Яндекс Маркет",
+      "vertical": "Goods",
+      "y": 0.2026475825602463
+    },
+    {
+      "family": "bf3861e2aebb54637ccc56ba7417f02507e61460cba3a94a18191d5410ec9917",
+      "brand": "DROM.RU",
+      "vertical": "Goods",
+      "y": 0.2247003784965525
+    },
+    {
+      "family": "0ab56ebf21899536c8d63d28cf248f2841bbc0c9fbc70c48f0354127b5470822",
+      "brand": "Familia",
+      "vertical": "Goods",
+      "y": 0.0617525592450421
+    },
+    {
+      "family": "55555e7907d5578c9fb9eee51bb68015e003a28156d411bb73fd9a7c8bfcfc3e",
+      "brand": "FUN DAY",
+      "vertical": "Goods",
+      "y": 0.0388904974070635
+    },
+    {
+      "family": "59637ee4091494ad05bffc8eacfe1abe4faa8f3e0f8f2b5785b8375eb2533625",
+      "brand": "Gloria Jeans",
+      "vertical": "Goods",
+      "y": 0.0511490127000185
+    },
+    {
+      "family": "cc770f35fd31ef2993947b716792bb08392be715a47d5da7f34fc2895d95c473",
+      "brand": "HH",
+      "vertical": "Job",
+      "y": 0.3177978310936129
+    },
+    {
+      "family": "501326f4c84ec6981397435233eba0a6a21af8ee4dd18eb95fde10b101296b2c",
+      "brand": "HH",
+      "vertical": "Job",
+      "y": 0.681395579087636
+    },
+    {
+      "family": "0cf3c1574333a541aa8feea02f9a7c99121df91c16eb2238fd1e3ff9ada3c104",
+      "brand": "HH",
+      "vertical": "Job",
+      "y": 0.0405995853890977
+    },
+    {
+      "family": "6cd72632f93a291a26fb4fc6d5806f9eabf55f927b17b34c20160831c09b1d43",
+      "brand": "HH",
+      "vertical": "Job",
+      "y": 0.1953337506718145
+    },
+    {
+      "family": "6cd72632f93a291a26fb4fc6d5806f9eabf55f927b17b34c20160831c09b1d43",
+      "brand": "HH",
+      "vertical": "Job",
+      "y": 0.772766775012607
+    },
+    {
+      "family": "273bc2e4fa8f405e4fe4add6fbaac951d18250315a3e7d0d331b4eec252d932b",
+      "brand": "HH",
+      "vertical": "Job",
+      "y": 0.7844110797968065
+    },
+    {
+      "family": "9da0db5b59a3dccb8a07e93055daa6a170ba58dfbba5988fe16ea029286a8565",
+      "brand": "HH",
+      "vertical": "Job",
+      "y": 0.8884795736895459
+    },
+    {
+      "family": "b35b7bc673749ba14df418321f1b0ff343bcd1784410815f37285da36f8495b2",
+      "brand": "Lamoda",
+      "vertical": "Goods",
+      "y": 0.020833059827086
+    },
+    {
+      "family": "2d878d5cfd0d3648ea9f5d0b6a071eced5c90ad6963829b926e480e05c80b20e",
+      "brand": "Lamoda",
+      "vertical": "Goods",
+      "y": 0.0437825858085219
+    },
+    {
+      "family": "07b5adf08aa0f6ec0de5f7295516bc94f088deee14ba35860a65bb7a56522e54",
+      "brand": "Lamoda",
+      "vertical": "Goods",
+      "y": 0.0391902792548907
+    },
+    {
+      "family": "78b3c43323268981f34ff9dce47211ab175a88b85d2807a50f26d4211071c92c",
+      "brand": "OZON",
+      "vertical": "Goods",
+      "y": 0.0558592348661509
+    },
+    {
+      "family": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "brand": "OZON",
+      "vertical": "Goods",
+      "y": 0.0639798887995561
+    },
+    {
+      "family": "f6c1abb676f4f00db3f95994be31b5c00c3860f567e376ba26907f22e41d07cc",
+      "brand": "OZON",
+      "vertical": "Goods",
+      "y": 0.1902854453401113
+    },
+    {
+      "family": "7e6ce71420f99e28621e2308fac80dcb818367ecf1097ea035e09c0dad65018d",
+      "brand": "OZON",
+      "vertical": "Goods",
+      "y": 0.060783204557811
+    },
+    {
+      "family": "c57ebfcbddc341efea66d444d200b09cd326597a39373b34829706171663667b",
+      "brand": "OZON",
+      "vertical": "Goods",
+      "y": 0.1760372386305843
+    },
+    {
+      "family": "3906e313ad4c2705011fee0f6adf0d1bcb8781ed1c3ed87ba61e7137c47bd786",
+      "brand": "OZON",
+      "vertical": "Goods",
+      "y": 0.058291645577235
+    },
+    {
+      "family": "d9c0197d175534d4ac2b9a5a93986381e35750b441a9a6f68c9335830be4ce91",
+      "brand": "OZON",
+      "vertical": "Goods",
+      "y": 0.0429641850553378
+    },
+    {
+      "family": "6eefd8689e8af52a3d27bfd47b9527feaf62c543c513eee166c866dd3cc5dfe0",
+      "brand": "OZON",
+      "vertical": "Goods",
+      "y": 0.0477278805522378
+    },
+    {
+      "family": "9e4b3448c2318d284ec5baab20c93fb430ba74ea0a07af2e44fecbba4f72a523",
+      "brand": "Wildberries",
+      "vertical": "Goods",
+      "y": 0.0315113021272226
+    },
+    {
+      "family": "248aea231daf6d3cd9e98b07af39ade105729e26b6240bc9e03c41a7bf49f4b8",
+      "brand": "Wildberries",
+      "vertical": "Goods",
+      "y": 0.0407557956034901
+    },
+    {
+      "family": "4686238b2c992d5f24f9f34e3d558a0d9a8bdfdd1b070cd8a8db0721bb81d31f",
+      "brand": "Wildberries",
+      "vertical": "Goods",
+      "y": 0.1117613525684336
+    },
+    {
+      "family": "d0bb95b9e537e3129766bff00aeab5873d50dde115a1735feb26439226380500",
+      "brand": "Wildberries",
+      "vertical": "Goods",
+      "y": 0.0997760856822979
+    },
+    {
+      "family": "44bf89267b149c0b802648fb0d57f770f7147f48c202c06c2a5103828a1d7181",
+      "brand": "Wildberries",
+      "vertical": "Goods",
+      "y": 0.0340329590187453
+    },
+    {
+      "family": "1d32fe9b81d8f3e57e5d816073291662baeff1bcb6e84d0b205bd5da83b8c831",
+      "brand": "Wildberries",
+      "vertical": "Goods",
+      "y": 0.0380888897942016
+    },
+    {
+      "family": "e5a2c1856c8b93f9ec115d22321aa050ee0e99d47ec609885d2e0d69e1a78db3",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.1317605722173422
+    },
+    {
+      "family": "01c8a8280a464532520986540d92068073cbd6206f5bee18db8043ff7f7b0d94",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.1501075946045242
+    },
+    {
+      "family": "57cc56fb59a6787a85cf30f64ed4d5016384070c1926a7d70d49fb466e2d9c44",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.1533916600386319
+    },
+    {
+      "family": "d83eb5e4624da49403d89d19f4e1c02024cc5febe8b7d7f14474c629e6acb59c",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2122015915119363
+    },
+    {
+      "family": "35f7e10d87bf353f645bae2d1617c56590987ce2d368707724a72b0596f173bf",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.1957430988010038
+    },
+    {
+      "family": "e8f1e4a5966f4688925f062557287da4677e14c160fa0b8f28fede3fb40cc212",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2158402781941363
+    },
+    {
+      "family": "be793b896a17547c23bdce0d6c0f6e83ca5747fde13639f0c0afb556e1fc1d37",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.0770906653259594
+    },
+    {
+      "family": "806616bfa8374f86aaedf30a8b323d912053edad7db3900a5baf986c02274110",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.3591841157190454
+    },
+    {
+      "family": "garage_2024_2025",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2115384615384615
+    },
+    {
+      "family": "cde2b0db629676325b683a51456d04a62381e8957b92bb19c35a469d3bd4ab87",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.0715538226189697
+    },
+    {
+      "family": "e6607baf2f27fa4b25307bb86cc3e0e9605fb0cc1418a9fcb5216e412f104ee2",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.1457066773853188
+    },
+    {
+      "family": "20101d0aa6466cb934c69b83906e245d1f4bcd9a27855f0b7ef8397c0ee7b89a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.3595854191637876
+    },
+    {
+      "family": "a18415ab8e21671b0ba1daf43b34897d54863bf971eaa7d23eefac70f1df8e69",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.050699940850069
+    },
+    {
+      "family": "2b180d4553e3372f350799745aa47243085c96572f978c07b4ad119d3c7ea9e4",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.0571368109194794
+    },
+    {
+      "family": "07126f6e08c2dfbcf4e150806faafd435f6d95063df8881abc6bd5b3a8f03d7a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.048131746254901
+    },
+    {
+      "family": "11e788f113e2f23d3c19507674f1a8a99271a5b7651ddba6c3096462b5bd3774",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.0903513702397652
+    }
+  ],
+  "training_records": [
+    "recall_0",
+    "recall_1",
+    "recall_2",
+    "recall_3",
+    "recall_4",
+    "recall_5",
+    "recall_6",
+    "recall_7",
+    "recall_8",
+    "recall_9",
+    "recall_10",
+    "recall_11",
+    "recall_12",
+    "recall_13",
+    "recall_14",
+    "recall_15",
+    "recall_16",
+    "recall_17",
+    "recall_18",
+    "recall_20",
+    "recall_21",
+    "recall_22",
+    "recall_23",
+    "recall_24",
+    "recall_25",
+    "recall_26",
+    "recall_27",
+    "recall_28",
+    "recall_29",
+    "recall_30",
+    "recall_31",
+    "recall_32",
+    "recall_33",
+    "recall_34",
+    "recall_35",
+    "recall_36",
+    "recall_37",
+    "recall_38",
+    "recall_39",
+    "recall_40",
+    "recall_41",
+    "recall_42",
+    "recall_43",
+    "recall_44",
+    "recall_45",
+    "recall_46",
+    "recall_47",
+    "recall_48",
+    "recall_49",
+    "recall_50",
+    "recall_51",
+    "recall_52",
+    "recall_53",
+    "recall_54",
+    "recall_55",
+    "recall_56",
+    "recall_57",
+    "recall_58",
+    "recall_59",
+    "recall_60",
+    "recall_61",
+    "recall_62",
+    "recall_63",
+    "recall_64",
+    "recall_65",
+    "recall_66",
+    "recall_67",
+    "recall_68",
+    "recall_69",
+    "recall_70",
+    "recall_71",
+    "recall_72",
+    "recall_73",
+    "recall_74",
+    "recall_75",
+    "recall_76",
+    "recall_77",
+    "recall_78",
+    "recall_79",
+    "recall_80",
+    "recall_81",
+    "recall_82",
+    "recall_83",
+    "recall_84",
+    "recall_85",
+    "recall_86",
+    "recall_87",
+    "recall_88",
+    "recall_89",
+    "recall_90",
+    "recall_91",
+    "recall_92",
+    "recall_93",
+    "recall_94",
+    "recall_95",
+    "recall_96",
+    "recall_97",
+    "recall_98",
+    "recall_99",
+    "recall_100",
+    "recall_101",
+    "recall_102",
+    "recall_103",
+    "recall_104",
+    "recall_105",
+    "recall_106"
+  ],
+  "spec": {
+    "id": "ridge_log_a100",
+    "kind": "ridge",
+    "alpha": 100.0,
+    "noise": 0.0
+  },
+  "description": "Neuro-only seven-input smooth approximation of frozen finished-video R; no paired scores used in fitting; candidate selection exploratory."
+}

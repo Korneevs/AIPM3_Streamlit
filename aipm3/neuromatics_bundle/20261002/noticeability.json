@@ -1,0 +1,16 @@
+{
+  "physical_columns": [
+    "phys__audio_dynamic_range_db",
+    "phys__motion_mean"
+  ],
+  "lower": [
+    6.224003791809082,
+    0.0160984480753541
+  ],
+  "upper": [
+    19.09761743545532,
+    0.07196523621678352
+  ],
+  "state_source": "state_transformation",
+  "state_input": "state_transformation_present"
+}

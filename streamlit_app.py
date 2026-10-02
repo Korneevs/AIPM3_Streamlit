@@ -1,9 +1,4 @@
-import os
-
 import streamlit as st
-
-
-LATEST_PRETEST_ENABLED = os.environ.get("AIPM_ENABLE_LATEST_PRETEST", "1") == "1"
 
 
 st.set_page_config(page_title="AI-Pretest MesSage · AIPM 3.0", page_icon="🎬", layout="wide")
@@ -33,7 +28,8 @@ def home() -> None:
     st.caption("Предтест рекламных креативов по заметности, считываемости и запоминаемости")
     st.markdown(
         """
-        Загрузите готовый ролик в разделе **Видео-претест**. AIPM 3.0 объединяет
+        Выберите раздел **AIPM3.0 (для готовых)** или **AIPM3.0 (для нейроматиков)**
+        и загрузите ролик. AIPM 3.0 объединяет
         три оценки: заметность, считываемость главной идеи и запоминаемость.
 
         Приложение показывает, **что модель учла в плюс и в минус**:
@@ -41,8 +37,6 @@ def home() -> None:
         Неподтверждённые причины отмечены отдельно.
         """
     )
-    if LATEST_PRETEST_ENABLED:
-        st.markdown("Проверка попадания в UVP доступна в разделе **Предыдущая версия**.")
 
 
 require_login()
@@ -56,11 +50,8 @@ with st.sidebar:
 pages = [
     st.Page(home, title="Главная", icon="🏠", default=True),
 ]
-if LATEST_PRETEST_ENABLED:
-    pages.extend([
-        st.Page("app_pages/latest_pretest.py", title="Видео-претест", icon="🎬", url_path="video_pretest"),
-        st.Page("app_pages/video_pretest.py", title="Предыдущая версия", icon="📂", url_path="previous_pretest"),
-    ])
-else:
-    pages.append(st.Page("app_pages/video_pretest.py", title="Видео-претест", icon="🎬", url_path="video_pretest"))
+pages.extend([
+    st.Page("app_pages/latest_pretest.py", title="AIPM3.0 (для готовых)", icon="🎬", url_path="video_pretest"),
+    st.Page("app_pages/neuromatics_pretest.py", title="AIPM3.0 (для нейроматиков)", icon="📝", url_path="neuromatics_pretest"),
+])
 st.navigation(pages).run()
