@@ -22,7 +22,7 @@ import numpy as np
 from . import latest_contracts as fresh_contract
 from . import message_delivery_runtime as md
 from .latest_physical import physical_updates
-from .latest_runtime import (PROTOCOL_VERSION, SCORING_VERSION, clean_json,
+from .latest_runtime import (PROTOCOL_VERSION, clean_json, scoring_version_for,
                              family_for_video, rows_from_measurements, score_feature_rows)
 from .objective_features import (aggregate_aipm1, aggregate_aipm2,
                                   prepare_legacy_video, request_kwargs)
@@ -232,8 +232,10 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
                         brand: str = "Avito", vertical: str = "Goods", family: str | None = None,
                         record: str | None = None, allow_live: bool = False,
                         progress: Callable[[str], None] | None = None,
-                        evidence_collector: Callable | None = None):
+                        evidence_collector: Callable | None = None,
+                        material_kind: str = "finished"):
     """Extract once, resume any completed stage, then score exactly ten runs."""
+    version = scoring_version_for(material_kind)
     if brand != "Avito":
         raise ValueError("This exact application protocol is calibrated for Avito uploads")
     source_video = Path(source_video).resolve()
@@ -272,7 +274,8 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
             raise ValueError("Source video changed during analysis")
         rows = rows_from_measurements(measurements, source_sha=sha, physical=physical,
                                       duration=physical["phys__duration"], brand=brand,
-                                      vertical=vertical, family=family, record=record)
+                                      vertical=vertical, family=family, record=record,
+                                      material_kind=material_kind)
         result = score_feature_rows(rows, metadata=dict(
             source_sha=sha, source_name=source_video.name, brand=brand, vertical=vertical,
             family=family, duration_seconds=md.video_duration(source_video),
@@ -283,8 +286,8 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
                                           for k in ("aipm1", "aipm2")}),
             extraction=dict(repeats=10, calls_per_repeat=16, independent_stage_caches=True,
                             transcript_and_recovery_used=False),
-        ))
-        identity = _fingerprint(dict(scoring=SCORING_VERSION, brand=brand, vertical=vertical,
+        ), material_kind=material_kind)
+        identity = _fingerprint(dict(scoring=version, material_kind=material_kind, brand=brand, vertical=vertical,
                                     family=family, record=record))[:16]
         _write_json(root / f"result_{identity}.json", result)
         if evidence_collector is not None:

@@ -12,7 +12,9 @@ import streamlit as st
 
 from aipm3.latest_interpretation import VERSION, build_latest_interpretation, public_result
 from aipm3.latest_pipeline import MissingMeasurement, run_latest_analysis
-from aipm3.latest_runtime import SCORING_VERSION, clean_json, validate_cached_result
+from aipm3.latest_runtime import (
+    MATERIAL_LABELS, clean_json, material_kind_for_result, scoring_version_for, validate_cached_result,
+)
 from aipm3.runtime_resources import AnalysisBusy
 
 
@@ -88,10 +90,11 @@ def _show_partial_explanation(card: dict) -> None:
 
 
 def show_latest_result(result: dict, interpretation: dict | None = None) -> None:
+    material_kind = material_kind_for_result(result)
     interpretation = interpretation or interpret_result(result)
     overall=interpretation.get('overall')
     if overall:
-        st.subheader('Общая оценка · AIPM 3.0')
+        st.subheader('Общая оценка · ' + MATERIAL_LABELS[material_kind])
         st.metric(overall['title'],f'{overall["index"]:.0f}')
         st.caption(overall['level']+' · Среднее по 10 полным прогонам')
     st.subheader("Результат по трём компонентам")
@@ -137,14 +140,16 @@ def show_latest_result(result: dict, interpretation: dict | None = None) -> None
                 "Баллы рассчитаны; неподтверждённые причины не превращены в рекомендации.")
     exported = clean_json(public_result(result,interpretation))
     with st.expander("Версия расчёта"):
-        st.code(SCORING_VERSION, language=None)
-        st.caption("Замороженная модель от 1 октября 2026: 9 / 9 / 7 признаков. "
-                   "Итог Q — среднее произведение трёх оценок по десяти повторам. "
+        st.code(result.get("scoring_version", scoring_version_for(material_kind)), language=None)
+        model_note = ("Замороженная модель от 1 октября 2026: 9 / 9 / 7 признаков. "
+                      if material_kind == "finished" else "Модель для нейроматиков: 9 / 9 / 7 признаков. ")
+        st.caption(model_note + "Итог Q — среднее произведение трёх оценок по десяти повторам. "
                    "Независимая проверка качества модели на отложенной выборке ещё не завершена.")
         st.write({"Q": result["scores"]["Q"], "OPM": result["scores"]["OPM"]})
     st.download_button("Скачать результат и интерпретацию", data=json.dumps(
         exported, ensure_ascii=False, indent=2, allow_nan=False),
-        file_name="aipm_20261001_result.json", mime="application/json")
+        file_name=f"aipm3_{material_kind}_{scoring_version_for(material_kind)}_result.json",
+        mime="application/json", key=f"latest_{material_kind}_download")
 
 
 def _api_key() -> str:
@@ -165,39 +170,48 @@ def _review_collector():
     return collect_full_evidence
 
 
-def main() -> None:
-    st.title("Видео-претест · AIPM 3.0")
+def main(material_kind: str = "finished") -> None:
+    if material_kind not in MATERIAL_LABELS:
+        raise ValueError(f"Unknown material kind: {material_kind}")
+    prefix = f"latest_{material_kind}_"
+    result_key = prefix + "result"
+    st.title(MATERIAL_LABELS[material_kind])
     st.caption("Заметность, считываемость и запоминаемость — с наблюдениями для обсуждения ролика.")
     mode = st.radio("Источник результата", ["Загрузить ролик", "Открыть сохранённый результат"],
-                    horizontal=True)
-    preset = os.environ.get("AIPM_LATEST_RESULT_JSON")
-    if preset and st.session_state.get("latest_preset") != preset:
+                    horizontal=True, key=prefix + "source")
+    preset_env = "AIPM_LATEST_RESULT_JSON" if material_kind == "finished" else "AIPM_NEUROMATICS_RESULT_JSON"
+    preset = os.environ.get(preset_env)
+    if preset and st.session_state.get(prefix + "preset") != preset:
         try:
-            st.session_state["latest_result"] = validate_cached_result(json.loads(Path(preset).read_text()))
-            st.session_state["latest_preset"] = preset
+            st.session_state[result_key] = validate_cached_result(
+                json.loads(Path(preset).read_text()), material_kind=material_kind)
+            st.session_state[prefix + "preset"] = preset
         except (ValueError, KeyError, OSError) as exc:
             st.error(str(exc))
 
     if mode == "Открыть сохранённый результат":
-        saved = st.file_uploader("Результат анализа (JSON)", type=["json"], key="latest_saved")
+        saved = st.file_uploader("Результат анализа (JSON)", type=["json"], key=prefix + "saved")
         if saved is not None:
             digest = hashlib.sha256(saved.getvalue()).hexdigest()
-            if st.session_state.get("latest_saved_sha") != digest:
+            if st.session_state.get(prefix + "saved_sha") != digest:
                 try:
-                    st.session_state["latest_result"] = validate_cached_result(json.loads(saved.getvalue()))
-                    st.session_state["latest_saved_sha"] = digest
+                    st.session_state[result_key] = validate_cached_result(
+                        json.loads(saved.getvalue()), material_kind=material_kind)
+                    st.session_state[prefix + "saved_sha"] = digest
                 except (ValueError, KeyError, TypeError) as exc:
                     st.error(str(exc))
                     st.stop()
         st.caption("Открытие сохранённого результата не отправляет запросы к AI.")
     else:
-        vertical = st.selectbox("Вертикаль", list(VERTICALS))
-        uploaded = st.file_uploader("Ролик Avito (MP4 / MOV)", type=["mp4", "mov"], key="latest_video")
+        vertical = st.selectbox("Вертикаль", list(VERTICALS), key=prefix + "vertical")
+        uploaded = st.file_uploader("Ролик Avito (MP4 / MOV)", type=["mp4", "mov"], key=prefix + "video")
         if uploaded is not None:
             st.video(uploaded)
         cached, live = st.columns(2)
-        cached_btn = cached.button("Рассчитать по сохранённым наблюдениям", use_container_width=True)
-        live_btn = live.button("Запустить AI-анализ", type="primary", use_container_width=True)
+        cached_btn = cached.button("Рассчитать по сохранённым наблюдениям", use_container_width=True,
+                                   key=prefix + "cached")
+        live_btn = live.button("Запустить AI-анализ", type="primary", use_container_width=True,
+                               key=prefix + "live")
         st.caption("AI-анализ отправляет видео на проверку: 10 повторов разбора "
                    "и отдельные проверки наблюдений. Готовые этапы используются повторно.")
         if cached_btn or live_btn:
@@ -215,11 +229,11 @@ def main() -> None:
                     with st.status("Разбираем ролик", expanded=True) as status:
                         result = run_latest_analysis(
                             source_video=source, output_root=cache, api_key=_api_key() if live_btn else "",
-                            vertical=VERTICALS[vertical], allow_live=bool(live_btn),
+                            vertical=VERTICALS[vertical], allow_live=bool(live_btn), material_kind=material_kind,
                             progress=lambda message: status.update(label=message),
                             evidence_collector=_review_collector())
                         result["source_name"] = uploaded.name
-                        st.session_state["latest_result"] = result
+                        st.session_state[result_key] = result
                         status.update(label="Разбор завершён", state="complete", expanded=False)
                 except MissingMeasurement:
                     st.warning("Для этого ролика не хватает сохранённых наблюдений. "
@@ -231,18 +245,21 @@ def main() -> None:
                              "Готовые этапы сохранены; повторный запуск продолжит расчёт.")
                 finally:
                     source.unlink(missing_ok=True)
-        if uploaded is not None and "latest_result" in st.session_state:
+        if uploaded is not None and result_key in st.session_state:
             current_sha = hashlib.sha256(uploaded.getvalue()).hexdigest()
-            stored_sha = st.session_state["latest_result"].get("source_sha")
+            stored_sha = st.session_state[result_key].get("source_sha")
             if stored_sha and stored_sha != current_sha:
                 st.info("Ниже показан результат предыдущего ролика. Запустите анализ нового файла.")
-            elif st.session_state["latest_result"].get("vertical") not in (None, VERTICALS[vertical]):
+            elif st.session_state[result_key].get("vertical") not in (None, VERTICALS[vertical]):
                 st.info("Вертикаль изменена. Ниже сохранён результат прежнего выбора; "
                         "пересчитайте его по сохранённым наблюдениям.")
 
-    if "latest_result" in st.session_state:
+    if result_key in st.session_state:
         st.divider()
-        result = st.session_state["latest_result"]
+        result = st.session_state[result_key]
+        if material_kind_for_result(result) != material_kind:
+            st.error("Сохранённый результат относится к другому типу материала. Откройте соответствующий раздел.")
+            st.stop()
         st.caption(result.get("source_name", result.get("name", result.get("record", ""))))
         with st.spinner("Готовим объяснение оценок"):
             show_latest_result(result)

@@ -1,4 +1,4 @@
-"""Deterministic explanations of the frozen 9/9/7 model, with evidence gates.
+"""Deterministic explanations of the selected 9/9/7 model, with evidence gates.
 
 Exact per-head Shapley values explain predictions, not causal edit effects.
 Independent video observations corroborate facts but never alter a score.
@@ -14,7 +14,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-VERSION = 'manager-evidence-v4'
+VERSION = 'manager-evidence-v5-material-modes'
 NAMES = {'n':'Заметность', 'm':'Считываемость', 'r':'Запоминаемость'}
 LABELS = {
  'character_close_up_seconds':'Крупные планы героя',
@@ -101,7 +101,11 @@ def _predictor(head):
 def design_predictor(head,frame,train):
     """Return aligned one-column-per-meaning designs and exact numeric scoring."""
     cols=head.state['columns']
-    if 'members' not in head.state['spec']:
+    if callable(getattr(head,'predict_design',None)):
+        # Adapted heads own their transformation and score conversion. Reusing
+        # the finished-video SVR here would explain a different prediction.
+        x=head.design(frame);bg=head.design(train);fn=head.predict_design
+    elif 'members' not in head.state['spec']:
         x=head.design(frame);bg=head.design(train);fn=_predictor(head)
     else:
         members=[type(head)(s,e) for s,e in head.estimator]
@@ -249,6 +253,8 @@ def editorial_check(feature,value):
 
 def semantic_measurement(head,frame,feature):
     """Compare video evidence to the value actually used by recall consensus."""
+    if callable(getattr(head,'observed_measurement',None)):
+        return head.observed_measurement(frame,feature)
     observed=float(pd.to_numeric(frame[feature],errors='coerce').mean()) if feature in frame else float('nan')
     sp=head.state['spec']
     if 'members' in sp:
@@ -263,9 +269,11 @@ def semantic_measurement(head,frame,feature):
     return observed,observed
 
 def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,strict_evidence=True):
+    from .latest_runtime import material_kind_for_result
+    material_kind=material_kind_for_result(result)
     if model is None or bundle_dir is None:
-        from .latest_runtime import load_latest_models,BUNDLE_DIR
-        model=model or load_latest_models();bundle_dir=bundle_dir or BUNDLE_DIR
+        from .latest_runtime import load_models,BUNDLE_DIR
+        model=model or load_models(material_kind);bundle_dir=bundle_dir or BUNDLE_DIR
     evidence=evidence or [];details={};cards=[];rejected=0
     if strict_evidence:
         from .latest_evidence import validate_evidence
@@ -292,7 +300,14 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
         dur=float(pd.to_numeric(frame.get('phys__duration',frame.get('duration',frame.get('total_video_duration_sec',pd.Series([30])))),errors='coerce').mean())
         for j,c in enumerate(columns):
             v,original_mean=semantic_measurement(head,frame,c)
-            support=_evidence(c,evidence,v,dur)
+            # Physical measurements describe the file as observed. An adapted
+            # scoring value must not be presented as its literal sound level.
+            adjusted_physical=(material_kind=='neuromatics' and c.startswith('phys__')
+                and not np.isclose(v,original_mean,rtol=0,atol=1e-12))
+            support=_evidence(c,evidence,original_mean if adjusted_physical else v,dur)
+            if adjusted_physical:
+                support['source']='physical_neuromatics_adjusted'
+                support['observation']+=' В оценке нейроматика влияние крайних значений ограничено, чтобы черновая анимация или озвучка не определяли оценку идеи.'
             sign=1 if vals[j]>0 else -1
             stability=float(np.mean(phi[:,j]*sign>1e-10))
             material=abs(vals[j]/base)>=.01
@@ -331,9 +346,9 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
         cards.append(card)
     reference=json.loads(Path(__file__).with_name('latest_display_reference.json').read_text())
     q=float(result['scores']['Q']);lo,hi=reference['Q_tertiles']
-    overall=dict(title='AIPM 3.0',score=q,index=100*q/reference['Q_mean'],
+    overall=dict(title=('AIPM3.0 (для нейроматиков)' if material_kind=='neuromatics' else 'AIPM 3.0'),score=q,index=100*q/reference['Q_mean'],
       level='Выше типичного уровня' if q>hi else 'Ниже типичного уровня' if q<lo else 'Типичный уровень')
-    return dict(version=VERSION,cards=cards,details=details,overall=overall,
+    return dict(version=VERSION,material_kind=material_kind,cards=cards,details=details,overall=overall,
       scale_note='100 - средняя оценка исторических роликов в этом компоненте. Это индекс модели, а не процент зрителей.',
       interpretation_note='Плюсы и ограничения объясняют расчет модели относительно исторических роликов. Проверки ниже помогут обсудить правки с Марком и ресерчем; эффект отдельной правки нужно проверить на новой версии.',
       repeat_note='Диапазон показывает разброс повторных разборов, а не доверительный интервал эффективности.',
