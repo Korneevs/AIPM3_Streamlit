@@ -1,0 +1,2684 @@
+{
+  "spec": {
+    "task": "m",
+    "fixed": [
+      "fresh__audiovisual_claim_alignment",
+      "main_character",
+      "numeric_offer_on_screen",
+      "panel__distinct_benefit_count",
+      "panel__mandatory_inference_chain_length",
+      "panel__message_specificity_level",
+      "panel__offer_novelty_explanation_need",
+      "panel__product_role_reveal_time_band",
+      "promo"
+    ],
+    "mode": "expanded",
+    "learner": "ridge",
+    "alpha": 1,
+    "target": "log",
+    "step": 0.5,
+    "calibration": "train_affine",
+    "repeat_training": true,
+    "panel_consensus": true,
+    "md_refinement": true,
+    "noticeability_weight_power": 2
+  },
+  "columns": [
+    "fresh__audiovisual_claim_alignment",
+    "main_character",
+    "numeric_offer_on_screen",
+    "panel__distinct_benefit_count",
+    "panel__mandatory_inference_chain_length",
+    "panel__message_specificity_level",
+    "panel__offer_novelty_explanation_need",
+    "panel__product_role_reveal_time_band",
+    "promo"
+  ],
+  "history": [
+    {
+      "family": "372cb7e8f6ae65f534aefaf2f6e97458a126c51e9152a8b2747b93267a9dd0d9",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.15
+    },
+    {
+      "family": "98f75aea9679cb15892855111c0e33a380b485f051ea8a013d2d4a7b6878545a",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.23
+    },
+    {
+      "family": "491f84b3d6722950dace3f711e10da267580113e784bdc15ee9904db379cb519",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.38
+    },
+    {
+      "family": "491f84b3d6722950dace3f711e10da267580113e784bdc15ee9904db379cb519",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.38
+    },
+    {
+      "family": "491f84b3d6722950dace3f711e10da267580113e784bdc15ee9904db379cb519",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.38
+    },
+    {
+      "family": "491f84b3d6722950dace3f711e10da267580113e784bdc15ee9904db379cb519",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.38
+    },
+    {
+      "family": "491f84b3d6722950dace3f711e10da267580113e784bdc15ee9904db379cb519",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.38
+    },
+    {
+      "family": "491f84b3d6722950dace3f711e10da267580113e784bdc15ee9904db379cb519",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.38
+    },
+    {
+      "family": "491f84b3d6722950dace3f711e10da267580113e784bdc15ee9904db379cb519",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.38
+    },
+    {
+      "family": "491f84b3d6722950dace3f711e10da267580113e784bdc15ee9904db379cb519",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.38
+    },
+    {
+      "family": "491f84b3d6722950dace3f711e10da267580113e784bdc15ee9904db379cb519",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.38
+    },
+    {
+      "family": "491f84b3d6722950dace3f711e10da267580113e784bdc15ee9904db379cb519",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.38
+    },
+    {
+      "family": "auto_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.1
+    },
+    {
+      "family": "auto_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.1
+    },
+    {
+      "family": "auto_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.1
+    },
+    {
+      "family": "auto_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.1
+    },
+    {
+      "family": "auto_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.1
+    },
+    {
+      "family": "auto_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.1
+    },
+    {
+      "family": "auto_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.1
+    },
+    {
+      "family": "auto_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.1
+    },
+    {
+      "family": "auto_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.1
+    },
+    {
+      "family": "auto_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Auto",
+      "y": 0.1
+    },
+    {
+      "family": "11e788f113e2f23d3c19507674f1a8a99271a5b7651ddba6c3096462b5bd3774",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.41
+    },
+    {
+      "family": "e5a2c1856c8b93f9ec115d22321aa050ee0e99d47ec609885d2e0d69e1a78db3",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.23
+    },
+    {
+      "family": "e5a2c1856c8b93f9ec115d22321aa050ee0e99d47ec609885d2e0d69e1a78db3",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.23
+    },
+    {
+      "family": "e5a2c1856c8b93f9ec115d22321aa050ee0e99d47ec609885d2e0d69e1a78db3",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.23
+    },
+    {
+      "family": "e5a2c1856c8b93f9ec115d22321aa050ee0e99d47ec609885d2e0d69e1a78db3",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.23
+    },
+    {
+      "family": "e5a2c1856c8b93f9ec115d22321aa050ee0e99d47ec609885d2e0d69e1a78db3",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.23
+    },
+    {
+      "family": "e5a2c1856c8b93f9ec115d22321aa050ee0e99d47ec609885d2e0d69e1a78db3",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.23
+    },
+    {
+      "family": "e5a2c1856c8b93f9ec115d22321aa050ee0e99d47ec609885d2e0d69e1a78db3",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.23
+    },
+    {
+      "family": "e5a2c1856c8b93f9ec115d22321aa050ee0e99d47ec609885d2e0d69e1a78db3",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.23
+    },
+    {
+      "family": "e5a2c1856c8b93f9ec115d22321aa050ee0e99d47ec609885d2e0d69e1a78db3",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.23
+    },
+    {
+      "family": "e5a2c1856c8b93f9ec115d22321aa050ee0e99d47ec609885d2e0d69e1a78db3",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.23
+    },
+    {
+      "family": "01c8a8280a464532520986540d92068073cbd6206f5bee18db8043ff7f7b0d94",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.3
+    },
+    {
+      "family": "57cc56fb59a6787a85cf30f64ed4d5016384070c1926a7d70d49fb466e2d9c44",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.5
+    },
+    {
+      "family": "57cc56fb59a6787a85cf30f64ed4d5016384070c1926a7d70d49fb466e2d9c44",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.5
+    },
+    {
+      "family": "57cc56fb59a6787a85cf30f64ed4d5016384070c1926a7d70d49fb466e2d9c44",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.5
+    },
+    {
+      "family": "57cc56fb59a6787a85cf30f64ed4d5016384070c1926a7d70d49fb466e2d9c44",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.5
+    },
+    {
+      "family": "57cc56fb59a6787a85cf30f64ed4d5016384070c1926a7d70d49fb466e2d9c44",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.5
+    },
+    {
+      "family": "57cc56fb59a6787a85cf30f64ed4d5016384070c1926a7d70d49fb466e2d9c44",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.5
+    },
+    {
+      "family": "57cc56fb59a6787a85cf30f64ed4d5016384070c1926a7d70d49fb466e2d9c44",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.5
+    },
+    {
+      "family": "57cc56fb59a6787a85cf30f64ed4d5016384070c1926a7d70d49fb466e2d9c44",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.5
+    },
+    {
+      "family": "57cc56fb59a6787a85cf30f64ed4d5016384070c1926a7d70d49fb466e2d9c44",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.5
+    },
+    {
+      "family": "57cc56fb59a6787a85cf30f64ed4d5016384070c1926a7d70d49fb466e2d9c44",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.5
+    },
+    {
+      "family": "d83eb5e4624da49403d89d19f4e1c02024cc5febe8b7d7f14474c629e6acb59c",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.37
+    },
+    {
+      "family": "d83eb5e4624da49403d89d19f4e1c02024cc5febe8b7d7f14474c629e6acb59c",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.37
+    },
+    {
+      "family": "d83eb5e4624da49403d89d19f4e1c02024cc5febe8b7d7f14474c629e6acb59c",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.37
+    },
+    {
+      "family": "d83eb5e4624da49403d89d19f4e1c02024cc5febe8b7d7f14474c629e6acb59c",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.37
+    },
+    {
+      "family": "d83eb5e4624da49403d89d19f4e1c02024cc5febe8b7d7f14474c629e6acb59c",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.37
+    },
+    {
+      "family": "d83eb5e4624da49403d89d19f4e1c02024cc5febe8b7d7f14474c629e6acb59c",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.37
+    },
+    {
+      "family": "d83eb5e4624da49403d89d19f4e1c02024cc5febe8b7d7f14474c629e6acb59c",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.37
+    },
+    {
+      "family": "d83eb5e4624da49403d89d19f4e1c02024cc5febe8b7d7f14474c629e6acb59c",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.37
+    },
+    {
+      "family": "d83eb5e4624da49403d89d19f4e1c02024cc5febe8b7d7f14474c629e6acb59c",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.37
+    },
+    {
+      "family": "d83eb5e4624da49403d89d19f4e1c02024cc5febe8b7d7f14474c629e6acb59c",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.37
+    },
+    {
+      "family": "35f7e10d87bf353f645bae2d1617c56590987ce2d368707724a72b0596f173bf",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "35f7e10d87bf353f645bae2d1617c56590987ce2d368707724a72b0596f173bf",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "35f7e10d87bf353f645bae2d1617c56590987ce2d368707724a72b0596f173bf",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "35f7e10d87bf353f645bae2d1617c56590987ce2d368707724a72b0596f173bf",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "35f7e10d87bf353f645bae2d1617c56590987ce2d368707724a72b0596f173bf",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "35f7e10d87bf353f645bae2d1617c56590987ce2d368707724a72b0596f173bf",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "35f7e10d87bf353f645bae2d1617c56590987ce2d368707724a72b0596f173bf",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "35f7e10d87bf353f645bae2d1617c56590987ce2d368707724a72b0596f173bf",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "35f7e10d87bf353f645bae2d1617c56590987ce2d368707724a72b0596f173bf",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "35f7e10d87bf353f645bae2d1617c56590987ce2d368707724a72b0596f173bf",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "e8f1e4a5966f4688925f062557287da4677e14c160fa0b8f28fede3fb40cc212",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.19
+    },
+    {
+      "family": "e8f1e4a5966f4688925f062557287da4677e14c160fa0b8f28fede3fb40cc212",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.19
+    },
+    {
+      "family": "e8f1e4a5966f4688925f062557287da4677e14c160fa0b8f28fede3fb40cc212",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.19
+    },
+    {
+      "family": "e8f1e4a5966f4688925f062557287da4677e14c160fa0b8f28fede3fb40cc212",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.19
+    },
+    {
+      "family": "e8f1e4a5966f4688925f062557287da4677e14c160fa0b8f28fede3fb40cc212",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.19
+    },
+    {
+      "family": "e8f1e4a5966f4688925f062557287da4677e14c160fa0b8f28fede3fb40cc212",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.19
+    },
+    {
+      "family": "e8f1e4a5966f4688925f062557287da4677e14c160fa0b8f28fede3fb40cc212",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.19
+    },
+    {
+      "family": "e8f1e4a5966f4688925f062557287da4677e14c160fa0b8f28fede3fb40cc212",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.19
+    },
+    {
+      "family": "e8f1e4a5966f4688925f062557287da4677e14c160fa0b8f28fede3fb40cc212",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.19
+    },
+    {
+      "family": "e8f1e4a5966f4688925f062557287da4677e14c160fa0b8f28fede3fb40cc212",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.19
+    },
+    {
+      "family": "806616bfa8374f86aaedf30a8b323d912053edad7db3900a5baf986c02274110",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.25
+    },
+    {
+      "family": "806616bfa8374f86aaedf30a8b323d912053edad7db3900a5baf986c02274110",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.25
+    },
+    {
+      "family": "806616bfa8374f86aaedf30a8b323d912053edad7db3900a5baf986c02274110",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.25
+    },
+    {
+      "family": "806616bfa8374f86aaedf30a8b323d912053edad7db3900a5baf986c02274110",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.25
+    },
+    {
+      "family": "806616bfa8374f86aaedf30a8b323d912053edad7db3900a5baf986c02274110",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.25
+    },
+    {
+      "family": "806616bfa8374f86aaedf30a8b323d912053edad7db3900a5baf986c02274110",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.25
+    },
+    {
+      "family": "806616bfa8374f86aaedf30a8b323d912053edad7db3900a5baf986c02274110",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.25
+    },
+    {
+      "family": "806616bfa8374f86aaedf30a8b323d912053edad7db3900a5baf986c02274110",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.25
+    },
+    {
+      "family": "806616bfa8374f86aaedf30a8b323d912053edad7db3900a5baf986c02274110",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.25
+    },
+    {
+      "family": "806616bfa8374f86aaedf30a8b323d912053edad7db3900a5baf986c02274110",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.25
+    },
+    {
+      "family": "be793b896a17547c23bdce0d6c0f6e83ca5747fde13639f0c0afb556e1fc1d37",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.46
+    },
+    {
+      "family": "be793b896a17547c23bdce0d6c0f6e83ca5747fde13639f0c0afb556e1fc1d37",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.46
+    },
+    {
+      "family": "be793b896a17547c23bdce0d6c0f6e83ca5747fde13639f0c0afb556e1fc1d37",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.46
+    },
+    {
+      "family": "be793b896a17547c23bdce0d6c0f6e83ca5747fde13639f0c0afb556e1fc1d37",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.46
+    },
+    {
+      "family": "be793b896a17547c23bdce0d6c0f6e83ca5747fde13639f0c0afb556e1fc1d37",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.46
+    },
+    {
+      "family": "be793b896a17547c23bdce0d6c0f6e83ca5747fde13639f0c0afb556e1fc1d37",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.46
+    },
+    {
+      "family": "be793b896a17547c23bdce0d6c0f6e83ca5747fde13639f0c0afb556e1fc1d37",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.46
+    },
+    {
+      "family": "be793b896a17547c23bdce0d6c0f6e83ca5747fde13639f0c0afb556e1fc1d37",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.46
+    },
+    {
+      "family": "be793b896a17547c23bdce0d6c0f6e83ca5747fde13639f0c0afb556e1fc1d37",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.46
+    },
+    {
+      "family": "be793b896a17547c23bdce0d6c0f6e83ca5747fde13639f0c0afb556e1fc1d37",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.46
+    },
+    {
+      "family": "garage_2024_2025",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "garage_2024_2025",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "garage_2024_2025",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "garage_2024_2025",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "garage_2024_2025",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "garage_2024_2025",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "garage_2024_2025",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "garage_2024_2025",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "garage_2024_2025",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "garage_2024_2025",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "ea57e2c751dbba0622cece5b2168785832d4c1d77629c85d2d876aaf9a9ad010",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.26
+    },
+    {
+      "family": "cde2b0db629676325b683a51456d04a62381e8957b92bb19c35a469d3bd4ab87",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.27
+    },
+    {
+      "family": "e6607baf2f27fa4b25307bb86cc3e0e9605fb0cc1418a9fcb5216e412f104ee2",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "e6607baf2f27fa4b25307bb86cc3e0e9605fb0cc1418a9fcb5216e412f104ee2",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "e6607baf2f27fa4b25307bb86cc3e0e9605fb0cc1418a9fcb5216e412f104ee2",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "e6607baf2f27fa4b25307bb86cc3e0e9605fb0cc1418a9fcb5216e412f104ee2",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "e6607baf2f27fa4b25307bb86cc3e0e9605fb0cc1418a9fcb5216e412f104ee2",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "e6607baf2f27fa4b25307bb86cc3e0e9605fb0cc1418a9fcb5216e412f104ee2",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "e6607baf2f27fa4b25307bb86cc3e0e9605fb0cc1418a9fcb5216e412f104ee2",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "e6607baf2f27fa4b25307bb86cc3e0e9605fb0cc1418a9fcb5216e412f104ee2",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "e6607baf2f27fa4b25307bb86cc3e0e9605fb0cc1418a9fcb5216e412f104ee2",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "e6607baf2f27fa4b25307bb86cc3e0e9605fb0cc1418a9fcb5216e412f104ee2",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "20101d0aa6466cb934c69b83906e245d1f4bcd9a27855f0b7ef8397c0ee7b89a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "20101d0aa6466cb934c69b83906e245d1f4bcd9a27855f0b7ef8397c0ee7b89a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "20101d0aa6466cb934c69b83906e245d1f4bcd9a27855f0b7ef8397c0ee7b89a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "20101d0aa6466cb934c69b83906e245d1f4bcd9a27855f0b7ef8397c0ee7b89a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "20101d0aa6466cb934c69b83906e245d1f4bcd9a27855f0b7ef8397c0ee7b89a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "20101d0aa6466cb934c69b83906e245d1f4bcd9a27855f0b7ef8397c0ee7b89a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "20101d0aa6466cb934c69b83906e245d1f4bcd9a27855f0b7ef8397c0ee7b89a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "20101d0aa6466cb934c69b83906e245d1f4bcd9a27855f0b7ef8397c0ee7b89a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "20101d0aa6466cb934c69b83906e245d1f4bcd9a27855f0b7ef8397c0ee7b89a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "20101d0aa6466cb934c69b83906e245d1f4bcd9a27855f0b7ef8397c0ee7b89a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "a18415ab8e21671b0ba1daf43b34897d54863bf971eaa7d23eefac70f1df8e69",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.26
+    },
+    {
+      "family": "a18415ab8e21671b0ba1daf43b34897d54863bf971eaa7d23eefac70f1df8e69",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.26
+    },
+    {
+      "family": "a18415ab8e21671b0ba1daf43b34897d54863bf971eaa7d23eefac70f1df8e69",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.26
+    },
+    {
+      "family": "a18415ab8e21671b0ba1daf43b34897d54863bf971eaa7d23eefac70f1df8e69",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.26
+    },
+    {
+      "family": "a18415ab8e21671b0ba1daf43b34897d54863bf971eaa7d23eefac70f1df8e69",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.26
+    },
+    {
+      "family": "a18415ab8e21671b0ba1daf43b34897d54863bf971eaa7d23eefac70f1df8e69",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.26
+    },
+    {
+      "family": "a18415ab8e21671b0ba1daf43b34897d54863bf971eaa7d23eefac70f1df8e69",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.26
+    },
+    {
+      "family": "a18415ab8e21671b0ba1daf43b34897d54863bf971eaa7d23eefac70f1df8e69",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.26
+    },
+    {
+      "family": "a18415ab8e21671b0ba1daf43b34897d54863bf971eaa7d23eefac70f1df8e69",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.26
+    },
+    {
+      "family": "a18415ab8e21671b0ba1daf43b34897d54863bf971eaa7d23eefac70f1df8e69",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.26
+    },
+    {
+      "family": "2b180d4553e3372f350799745aa47243085c96572f978c07b4ad119d3c7ea9e4",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.25
+    },
+    {
+      "family": "4578099cb8a697f8a169117a375baa1ab7e211d736477922af0e6981886ad977",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "4578099cb8a697f8a169117a375baa1ab7e211d736477922af0e6981886ad977",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "4578099cb8a697f8a169117a375baa1ab7e211d736477922af0e6981886ad977",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "4578099cb8a697f8a169117a375baa1ab7e211d736477922af0e6981886ad977",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "4578099cb8a697f8a169117a375baa1ab7e211d736477922af0e6981886ad977",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "4578099cb8a697f8a169117a375baa1ab7e211d736477922af0e6981886ad977",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "4578099cb8a697f8a169117a375baa1ab7e211d736477922af0e6981886ad977",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "4578099cb8a697f8a169117a375baa1ab7e211d736477922af0e6981886ad977",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "4578099cb8a697f8a169117a375baa1ab7e211d736477922af0e6981886ad977",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "4578099cb8a697f8a169117a375baa1ab7e211d736477922af0e6981886ad977",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.21
+    },
+    {
+      "family": "f678c2339636323bb95679ec579b6e28648f67be1d2b09bb94b572f3cb495aa5",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.23
+    },
+    {
+      "family": "a65e6ebc06a8a0d13ab515dd9e0920ef454b0883855b7031854b2e795b0c6f33",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "a65e6ebc06a8a0d13ab515dd9e0920ef454b0883855b7031854b2e795b0c6f33",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "a65e6ebc06a8a0d13ab515dd9e0920ef454b0883855b7031854b2e795b0c6f33",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "a65e6ebc06a8a0d13ab515dd9e0920ef454b0883855b7031854b2e795b0c6f33",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "a65e6ebc06a8a0d13ab515dd9e0920ef454b0883855b7031854b2e795b0c6f33",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "a65e6ebc06a8a0d13ab515dd9e0920ef454b0883855b7031854b2e795b0c6f33",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "a65e6ebc06a8a0d13ab515dd9e0920ef454b0883855b7031854b2e795b0c6f33",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "a65e6ebc06a8a0d13ab515dd9e0920ef454b0883855b7031854b2e795b0c6f33",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "a65e6ebc06a8a0d13ab515dd9e0920ef454b0883855b7031854b2e795b0c6f33",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "a65e6ebc06a8a0d13ab515dd9e0920ef454b0883855b7031854b2e795b0c6f33",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "5a39e29f0e9382307832c0c3decd102e31e97ac583d5b0e40a02c54084dbb0e4",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.16
+    },
+    {
+      "family": "5a39e29f0e9382307832c0c3decd102e31e97ac583d5b0e40a02c54084dbb0e4",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.16
+    },
+    {
+      "family": "5a39e29f0e9382307832c0c3decd102e31e97ac583d5b0e40a02c54084dbb0e4",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.16
+    },
+    {
+      "family": "5a39e29f0e9382307832c0c3decd102e31e97ac583d5b0e40a02c54084dbb0e4",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.16
+    },
+    {
+      "family": "5a39e29f0e9382307832c0c3decd102e31e97ac583d5b0e40a02c54084dbb0e4",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.16
+    },
+    {
+      "family": "5a39e29f0e9382307832c0c3decd102e31e97ac583d5b0e40a02c54084dbb0e4",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.16
+    },
+    {
+      "family": "5a39e29f0e9382307832c0c3decd102e31e97ac583d5b0e40a02c54084dbb0e4",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.16
+    },
+    {
+      "family": "5a39e29f0e9382307832c0c3decd102e31e97ac583d5b0e40a02c54084dbb0e4",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.16
+    },
+    {
+      "family": "5a39e29f0e9382307832c0c3decd102e31e97ac583d5b0e40a02c54084dbb0e4",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.16
+    },
+    {
+      "family": "5a39e29f0e9382307832c0c3decd102e31e97ac583d5b0e40a02c54084dbb0e4",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.16
+    },
+    {
+      "family": "140bcab25cbb9038b2b7bb99dfbb9f99f37cdd5485885d8cbeb32c04bdeeea76",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "140bcab25cbb9038b2b7bb99dfbb9f99f37cdd5485885d8cbeb32c04bdeeea76",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "140bcab25cbb9038b2b7bb99dfbb9f99f37cdd5485885d8cbeb32c04bdeeea76",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "140bcab25cbb9038b2b7bb99dfbb9f99f37cdd5485885d8cbeb32c04bdeeea76",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "140bcab25cbb9038b2b7bb99dfbb9f99f37cdd5485885d8cbeb32c04bdeeea76",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "140bcab25cbb9038b2b7bb99dfbb9f99f37cdd5485885d8cbeb32c04bdeeea76",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "140bcab25cbb9038b2b7bb99dfbb9f99f37cdd5485885d8cbeb32c04bdeeea76",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "140bcab25cbb9038b2b7bb99dfbb9f99f37cdd5485885d8cbeb32c04bdeeea76",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "140bcab25cbb9038b2b7bb99dfbb9f99f37cdd5485885d8cbeb32c04bdeeea76",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "140bcab25cbb9038b2b7bb99dfbb9f99f37cdd5485885d8cbeb32c04bdeeea76",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.32
+    },
+    {
+      "family": "9e7b30dacca267ce0700b6d8aab0d5245797a16b13e368f1e33a5f39aa4b452c",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.36
+    },
+    {
+      "family": "2b887867a656bb914af76caf3279ee6b2259b0018ced5a6fb1d85652423c0930",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "2b887867a656bb914af76caf3279ee6b2259b0018ced5a6fb1d85652423c0930",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "2b887867a656bb914af76caf3279ee6b2259b0018ced5a6fb1d85652423c0930",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "2b887867a656bb914af76caf3279ee6b2259b0018ced5a6fb1d85652423c0930",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "2b887867a656bb914af76caf3279ee6b2259b0018ced5a6fb1d85652423c0930",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "2b887867a656bb914af76caf3279ee6b2259b0018ced5a6fb1d85652423c0930",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "2b887867a656bb914af76caf3279ee6b2259b0018ced5a6fb1d85652423c0930",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "2b887867a656bb914af76caf3279ee6b2259b0018ced5a6fb1d85652423c0930",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "2b887867a656bb914af76caf3279ee6b2259b0018ced5a6fb1d85652423c0930",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "2b887867a656bb914af76caf3279ee6b2259b0018ced5a6fb1d85652423c0930",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "14891ce3f527c465a284c05d9bfdaefd3e356728d525f96b1bbcdcb5b4f02fa1",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.18
+    },
+    {
+      "family": "14891ce3f527c465a284c05d9bfdaefd3e356728d525f96b1bbcdcb5b4f02fa1",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.18
+    },
+    {
+      "family": "14891ce3f527c465a284c05d9bfdaefd3e356728d525f96b1bbcdcb5b4f02fa1",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.18
+    },
+    {
+      "family": "14891ce3f527c465a284c05d9bfdaefd3e356728d525f96b1bbcdcb5b4f02fa1",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.18
+    },
+    {
+      "family": "14891ce3f527c465a284c05d9bfdaefd3e356728d525f96b1bbcdcb5b4f02fa1",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.18
+    },
+    {
+      "family": "14891ce3f527c465a284c05d9bfdaefd3e356728d525f96b1bbcdcb5b4f02fa1",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.18
+    },
+    {
+      "family": "14891ce3f527c465a284c05d9bfdaefd3e356728d525f96b1bbcdcb5b4f02fa1",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.18
+    },
+    {
+      "family": "14891ce3f527c465a284c05d9bfdaefd3e356728d525f96b1bbcdcb5b4f02fa1",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.18
+    },
+    {
+      "family": "14891ce3f527c465a284c05d9bfdaefd3e356728d525f96b1bbcdcb5b4f02fa1",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.18
+    },
+    {
+      "family": "14891ce3f527c465a284c05d9bfdaefd3e356728d525f96b1bbcdcb5b4f02fa1",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.18
+    },
+    {
+      "family": "0bca12f6bb27ca0445db96d8e5d26682c1e0dcfb6fe8b4c5b6ce14ff8029f2f7",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.25
+    },
+    {
+      "family": "3e95b3bd882af4011ce70740567c96fb9ecf78aa2c9cfd859546d596ffa49715",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.34
+    },
+    {
+      "family": "3e95b3bd882af4011ce70740567c96fb9ecf78aa2c9cfd859546d596ffa49715",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.34
+    },
+    {
+      "family": "3e95b3bd882af4011ce70740567c96fb9ecf78aa2c9cfd859546d596ffa49715",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.34
+    },
+    {
+      "family": "3e95b3bd882af4011ce70740567c96fb9ecf78aa2c9cfd859546d596ffa49715",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.34
+    },
+    {
+      "family": "3e95b3bd882af4011ce70740567c96fb9ecf78aa2c9cfd859546d596ffa49715",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.34
+    },
+    {
+      "family": "3e95b3bd882af4011ce70740567c96fb9ecf78aa2c9cfd859546d596ffa49715",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.34
+    },
+    {
+      "family": "3e95b3bd882af4011ce70740567c96fb9ecf78aa2c9cfd859546d596ffa49715",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.34
+    },
+    {
+      "family": "3e95b3bd882af4011ce70740567c96fb9ecf78aa2c9cfd859546d596ffa49715",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.34
+    },
+    {
+      "family": "3e95b3bd882af4011ce70740567c96fb9ecf78aa2c9cfd859546d596ffa49715",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.34
+    },
+    {
+      "family": "3e95b3bd882af4011ce70740567c96fb9ecf78aa2c9cfd859546d596ffa49715",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.34
+    },
+    {
+      "family": "e315d2710c865cf8653a263095145102512d8c729e85f6d4c61db0f02a0f2b3a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "e315d2710c865cf8653a263095145102512d8c729e85f6d4c61db0f02a0f2b3a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "e315d2710c865cf8653a263095145102512d8c729e85f6d4c61db0f02a0f2b3a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "e315d2710c865cf8653a263095145102512d8c729e85f6d4c61db0f02a0f2b3a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "e315d2710c865cf8653a263095145102512d8c729e85f6d4c61db0f02a0f2b3a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "e315d2710c865cf8653a263095145102512d8c729e85f6d4c61db0f02a0f2b3a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "e315d2710c865cf8653a263095145102512d8c729e85f6d4c61db0f02a0f2b3a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "e315d2710c865cf8653a263095145102512d8c729e85f6d4c61db0f02a0f2b3a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "e315d2710c865cf8653a263095145102512d8c729e85f6d4c61db0f02a0f2b3a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "e315d2710c865cf8653a263095145102512d8c729e85f6d4c61db0f02a0f2b3a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.22
+    },
+    {
+      "family": "a6438e79890f3977484c39fa0fa422fbed4dd09b3f137b9bda3f2dccd1ca875f",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.29
+    },
+    {
+      "family": "a6438e79890f3977484c39fa0fa422fbed4dd09b3f137b9bda3f2dccd1ca875f",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.29
+    },
+    {
+      "family": "a6438e79890f3977484c39fa0fa422fbed4dd09b3f137b9bda3f2dccd1ca875f",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.29
+    },
+    {
+      "family": "a6438e79890f3977484c39fa0fa422fbed4dd09b3f137b9bda3f2dccd1ca875f",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.29
+    },
+    {
+      "family": "a6438e79890f3977484c39fa0fa422fbed4dd09b3f137b9bda3f2dccd1ca875f",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.29
+    },
+    {
+      "family": "a6438e79890f3977484c39fa0fa422fbed4dd09b3f137b9bda3f2dccd1ca875f",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.29
+    },
+    {
+      "family": "a6438e79890f3977484c39fa0fa422fbed4dd09b3f137b9bda3f2dccd1ca875f",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.29
+    },
+    {
+      "family": "a6438e79890f3977484c39fa0fa422fbed4dd09b3f137b9bda3f2dccd1ca875f",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.29
+    },
+    {
+      "family": "a6438e79890f3977484c39fa0fa422fbed4dd09b3f137b9bda3f2dccd1ca875f",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.29
+    },
+    {
+      "family": "a6438e79890f3977484c39fa0fa422fbed4dd09b3f137b9bda3f2dccd1ca875f",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.29
+    },
+    {
+      "family": "271f1a3b8c729931f50bd12020d474dee352d6d8369c6f824e160d54d14a4070",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.14
+    },
+    {
+      "family": "271f1a3b8c729931f50bd12020d474dee352d6d8369c6f824e160d54d14a4070",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.14
+    },
+    {
+      "family": "271f1a3b8c729931f50bd12020d474dee352d6d8369c6f824e160d54d14a4070",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.14
+    },
+    {
+      "family": "271f1a3b8c729931f50bd12020d474dee352d6d8369c6f824e160d54d14a4070",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.14
+    },
+    {
+      "family": "271f1a3b8c729931f50bd12020d474dee352d6d8369c6f824e160d54d14a4070",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.14
+    },
+    {
+      "family": "271f1a3b8c729931f50bd12020d474dee352d6d8369c6f824e160d54d14a4070",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.14
+    },
+    {
+      "family": "271f1a3b8c729931f50bd12020d474dee352d6d8369c6f824e160d54d14a4070",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.14
+    },
+    {
+      "family": "271f1a3b8c729931f50bd12020d474dee352d6d8369c6f824e160d54d14a4070",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.14
+    },
+    {
+      "family": "271f1a3b8c729931f50bd12020d474dee352d6d8369c6f824e160d54d14a4070",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.14
+    },
+    {
+      "family": "271f1a3b8c729931f50bd12020d474dee352d6d8369c6f824e160d54d14a4070",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.14
+    },
+    {
+      "family": "07126f6e08c2dfbcf4e150806faafd435f6d95063df8881abc6bd5b3a8f03d7a",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.41
+    },
+    {
+      "family": "adaaef39a367b212707dff76f70524ec784a8c91b07534392ca53cefce8d3c3b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.19
+    },
+    {
+      "family": "adaaef39a367b212707dff76f70524ec784a8c91b07534392ca53cefce8d3c3b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.19
+    },
+    {
+      "family": "adaaef39a367b212707dff76f70524ec784a8c91b07534392ca53cefce8d3c3b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.19
+    },
+    {
+      "family": "adaaef39a367b212707dff76f70524ec784a8c91b07534392ca53cefce8d3c3b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.19
+    },
+    {
+      "family": "adaaef39a367b212707dff76f70524ec784a8c91b07534392ca53cefce8d3c3b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.19
+    },
+    {
+      "family": "adaaef39a367b212707dff76f70524ec784a8c91b07534392ca53cefce8d3c3b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.19
+    },
+    {
+      "family": "adaaef39a367b212707dff76f70524ec784a8c91b07534392ca53cefce8d3c3b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.19
+    },
+    {
+      "family": "adaaef39a367b212707dff76f70524ec784a8c91b07534392ca53cefce8d3c3b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.19
+    },
+    {
+      "family": "adaaef39a367b212707dff76f70524ec784a8c91b07534392ca53cefce8d3c3b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.19
+    },
+    {
+      "family": "adaaef39a367b212707dff76f70524ec784a8c91b07534392ca53cefce8d3c3b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.19
+    },
+    {
+      "family": "06a5ef7732743e8fc8234a327f4d55c321eb0abfb36c2fc74059b037e717d2e6",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.29
+    },
+    {
+      "family": "06a5ef7732743e8fc8234a327f4d55c321eb0abfb36c2fc74059b037e717d2e6",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.29
+    },
+    {
+      "family": "06a5ef7732743e8fc8234a327f4d55c321eb0abfb36c2fc74059b037e717d2e6",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.29
+    },
+    {
+      "family": "06a5ef7732743e8fc8234a327f4d55c321eb0abfb36c2fc74059b037e717d2e6",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.29
+    },
+    {
+      "family": "06a5ef7732743e8fc8234a327f4d55c321eb0abfb36c2fc74059b037e717d2e6",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.29
+    },
+    {
+      "family": "06a5ef7732743e8fc8234a327f4d55c321eb0abfb36c2fc74059b037e717d2e6",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.29
+    },
+    {
+      "family": "06a5ef7732743e8fc8234a327f4d55c321eb0abfb36c2fc74059b037e717d2e6",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.29
+    },
+    {
+      "family": "06a5ef7732743e8fc8234a327f4d55c321eb0abfb36c2fc74059b037e717d2e6",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.29
+    },
+    {
+      "family": "06a5ef7732743e8fc8234a327f4d55c321eb0abfb36c2fc74059b037e717d2e6",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.29
+    },
+    {
+      "family": "06a5ef7732743e8fc8234a327f4d55c321eb0abfb36c2fc74059b037e717d2e6",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.29
+    },
+    {
+      "family": "236ae03ee0ec27ab154f437956e6ac005bdf7739cccc349aca4518c9b3f6665b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.14
+    },
+    {
+      "family": "236ae03ee0ec27ab154f437956e6ac005bdf7739cccc349aca4518c9b3f6665b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.14
+    },
+    {
+      "family": "236ae03ee0ec27ab154f437956e6ac005bdf7739cccc349aca4518c9b3f6665b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.14
+    },
+    {
+      "family": "236ae03ee0ec27ab154f437956e6ac005bdf7739cccc349aca4518c9b3f6665b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.14
+    },
+    {
+      "family": "236ae03ee0ec27ab154f437956e6ac005bdf7739cccc349aca4518c9b3f6665b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.14
+    },
+    {
+      "family": "236ae03ee0ec27ab154f437956e6ac005bdf7739cccc349aca4518c9b3f6665b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.14
+    },
+    {
+      "family": "236ae03ee0ec27ab154f437956e6ac005bdf7739cccc349aca4518c9b3f6665b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.14
+    },
+    {
+      "family": "236ae03ee0ec27ab154f437956e6ac005bdf7739cccc349aca4518c9b3f6665b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.14
+    },
+    {
+      "family": "236ae03ee0ec27ab154f437956e6ac005bdf7739cccc349aca4518c9b3f6665b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.14
+    },
+    {
+      "family": "236ae03ee0ec27ab154f437956e6ac005bdf7739cccc349aca4518c9b3f6665b",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.14
+    },
+    {
+      "family": "jobs_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.18
+    },
+    {
+      "family": "jobs_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.18
+    },
+    {
+      "family": "jobs_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.18
+    },
+    {
+      "family": "jobs_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.18
+    },
+    {
+      "family": "jobs_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.18
+    },
+    {
+      "family": "jobs_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.18
+    },
+    {
+      "family": "jobs_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.18
+    },
+    {
+      "family": "jobs_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.18
+    },
+    {
+      "family": "jobs_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.18
+    },
+    {
+      "family": "jobs_2025_2026_shared",
+      "brand": "Avito",
+      "vertical": "Jobs",
+      "y": 0.18
+    },
+    {
+      "family": "c0d21ddc15f6787eb3aae563c755c3846c75c63efd6a122727cc1d782d0775d9",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.37
+    },
+    {
+      "family": "c0d21ddc15f6787eb3aae563c755c3846c75c63efd6a122727cc1d782d0775d9",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.37
+    },
+    {
+      "family": "c0d21ddc15f6787eb3aae563c755c3846c75c63efd6a122727cc1d782d0775d9",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.37
+    },
+    {
+      "family": "c0d21ddc15f6787eb3aae563c755c3846c75c63efd6a122727cc1d782d0775d9",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.37
+    },
+    {
+      "family": "c0d21ddc15f6787eb3aae563c755c3846c75c63efd6a122727cc1d782d0775d9",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.37
+    },
+    {
+      "family": "c0d21ddc15f6787eb3aae563c755c3846c75c63efd6a122727cc1d782d0775d9",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.37
+    },
+    {
+      "family": "c0d21ddc15f6787eb3aae563c755c3846c75c63efd6a122727cc1d782d0775d9",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.37
+    },
+    {
+      "family": "c0d21ddc15f6787eb3aae563c755c3846c75c63efd6a122727cc1d782d0775d9",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.37
+    },
+    {
+      "family": "c0d21ddc15f6787eb3aae563c755c3846c75c63efd6a122727cc1d782d0775d9",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.37
+    },
+    {
+      "family": "c0d21ddc15f6787eb3aae563c755c3846c75c63efd6a122727cc1d782d0775d9",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.37
+    },
+    {
+      "family": "38d4fffaa6301197c2db6fbac93fee0d2214e4c476475a7332d1e7850ef69b34",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "bed7e271f2f92b8dbab23e87205a60e3fcea57a1c7c72984218e9a8a6020bc5a",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "bed7e271f2f92b8dbab23e87205a60e3fcea57a1c7c72984218e9a8a6020bc5a",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "bed7e271f2f92b8dbab23e87205a60e3fcea57a1c7c72984218e9a8a6020bc5a",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "bed7e271f2f92b8dbab23e87205a60e3fcea57a1c7c72984218e9a8a6020bc5a",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "bed7e271f2f92b8dbab23e87205a60e3fcea57a1c7c72984218e9a8a6020bc5a",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "bed7e271f2f92b8dbab23e87205a60e3fcea57a1c7c72984218e9a8a6020bc5a",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "bed7e271f2f92b8dbab23e87205a60e3fcea57a1c7c72984218e9a8a6020bc5a",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "bed7e271f2f92b8dbab23e87205a60e3fcea57a1c7c72984218e9a8a6020bc5a",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "bed7e271f2f92b8dbab23e87205a60e3fcea57a1c7c72984218e9a8a6020bc5a",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "bed7e271f2f92b8dbab23e87205a60e3fcea57a1c7c72984218e9a8a6020bc5a",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "1b02a0757b39526712ec48eaff15214faef745508fb1ecf7c515b7c5342b94b7",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.24
+    },
+    {
+      "family": "1b02a0757b39526712ec48eaff15214faef745508fb1ecf7c515b7c5342b94b7",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.24
+    },
+    {
+      "family": "1b02a0757b39526712ec48eaff15214faef745508fb1ecf7c515b7c5342b94b7",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.24
+    },
+    {
+      "family": "1b02a0757b39526712ec48eaff15214faef745508fb1ecf7c515b7c5342b94b7",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.24
+    },
+    {
+      "family": "1b02a0757b39526712ec48eaff15214faef745508fb1ecf7c515b7c5342b94b7",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.24
+    },
+    {
+      "family": "1b02a0757b39526712ec48eaff15214faef745508fb1ecf7c515b7c5342b94b7",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.24
+    },
+    {
+      "family": "1b02a0757b39526712ec48eaff15214faef745508fb1ecf7c515b7c5342b94b7",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.24
+    },
+    {
+      "family": "1b02a0757b39526712ec48eaff15214faef745508fb1ecf7c515b7c5342b94b7",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.24
+    },
+    {
+      "family": "1b02a0757b39526712ec48eaff15214faef745508fb1ecf7c515b7c5342b94b7",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.24
+    },
+    {
+      "family": "1b02a0757b39526712ec48eaff15214faef745508fb1ecf7c515b7c5342b94b7",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.24
+    },
+    {
+      "family": "ac56aa08608f295f30408bcf992bbec753aadd4b104603cb1679ed203c550c68",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "ac56aa08608f295f30408bcf992bbec753aadd4b104603cb1679ed203c550c68",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "ac56aa08608f295f30408bcf992bbec753aadd4b104603cb1679ed203c550c68",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "ac56aa08608f295f30408bcf992bbec753aadd4b104603cb1679ed203c550c68",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "ac56aa08608f295f30408bcf992bbec753aadd4b104603cb1679ed203c550c68",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "ac56aa08608f295f30408bcf992bbec753aadd4b104603cb1679ed203c550c68",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "ac56aa08608f295f30408bcf992bbec753aadd4b104603cb1679ed203c550c68",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "ac56aa08608f295f30408bcf992bbec753aadd4b104603cb1679ed203c550c68",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "ac56aa08608f295f30408bcf992bbec753aadd4b104603cb1679ed203c550c68",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "ac56aa08608f295f30408bcf992bbec753aadd4b104603cb1679ed203c550c68",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.21
+    },
+    {
+      "family": "638daa5700f6042724af6e172c2ed9bf499e97f2cc4f4a237f163909d8c9f205",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.11
+    },
+    {
+      "family": "46c6d9b3cfeb6db491e2bad7c269a929daed7794e5afe8791e356de3e8c35393",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.26
+    },
+    {
+      "family": "46c6d9b3cfeb6db491e2bad7c269a929daed7794e5afe8791e356de3e8c35393",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.26
+    },
+    {
+      "family": "46c6d9b3cfeb6db491e2bad7c269a929daed7794e5afe8791e356de3e8c35393",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.26
+    },
+    {
+      "family": "46c6d9b3cfeb6db491e2bad7c269a929daed7794e5afe8791e356de3e8c35393",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.26
+    },
+    {
+      "family": "46c6d9b3cfeb6db491e2bad7c269a929daed7794e5afe8791e356de3e8c35393",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.26
+    },
+    {
+      "family": "46c6d9b3cfeb6db491e2bad7c269a929daed7794e5afe8791e356de3e8c35393",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.26
+    },
+    {
+      "family": "46c6d9b3cfeb6db491e2bad7c269a929daed7794e5afe8791e356de3e8c35393",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.26
+    },
+    {
+      "family": "46c6d9b3cfeb6db491e2bad7c269a929daed7794e5afe8791e356de3e8c35393",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.26
+    },
+    {
+      "family": "46c6d9b3cfeb6db491e2bad7c269a929daed7794e5afe8791e356de3e8c35393",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.26
+    },
+    {
+      "family": "46c6d9b3cfeb6db491e2bad7c269a929daed7794e5afe8791e356de3e8c35393",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.26
+    },
+    {
+      "family": "b0af9f5d3b477efc1b15bdd28a0cfe8b8f6923b994a8b8b918e82d2f749f1ed2",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.25
+    },
+    {
+      "family": "b0af9f5d3b477efc1b15bdd28a0cfe8b8f6923b994a8b8b918e82d2f749f1ed2",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.25
+    },
+    {
+      "family": "b0af9f5d3b477efc1b15bdd28a0cfe8b8f6923b994a8b8b918e82d2f749f1ed2",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.25
+    },
+    {
+      "family": "b0af9f5d3b477efc1b15bdd28a0cfe8b8f6923b994a8b8b918e82d2f749f1ed2",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.25
+    },
+    {
+      "family": "b0af9f5d3b477efc1b15bdd28a0cfe8b8f6923b994a8b8b918e82d2f749f1ed2",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.25
+    },
+    {
+      "family": "b0af9f5d3b477efc1b15bdd28a0cfe8b8f6923b994a8b8b918e82d2f749f1ed2",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.25
+    },
+    {
+      "family": "b0af9f5d3b477efc1b15bdd28a0cfe8b8f6923b994a8b8b918e82d2f749f1ed2",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.25
+    },
+    {
+      "family": "b0af9f5d3b477efc1b15bdd28a0cfe8b8f6923b994a8b8b918e82d2f749f1ed2",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.25
+    },
+    {
+      "family": "b0af9f5d3b477efc1b15bdd28a0cfe8b8f6923b994a8b8b918e82d2f749f1ed2",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.25
+    },
+    {
+      "family": "b0af9f5d3b477efc1b15bdd28a0cfe8b8f6923b994a8b8b918e82d2f749f1ed2",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.25
+    },
+    {
+      "family": "86658353631da079278893193e663d3f06bb5d9e6607db9573226956f7004005",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.17
+    },
+    {
+      "family": "86658353631da079278893193e663d3f06bb5d9e6607db9573226956f7004005",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.17
+    },
+    {
+      "family": "86658353631da079278893193e663d3f06bb5d9e6607db9573226956f7004005",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.17
+    },
+    {
+      "family": "86658353631da079278893193e663d3f06bb5d9e6607db9573226956f7004005",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.17
+    },
+    {
+      "family": "86658353631da079278893193e663d3f06bb5d9e6607db9573226956f7004005",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.17
+    },
+    {
+      "family": "86658353631da079278893193e663d3f06bb5d9e6607db9573226956f7004005",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.17
+    },
+    {
+      "family": "86658353631da079278893193e663d3f06bb5d9e6607db9573226956f7004005",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.17
+    },
+    {
+      "family": "86658353631da079278893193e663d3f06bb5d9e6607db9573226956f7004005",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.17
+    },
+    {
+      "family": "86658353631da079278893193e663d3f06bb5d9e6607db9573226956f7004005",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.17
+    },
+    {
+      "family": "86658353631da079278893193e663d3f06bb5d9e6607db9573226956f7004005",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.17
+    },
+    {
+      "family": "b47bf7e84ebbf701677b26d30152be2ad41282f8057afd39adfbc6dcdcfec2b9",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.14
+    },
+    {
+      "family": "17a73d094b5569f1fdafd79544dcce3be1c3bb90535425fc1cae810ccfd513bc",
+      "brand": "Avito",
+      "vertical": "Services",
+      "y": 0.24
+    },
+    {
+      "family": "el_buyout_25_campaign",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.23
+    },
+    {
+      "family": "el_buyout_25_campaign",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.32
+    },
+    {
+      "family": "gig_26_campaign",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.31
+    },
+    {
+      "family": "gig_26_campaign",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.23
+    },
+    {
+      "family": "ddbbcc2fb8ab45577bf0499e02558ec984c78ba7f4566b64825af62230b6b73c",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.24
+    },
+    {
+      "family": "94fbf1ed5ac44656fed987cefe53e227d58eded7b6cf64a674b84a9163cd4a17",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.24
+    },
+    {
+      "family": "3b23416e7dbd16a49f7076c86c69f7aa1d745c7299b2e7d80f728e66b40c9dfb",
+      "brand": "Avito",
+      "vertical": "Goods",
+      "y": 0.2
+    },
+    {
+      "family": "0a630b470e3aa11d053e583a9cacc31dda74511fb20d857e315f5f78326ac478",
+      "brand": "Avito",
+      "vertical": "Other",
+      "y": 0.22
+    },
+    {
+      "family": "3c2bfab4f87d4fb286177d2765618777a92ccc093a865b33125ee953d08df171",
+      "brand": "Avito",
+      "vertical": "RE",
+      "y": 0.31
+    }
+  ],
+  "training_families": [
+    "01c8a8280a464532520986540d92068073cbd6206f5bee18db8043ff7f7b0d94",
+    "06a5ef7732743e8fc8234a327f4d55c321eb0abfb36c2fc74059b037e717d2e6",
+    "07126f6e08c2dfbcf4e150806faafd435f6d95063df8881abc6bd5b3a8f03d7a",
+    "0a630b470e3aa11d053e583a9cacc31dda74511fb20d857e315f5f78326ac478",
+    "0bca12f6bb27ca0445db96d8e5d26682c1e0dcfb6fe8b4c5b6ce14ff8029f2f7",
+    "11e788f113e2f23d3c19507674f1a8a99271a5b7651ddba6c3096462b5bd3774",
+    "140bcab25cbb9038b2b7bb99dfbb9f99f37cdd5485885d8cbeb32c04bdeeea76",
+    "14891ce3f527c465a284c05d9bfdaefd3e356728d525f96b1bbcdcb5b4f02fa1",
+    "17a73d094b5569f1fdafd79544dcce3be1c3bb90535425fc1cae810ccfd513bc",
+    "1b02a0757b39526712ec48eaff15214faef745508fb1ecf7c515b7c5342b94b7",
+    "20101d0aa6466cb934c69b83906e245d1f4bcd9a27855f0b7ef8397c0ee7b89a",
+    "236ae03ee0ec27ab154f437956e6ac005bdf7739cccc349aca4518c9b3f6665b",
+    "271f1a3b8c729931f50bd12020d474dee352d6d8369c6f824e160d54d14a4070",
+    "2b180d4553e3372f350799745aa47243085c96572f978c07b4ad119d3c7ea9e4",
+    "2b887867a656bb914af76caf3279ee6b2259b0018ced5a6fb1d85652423c0930",
+    "35f7e10d87bf353f645bae2d1617c56590987ce2d368707724a72b0596f173bf",
+    "372cb7e8f6ae65f534aefaf2f6e97458a126c51e9152a8b2747b93267a9dd0d9",
+    "38d4fffaa6301197c2db6fbac93fee0d2214e4c476475a7332d1e7850ef69b34",
+    "3b23416e7dbd16a49f7076c86c69f7aa1d745c7299b2e7d80f728e66b40c9dfb",
+    "3c2bfab4f87d4fb286177d2765618777a92ccc093a865b33125ee953d08df171",
+    "3e95b3bd882af4011ce70740567c96fb9ecf78aa2c9cfd859546d596ffa49715",
+    "4578099cb8a697f8a169117a375baa1ab7e211d736477922af0e6981886ad977",
+    "46c6d9b3cfeb6db491e2bad7c269a929daed7794e5afe8791e356de3e8c35393",
+    "491f84b3d6722950dace3f711e10da267580113e784bdc15ee9904db379cb519",
+    "57cc56fb59a6787a85cf30f64ed4d5016384070c1926a7d70d49fb466e2d9c44",
+    "5a39e29f0e9382307832c0c3decd102e31e97ac583d5b0e40a02c54084dbb0e4",
+    "638daa5700f6042724af6e172c2ed9bf499e97f2cc4f4a237f163909d8c9f205",
+    "806616bfa8374f86aaedf30a8b323d912053edad7db3900a5baf986c02274110",
+    "86658353631da079278893193e663d3f06bb5d9e6607db9573226956f7004005",
+    "94fbf1ed5ac44656fed987cefe53e227d58eded7b6cf64a674b84a9163cd4a17",
+    "98f75aea9679cb15892855111c0e33a380b485f051ea8a013d2d4a7b6878545a",
+    "9e7b30dacca267ce0700b6d8aab0d5245797a16b13e368f1e33a5f39aa4b452c",
+    "a18415ab8e21671b0ba1daf43b34897d54863bf971eaa7d23eefac70f1df8e69",
+    "a6438e79890f3977484c39fa0fa422fbed4dd09b3f137b9bda3f2dccd1ca875f",
+    "a65e6ebc06a8a0d13ab515dd9e0920ef454b0883855b7031854b2e795b0c6f33",
+    "ac56aa08608f295f30408bcf992bbec753aadd4b104603cb1679ed203c550c68",
+    "adaaef39a367b212707dff76f70524ec784a8c91b07534392ca53cefce8d3c3b",
+    "auto_2025_2026_shared",
+    "b0af9f5d3b477efc1b15bdd28a0cfe8b8f6923b994a8b8b918e82d2f749f1ed2",
+    "b47bf7e84ebbf701677b26d30152be2ad41282f8057afd39adfbc6dcdcfec2b9",
+    "be793b896a17547c23bdce0d6c0f6e83ca5747fde13639f0c0afb556e1fc1d37",
+    "bed7e271f2f92b8dbab23e87205a60e3fcea57a1c7c72984218e9a8a6020bc5a",
+    "c0d21ddc15f6787eb3aae563c755c3846c75c63efd6a122727cc1d782d0775d9",
+    "cde2b0db629676325b683a51456d04a62381e8957b92bb19c35a469d3bd4ab87",
+    "d83eb5e4624da49403d89d19f4e1c02024cc5febe8b7d7f14474c629e6acb59c",
+    "ddbbcc2fb8ab45577bf0499e02558ec984c78ba7f4566b64825af62230b6b73c",
+    "e315d2710c865cf8653a263095145102512d8c729e85f6d4c61db0f02a0f2b3a",
+    "e5a2c1856c8b93f9ec115d22321aa050ee0e99d47ec609885d2e0d69e1a78db3",
+    "e6607baf2f27fa4b25307bb86cc3e0e9605fb0cc1418a9fcb5216e412f104ee2",
+    "e8f1e4a5966f4688925f062557287da4677e14c160fa0b8f28fede3fb40cc212",
+    "ea57e2c751dbba0622cece5b2168785832d4c1d77629c85d2d876aaf9a9ad010",
+    "el_buyout_25_campaign",
+    "f678c2339636323bb95679ec579b6e28648f67be1d2b09bb94b572f3cb495aa5",
+    "garage_2024_2025",
+    "gig_26_campaign",
+    "jobs_2025_2026_shared"
+  ],
+  "median": [
+    3.0,
+    0.0,
+    0.0,
+    2.0,
+    1.0,
+    3.0,
+    0.0,
+    1.0,
+    0.0
+  ],
+  "center": [
+    2.6456043956043955,
+    0.4725274725274725,
+    0.4230769230769231,
+    2.21978021978022,
+    0.9945054945054945,
+    2.840659340659341,
+    0.34065934065934067,
+    0.8598901098901099,
+    0.36538461538461536
+  ],
+  "scale": [
+    0.47832976070978295,
+    0.49924468974068253,
+    0.4940474068717344,
+    0.7383110783402578,
+    0.0739210112476578,
+    0.3659934611732056,
+    0.4739309594032488,
+    0.7297718964794396,
+    0.4815378471364978
+  ],
+  "raw_y": [
+    0.15,
+    0.23,
+    0.38,
+    0.38,
+    0.38,
+    0.38,
+    0.38,
+    0.38,
+    0.38,
+    0.38,
+    0.38,
+    0.38,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.41,
+    0.23,
+    0.23,
+    0.23,
+    0.23,
+    0.23,
+    0.23,
+    0.23,
+    0.23,
+    0.23,
+    0.23,
+    0.3,
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.46,
+    0.46,
+    0.46,
+    0.46,
+    0.46,
+    0.46,
+    0.46,
+    0.46,
+    0.46,
+    0.46,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.26,
+    0.27,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.25,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.23,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.16,
+    0.16,
+    0.16,
+    0.16,
+    0.16,
+    0.16,
+    0.16,
+    0.16,
+    0.16,
+    0.16,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.32,
+    0.36,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.25,
+    0.34,
+    0.34,
+    0.34,
+    0.34,
+    0.34,
+    0.34,
+    0.34,
+    0.34,
+    0.34,
+    0.34,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.22,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.41,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.19,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.29,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.37,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.24,
+    0.24,
+    0.24,
+    0.24,
+    0.24,
+    0.24,
+    0.24,
+    0.24,
+    0.24,
+    0.24,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.21,
+    0.11,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.26,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.25,
+    0.17,
+    0.17,
+    0.17,
+    0.17,
+    0.17,
+    0.17,
+    0.17,
+    0.17,
+    0.17,
+    0.17,
+    0.14,
+    0.24,
+    0.23,
+    0.32,
+    0.31,
+    0.23,
+    0.24,
+    0.24,
+    0.2,
+    0.22,
+    0.31
+  ],
+  "target_mean": -1.4463444305358466,
+  "target_scale": 0.3400149088125385,
+  "calibration_intercept": 0.01206810213330925,
+  "calibration_slope": 0.9803768712572041
+}
