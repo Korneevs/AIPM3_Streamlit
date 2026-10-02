@@ -21,10 +21,10 @@ def isolate_page_import(monkeypatch):
 
 
 def interpretation():
-    driver = dict(label="Связь изображения и озвучки", evidence={
+    driver = dict(feature="fresh__audiovisual_claim_alignment", value=3, label="Связь изображения и озвучки", evidence={"verified": True,
         "observation": "Изображение показывает заявленное действие.",
         "episodes": [{"start": 3., "end": 5.}]},
-        interpretation_kind="association_only", why="Это связь в обученной модели.", check=None)
+        usable=True, direction="limits", interpretation_kind="association_only", why="Это связь в обученной модели.", check=None)
     return dict(cards=[dict(title=title, index=index, level="Типичный уровень",
                            repeat_index_range=[95., 105.], strengths=[], limitations=[driver], unresolved=[])
                       for title, index in [("Заметность", 101), ("Считываемость", 92), ("Запоминаемость", 98)]],
@@ -49,12 +49,15 @@ def test_result_page_shows_three_indices_and_preserves_associations(repeat_count
     assert [item.value for item in app.metric] == ["101", "92", "98"]
     text = " ".join(item.value for item in app.markdown)
     captions = " ".join(item.value for item in app.caption)
-    assert "Что модель учла в минус" in text
-    assert "Особенность модели, не рекомендация" in captions
-    assert "Что проверить в следующей версии" not in text
-    assert "не процент зрителей" in captions
-    assert f"по {repeat_count} повторам" in captions
-    assert len(app.get("plotly_chart")) == 1
+    assert "Что видно в ролике" in text
+    assert "Изображение показывает заявленное действие." in text
+    assert "На что обратить внимание" not in text
+    assert "100 - средняя оценка" in captions
+    for forbidden in ["Сравнение и разброс", "Версия расчёта", "пункта индекса", "SHAP", "исходные признаки", "Q", "OPM", "Особенность модели", "замороженная"]:
+        assert forbidden not in text + captions
+    assert not app.expander
+    assert len(app.get("plotly_chart")) == 0
+    assert "#FFF6D6" in text and "В норме" in text
     assert len(app.get("download_button")) == 1
     assert app.session_state["interpretation"] == before
 
@@ -175,7 +178,7 @@ def test_live_action_passes_material_kind_and_uses_three_runs(kind, page, monkey
     app.run(timeout=30)
     assert not app.exception
     assert not calls
-    assert any("3 полных прогона" in caption.value for caption in app.caption)
+    assert any("Анализ и проверка наблюдений" in caption.value for caption in app.caption)
     app.button(key=f"latest_{kind}_live").click().run(timeout=30)
     assert not app.exception
     assert len(calls) == 1

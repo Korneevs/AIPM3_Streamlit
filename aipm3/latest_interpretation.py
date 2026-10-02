@@ -14,7 +14,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-VERSION = 'manager-evidence-v5-material-modes'
+VERSION = 'manager-evidence-v6-plain-language'
 NAMES = {'n':'Заметность', 'm':'Считываемость', 'r':'Запоминаемость'}
 LABELS = {
  'character_close_up_seconds':'Крупные планы героя',
@@ -171,8 +171,33 @@ def _evidence(feature,rows,observed,duration):
 def has_person_name(text):
     # Conservative language gate; never identifies a face or replaces it with a name.
     text=re.sub(r'\bАвито(?: (?:Авто|Работ[а-яё]*|Доставк[а-яё]*|Недвижимост[а-яё]*|Услуг[а-яё]*))?\b','',text)
+    # A named fictional role in a holiday story is not the actor's identity.
+    text=re.sub(r'\bДед(?:а|у|ом|е)? Мороз(?:а|у|ом|е)?\b','',text)
     return bool(re.search(r'\b[А-ЯЁ][а-яё]+(?:[- ][А-ЯЁ][а-яё]+){1,2}\b',text) or
       re.search(r'\b(Фоменко|Журавл[её]в|Куркова|Macan|MACAN|Макан)\b',text))
+
+def factual_observation(feature, rows, duration):
+    """A corroborated fact may be shown neutrally even when scoring disagrees.
+
+    It never becomes a score explanation or a replacement scoring input.
+    Reuse the same three-read, source, timestamp and identity gates.
+    """
+    if feature.startswith('phys__') or feature in {'brand_history', 'is_celeb', 'human_characters_count'}:
+        return None
+    if feature == 'fresh__audiovisual_claim_alignment':
+        candidates = range(4)
+    else:
+        values = [x['value'] for row in rows for x in row['values']['observations']
+                  if x['feature'] == feature and x['status'] != 'uncertain'
+                  and isinstance(x['value'], (int, float)) and math.isfinite(x['value'])]
+        if len(values) < 3:
+            return None
+        candidates = [float(np.median(values))]
+    for value in candidates:
+        support = _evidence(feature, rows, value, duration)
+        if support['verified']:
+            return dict(value=value, label=observed_label(feature, value), evidence=support)
+    return None
 
 def public_result(result,interpretation):
     """Keep scores and inputs; do not publish unsupported identities from free text."""
@@ -219,8 +244,13 @@ def alignment_support(rows,observed,duration):
     if not episodes:episodes=v['main_phrase_episodes']
     if has_person_name(v['rating_reason']+' '+str(episodes)):
         return dict(verified=False,observation='В описании есть непроверенное имя или собственное название. Нужна проверка текста наблюдения.',episodes=[],agreement=0.)
+    phrase_key=lambda text:re.sub(r'[^а-яёa-z0-9]','',text.lower())
+    same_phrase=len({phrase_key(x['main_phrase']) for x in valid})==1
+    phrase=v['main_phrase'] if same_phrase and not has_person_name(v['main_phrase']) else None
     return dict(verified=True,observation=v['rating_reason'],episodes=episodes,
-      agreement=len(valid)/3,source='structured_alignment_review')
+      agreement=len(valid)/3,source='structured_alignment_review', main_phrase=phrase,
+      shown_action=(all(x['action_evidence']['status']=='shown' for x in valid)),
+      shown_result=(all(x['result_evidence']['status']=='shown' for x in valid)))
 
 def _reading_kind(feature,value,reference,contribution):
     """Distinguish arithmetic attribution from a defensible editorial check."""
@@ -319,6 +349,7 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
                 stable_fraction=stability,usable=bool(usable),evidence=support,
                 interpretation_kind=kind,why=why,reference_value=reference,
                 original_measurement_mean=original_mean,
+                factual_observation=factual_observation(c,evidence,dur) if not support['verified'] else None,
                 check=editorial_check(c,v) if usable and sign<0 and kind=='observed_driver' else None)
             drivers.append(driver)
         drivers.sort(key=lambda d:-abs(d['contribution']))

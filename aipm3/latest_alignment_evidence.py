@@ -10,7 +10,11 @@ from datetime import datetime, timezone
 from . import latest_contracts, message_delivery_runtime as media
 from .runtime_resources import file_sha256
 
-VERSION = "alignment-structured-evidence-v1-20261002"
+VERSION = "alignment-structured-evidence-v2-20261002"
+LEGACY_CONTRACTS = {
+    ("80dcc2e54850511541b6d17e49606df3c9951837b43b93fb5dbfaf88b45a3db8",
+     "68760526bf6d86e497caab63184aca2a33bb09c7cdf9261dcc167cdd887be16a"),
+}
 MODEL = latest_contracts.MODEL
 BASE_URL = latest_contracts.BASE_URL
 RUBRIC = latest_contracts.PROMPT.split("5. audiovisual_claim_alignment", 1)[1].split("\n\n6.", 1)[0]
@@ -49,6 +53,11 @@ representation=text_or_voice_only. Если элемента нет, episodes=[]
 rating=0. Если показано лишь одно из действия/результата, rating=2.
 При ненадежно определяемом факте relation=uncertain и rating=null; не угадывай.
 description в доказательствах — конкретное видимое событие, а не повтор названия шкалы.
+Все описания и объяснения пиши по-русски. rating вычисляется строго из заполненных фактов:
+при uncertain/unavailable — null; при unrelated_or_contradictory — 0; иначе, если показаны
+и действие, и результат и same_causal_link_in_voice=true — ровно 3; иначе, если показано
+хотя бы одно — ровно 2; иначе — ровно 1. Не сжимай оценку к центру шкалы и не вноси
+поправок на жанр, материал или предполагаемую эффективность. Это проверка фактов.
 Верни только JSON по схеме. Все выводы относятся к этому просмотру; чужих ответов ты не видишь.
 """
 
@@ -156,8 +165,10 @@ def validate_values(values, duration):
 
 
 def validate_record(data, sha, prepared_sha, repeat, duration):
+    contract = (data.get("contract_sha256"), data.get("prompt_sha256"))
+    if contract not in LEGACY_CONTRACTS | {(CONTRACT_SHA, PROMPT_SHA)}:
+        raise ValueError("Evidence cache contract mismatch")
     if any(data.get(key) != value for key, value in {
-            "contract_sha256": CONTRACT_SHA, "prompt_sha256": PROMPT_SHA,
             "source_sha256": sha, "prepared_sha256": prepared_sha, "repeat": repeat}.items()):
         raise ValueError("Evidence cache source/contract mismatch")
     if not isinstance(data.get("request_id"), str) or not data["request_id"].strip():
@@ -168,7 +179,12 @@ def validate_record(data, sha, prepared_sha, repeat, duration):
 
 def collect_alignment_evidence(*,source_video,output_root,api_key=None,allow_live=False,progress=None):
     source=Path(source_video);sha=file_sha256(source)
-    root=Path(output_root)/VERSION/sha;root.mkdir(parents=True,exist_ok=True)
+    root=Path(output_root)/VERSION/sha
+    if not allow_live and not all((root/f'repeat_{i:02d}.json').exists() for i in range(1,4)):
+        legacy=Path(output_root)/'alignment-structured-evidence-v1-20261002'/sha
+        if all((legacy/f'repeat_{i:02d}.json').exists() for i in range(1,4)):
+            root=legacy
+    root.mkdir(parents=True,exist_ok=True)
     with (root/'worker.lock').open('a') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX)
         prepared=media.prepare_video(source,root/'prepared_media')
