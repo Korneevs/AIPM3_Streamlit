@@ -64,7 +64,7 @@ def test_only_current_material_routes_even_with_old_environment(setting, path, m
     assert offline_navigation == ROUTES
     assert app.title[0].value == ROUTES[path][0]
     assert app.radio[0].label == "Источник результата"
-    assert "Запустить AI-анализ" in [button.label for button in app.button]
+    assert "Проанализировать ролик" in [button.label for button in app.button]
     assert not any("UVP" in caption.value for caption in app.caption)
 
 

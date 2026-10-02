@@ -7,6 +7,7 @@ No extraction, provider request, or model fitting is performed here.
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 from pathlib import Path
 
 import numpy as np
@@ -102,6 +103,16 @@ def _attach_alignment(parent, repeat, rating=2):
 def _alignment_rows(frozen_result, ratings):
     return [_attach_alignment(_evidence_row(frozen_result, f"general-review-{repeat}"), repeat, rating)
             for repeat, rating in enumerate(ratings, start=1)]
+
+
+def test_old_alignment_contract_keeps_strict_validation(frozen_result):
+    rows = _alignment_rows(frozen_result, [3, 3, 3])
+    for parent in rows:
+        item = parent['alignment_evidence']
+        item['contract_sha256'], item['prompt_sha256'] = next(iter(alignment_api.LEGACY_CONTRACTS))
+    assert interpretation.alignment_support(rows, observed=3., duration=30.)['verified']
+    rows[0]['alignment_evidence']['values']['rating'] = 2
+    assert not interpretation.alignment_support(rows, observed=3., duration=30.)['verified']
 
 
 def _fast_negative_shap(x, background, predict):
@@ -684,3 +695,49 @@ def test_public_result_redacts_names_without_mutating_original_scores_or_inputs(
         pd.testing.assert_frame_equal(pd.DataFrame(original["feature_rows"][task]), expected)
         pd.testing.assert_frame_equal(pd.DataFrame(published["feature_rows"][task]), expected)
     assert runtime.score_feature_rows(published["feature_rows"])["scores"] == before["scores"]
+
+
+def test_confirmed_fact_with_different_scoring_value_stays_separate(frozen_result):
+    rows = [_evidence_row(frozen_result, f'fact-{i}', overrides={
+        'product_demo_seconds': 0
+    }) for i in range(3)]
+    # Use the same validated observations; this helper must not substitute them into inference.
+    duration = 30
+    fact = interpretation.factual_observation('product_demo_seconds', rows, duration)
+    assert fact['value'] == 0 and fact['evidence']['verified']
+    assert 'Без демонстрации' in fact['label']
+
+
+def test_legacy_evidence_contract_is_readable_but_unknown_contract_is_not(frozen_result):
+    row = _evidence_row(frozen_result)
+    frame = pd.DataFrame(frozen_result['feature_rows']['n'])
+    row['prompt_sha'] = evidence_api.LEGACY_PROMPT_SHA
+    evidence_api.validate_evidence(row, str(frame.sha.iloc[0]), float(frame['phys__duration'].iloc[0]))
+    row['prompt_sha'] = 'unknown'
+    with pytest.raises(ValueError):
+        evidence_api.validate_evidence(row, str(frame.sha.iloc[0]), float(frame['phys__duration'].iloc[0]))
+
+
+@pytest.mark.parametrize('phrase', ['Дед Мороз вручает подарок.', 'Героиня обращается к Деду Морозу.',
+                                    'Встреча с Дедом Морозом показана в финале.'])
+def test_fictional_holiday_role_is_not_a_real_person_identity(phrase):
+    assert not interpretation.has_person_name(phrase)
+    assert interpretation.has_person_name(phrase + ' Николай Фоменко в кадре.')
+
+
+def test_cached_review_keeps_existing_v3_observations_without_live_calls(frozen_result, tmp_path, monkeypatch):
+    source = tmp_path / 'video.mp4'
+    source.write_bytes(b'fixture')
+    sha = 'a' * 64
+    monkeypatch.setattr(evidence_api, 'file_sha256', lambda path: sha)
+    monkeypatch.setattr(evidence_api.md, 'prepare_video', lambda path, dest: source)
+    monkeypatch.setattr(evidence_api.md, 'video_duration', lambda path: 30.)
+    root = tmp_path / 'independent-video-evidence-v3' / sha
+    root.mkdir(parents=True)
+    for repeat in range(1, 4):
+        row = _evidence_row(frozen_result, f'legacy-{repeat}')
+        row.update(source_sha=sha, prompt_sha=evidence_api.LEGACY_PROMPT_SHA, repeat=repeat)
+        (root / f'repeat_{repeat:02}.json').write_text(json.dumps(row))
+    rows = evidence_api.collect_independent_evidence(source_video=source, output_root=tmp_path, allow_live=False)
+    assert len(rows) == 3
+    assert all(row['prompt_sha'] == evidence_api.LEGACY_PROMPT_SHA for row in rows)

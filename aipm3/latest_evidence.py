@@ -9,7 +9,8 @@ from . import message_delivery_runtime as md
 from .runtime_resources import file_sha256
 from .latest_contracts import MODEL, BASE_URL
 
-VERSION='independent-video-evidence-v3'
+VERSION='independent-video-evidence-v4'
+LEGACY_PROMPT_SHA='e647a8944749d05e575abfd75f1db3a3bed8301d765f78957fc4d42aefd3482a'
 DEFS=json.loads(Path(__file__).with_name('latest_evidence_definitions.json').read_text())
 BINARY={'is_celeb','monologue_to_camera','state_transformation_present','main_character',
         'numeric_offer_on_screen','promo','has_callback_to_opening','jingle_present',
@@ -25,6 +26,14 @@ PROMPT='''Посмотри рекламное видео целиком со з�
 В цитатах только услышанное или прочитанное. Не устанавливай личность реальных людей по внешности:
 is_celeb=uncertain, value=null; не называй актеров и не делай вывод об их публичной известности.
 Для джингла отличай речь с названием бренда от музыкального мотива. Крупные планы измеряются в секундах.
+Описывай только то, что буквально видно или слышно. Различай реальный интерфейс сервиса и
+условные карточки, календарь, волшебный портал или графическую метафору. Если показаны карточки
+специалистов, так и напиши; не называй их экраном приложения без видимого основания.
+Не считай празднующих людей показом выполненной услуги, если само действие не показано.
+Не дописывай услуге свойства, условия, отзывы, гарантии и цены, которых нет в речи или на экране.
+Авито помогает найти специалиста; не называй специалистов сотрудниками Авито без прямого указания.
+Пиши без профессиональных сокращений: финальный кадр с брендом вместо пэкшота, предложение вместо оффера.
+Не оценивай насколько услуга привычна всем зрителям: укажи, какое объяснение есть в самом ролике.
 Короткие тире. Без похвалы и общих фраз о вовлечении и эмоциональном отклике.
 Признаки и определения:
 '''+json.dumps(DEFS,ensure_ascii=False)
@@ -39,13 +48,13 @@ def response_schema():
       'status':{'type':'string','enum':['present','absent','uncertain']},
       'observation':{'type':'string'},'episodes':{'type':'array','items':episode}},
       'required':['feature','value','status','observation','episodes']}
-    return {'type':'json_schema','json_schema':{'name':'independent_video_observation_v3','strict':True,
+    return {'type':'json_schema','json_schema':{'name':'independent_video_observation_v4','strict':True,
       'schema':{'type':'object','additionalProperties':False,'properties':{
       'synopsis':{'type':'string'},'main_claim':{'type':'string'},
       'observations':{'type':'array','items':obs}},'required':['synopsis','main_claim','observations']}}}
 
 def validate_evidence(data,source_sha,duration):
-    if data.get('source_sha')!=source_sha or data.get('prompt_sha')!=PROMPT_SHA:
+    if data.get('source_sha')!=source_sha or data.get('prompt_sha') not in {PROMPT_SHA, LEGACY_PROMPT_SHA}:
         raise ValueError('Evidence source or contract mismatch')
     observations=data['values']['observations']
     if len(observations)!=len(DEFS) or {x['feature'] for x in observations}!=set(DEFS):
@@ -65,7 +74,12 @@ def validate_evidence(data,source_sha,duration):
 
 def _collect_unlocked(*,source_video,output_root,api_key=None,allow_live=False,progress=None):
     source_video=Path(source_video);sha=file_sha256(source_video)
-    root=Path(output_root)/VERSION/sha;root.mkdir(parents=True,exist_ok=True)
+    root=Path(output_root)/VERSION/sha
+    if not allow_live and not all((root/f'repeat_{i:02}.json').exists() for i in range(1,4)):
+        legacy=Path(output_root)/'independent-video-evidence-v3'/sha
+        if all((legacy/f'repeat_{i:02}.json').exists() for i in range(1,4)):
+            root=legacy
+    root.mkdir(parents=True,exist_ok=True)
     prepared=md.prepare_video(source_video,root/'prepared_media')
     duration=md.video_duration(prepared);prepared_sha=file_sha256(prepared);rows=[];encoded=None
     for repeat in range(1,4):
@@ -84,7 +98,7 @@ def _collect_unlocked(*,source_video,output_root,api_key=None,allow_live=False,p
                     response=client.chat.completions.create(model=MODEL,temperature=0,
                       messages=[{'role':'user','content':[{'type':'text','text':PROMPT},
                       {'type':'image_url','image_url':{'url':'data:video/mp4;base64,'+encoded}}]}],response_format=response_schema())
-                    data=dict(evidence_version=3,values=json.loads(response.choices[0].message.content),
+                    data=dict(evidence_version=4,values=json.loads(response.choices[0].message.content),
                         source_sha=sha,prepared_sha256=prepared_sha,repeat=repeat,model=response.model,request_id=response.id,
                         prompt_sha=PROMPT_SHA,usage=response.usage.model_dump() if response.usage else None)
                     (root/f'attempt_{repeat}_{attempt}.json').write_text(json.dumps(data,ensure_ascii=False,indent=2))
