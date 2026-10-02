@@ -128,67 +128,143 @@ def plain_text(text):
     return re.sub(r"\s+", " ", text).strip()
 
 
+# A feature can explain the score only when both its evidence and direction are
+# supported. Neutral scene descriptions are deliberately not rendered.
+TAKEAWAYS = {
+    'character_close_up_seconds': 'Крупные планы поддерживают заметность героя и его реакции.',
+    'monologue_to_camera': 'Обращение к зрителю поддерживает заметность ключевой реплики.',
+    'pack_shot_duration_seconds': 'Финальный кадр с брендом поддерживает заметность предложения.',
+    'product_demo_seconds': 'Показ сервиса помогает выделить само предложение, а не только сюжет.',
+    'state_transformation_present': 'Контраст между исходной ситуацией и результатом поддерживает заметность решения.',
+    'main_character': 'Один главный герой помогает удержать фокус на одной задаче.',
+    'numeric_offer_on_screen': 'Число на экране делает предложение более конкретным.',
+    'has_callback_to_opening': 'Связь завязки и финала поддерживает цельность истории.',
+    'jingle_present': 'Фирменная мелодия поддерживает звуковую связь с брендом.',
+    'problem_solution_arc_present': 'Связь проблемы с решением помогает закрепить роль сервиса в истории.',
+    'promo': 'Выделенная выгода акции поддерживает считываемость предложения.',
+    'scene_pace_high': 'Темп смены сцен в этой версии поддерживает оценку запоминаемости.',
+}
+AUDIO_DEPENDENT = {
+    'panel__first_core_claim_time_band', 'fresh__audiovisual_claim_alignment',
+    'panel__distinct_benefit_count', 'panel__mandatory_inference_chain_length',
+    'panel__message_specificity_level', 'panel__offer_novelty_explanation_need',
+    'panel__product_role_reveal_time_band', 'brand_first_mention_seconds',
+    'jingle_present', 'problem_solution_arc_present', 'monologue_to_camera',
+}
+
+
+def takeaway(feature, value, direction):
+    positive = direction == 'supports'
+    if feature == 'fresh__audiovisual_claim_alignment':
+        if positive:
+            return ('Изображение раскрывает обещание и поддерживает считываемость.' if value >= 2.5 else
+                    'Показанная часть обещания поддерживает считываемость, хотя связь раскрыта не полностью.')
+        return 'Связь изображения с главным обещанием ограничивает оценку считываемости.'
+    if feature == 'panel__mandatory_inference_chain_length':
+        return ('Прямое объяснение связи между сюжетом и предложением поддерживает считываемость.' if positive else
+                'Неявная связь между событиями и выгодой ограничивает считываемость: часть смысла приходится достраивать.')
+    if feature == 'panel__message_specificity_level':
+        return ('Конкретное предложение поддерживает считываемость: есть опора для понимания услуги или выгоды.' if positive else
+                'Общее обещание ограничивает считываемость: модель не выделяет достаточно конкретики о предложении.')
+    if feature == 'panel__offer_novelty_explanation_need':
+        return ('Отсутствие сложной для объяснения механики поддерживает считываемость.' if positive else
+                'Непривычное предложение требует пояснения; в этой версии это ограничивает считываемость.')
+    if feature == 'panel__first_core_claim_time_band':
+        return ('Раннее появление главного предложения поддерживает его заметность.' if positive else
+                'Позднее появление главного предложения оставляет меньше времени на него и ограничивает заметность.')
+    if feature == 'panel__product_role_reveal_time_band':
+        return ('Роль сервиса раскрывается достаточно рано и поддерживает считываемость.' if positive else
+                'Роль сервиса становится понятна не сразу. Это ограничивает считываемость связи между историей и Авито.')
+    if feature == 'brand_first_mention_seconds':
+        return ('Раннее появление бренда поддерживает связь истории с Авито.' if positive else
+                'Позднее появление бренда ограничивает связь истории с Авито в оценке запоминаемости.')
+    if feature == 'panel__distinct_benefit_count':
+        if value < 1.5:
+            return 'Одно основное обещание поддерживает фокус сообщения.'
+        return ('Несколько выделенных выгод поддерживают оценку этой версии. Это не означает, что добавление новых выгод её улучшит.' if positive else
+                'Несколько разных выгод ограничивают фокус сообщения в оценке модели.')
+    return TAKEAWAYS.get(feature, 'Эта деталь поддерживает оценку данной версии.')
+
+
+def brief_evidence(text):
+    """Keep one short justification, not the plot of the video."""
+    text = plain_text(text)
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    first = sentences[0]
+    if len(first) > 220:
+        first = first[:217].rsplit(' ', 1)[0].rstrip('.,;:') + '…'
+    return first
+
+
 def report_cards(interpretation):
-    """Expose more grounded features without relaxing the evidence gates."""
     cards = []
-    for card in interpretation["cards"]:
-        task = card.get("task")
-        drivers = interpretation.get("details", {}).get(task, {}).get("drivers")
+    incomplete = interpretation.get('audio_status') in {'partial', 'absent'}
+    for card in interpretation['cards']:
+        task = card.get('task')
+        drivers = interpretation.get('details', {}).get(task, {}).get('drivers')
         if drivers is None:
-            drivers = [*card.get("strengths", []), *card.get("limitations", [])]
-        groups = {"strengths": [], "limitations": [], "observations": []}
-        pending = []
-        for driver in drivers:
-            feature = driver.get("feature", "")
-            if feature == "brand_history" or feature.startswith("phys__") or feature == "is_celeb":
+            drivers = [*card.get('strengths', []), *card.get('limitations', [])]
+        groups = {'strengths': [], 'limitations': []}
+        uncertain = {k: [] for k in ['audio', 'unverified', 'unstable', 'association', 'production']}
+        for d in drivers:
+            feature = d.get('feature', '')
+            if feature == 'brand_history' or abs(d.get('index_points', 0)) < 1:
                 continue
-            support = driver.get("evidence", {})
-            factual = driver.get("factual_observation")
-            independent_only = not support.get("verified", False) and bool(factual)
-            if independent_only:
-                support = factual["evidence"]
-            if not support.get("verified", False):
-                if abs(driver.get("index_points", 0)) >= 2:
-                    pending.append(LABELS.get(feature, driver["label"]))
+            label = LABELS.get(feature, d.get('label', feature))
+            if feature.startswith('phys__'):
+                if abs(d.get('index_points', 0)) >= 2:
+                    uncertain['production'].append(label)
+                continue
+            if incomplete and feature in AUDIO_DEPENDENT:
+                uncertain['audio'].append(label)
+                continue
+            support = d.get('evidence', {})
+            if not support.get('verified'):
+                if abs(d.get('index_points', 0)) >= 2:
+                    uncertain['unverified'].append(label)
+                continue
+            if not d.get('usable'):
+                if abs(d.get('index_points', 0)) >= 2:
+                    uncertain['unstable'].append(label)
                 continue
             if feature not in PURPOSE:
                 continue
-            value = factual["value"] if independent_only else driver.get("value", 0)
+            value = d.get('value', 0)
             absent = feature in ABSENCE and value < (.5 if feature not in {
-                "character_close_up_seconds", "product_demo_seconds"} else 1e-9)
-            context = feature_context(feature, value, absent)
-            phrase = support.get("main_phrase")
-            if feature == "fresh__audiovisual_claim_alignment" and phrase and re.search(r"[а-яА-ЯёЁ]", phrase):
-                quote = plain_text(phrase).strip('«»"').rstrip('.')
-                context = "Здесь проверяем связь изображения с предложением: «" + quote + "»" + (
-                    "" if quote.endswith(('?', '!')) else ".")
-            item = dict(feature=feature, label=factual["label"] if independent_only else driver["label"],
-                        observation=observation_text(feature, support, value),
-                        context=context, episodes=support.get("episodes", [])[:2],
-                        check=plain_text(driver.get("check")))
-            if feature == "state_transformation_present" and absent:
-                item["label"] = "Изменение ситуации благодаря сервису"
-            # An odd association or a changing sign is a factual observation,
-            # never a reason to add/remove a device or a list of shortcomings.
-            directional = (not independent_only and driver.get("usable")
-                           and driver.get("interpretation_kind") == "observed_driver")
-            if feature == "panel__distinct_benefit_count" and value < .5:
+                'character_close_up_seconds', 'product_demo_seconds'} else 1e-9)
+            directional = d.get('interpretation_kind') == 'observed_driver'
+            if feature == 'panel__distinct_benefit_count' and value < .5:
                 directional = False
-            # A relative arithmetic contribution is not a creative defect.
-            # Neither absent optional devices nor a specific offer should be
-            # presented as a shortcoming merely because their contribution is negative.
-            if driver.get("direction") != "supports":
-                if absent or feature in {"character_close_up_seconds", "pack_shot_duration_seconds",
-                                         "product_demo_seconds", "panel__distinct_benefit_count"}:
-                    directional = False
-                if feature == "panel__message_specificity_level" and value >= 1.5:
-                    directional = False
-            group = ("strengths" if driver.get("direction") == "supports" else "limitations") if directional else "observations"
-            if group != "limitations":
-                item["check"] = ""
-            groups[group].append(item)
-        cards.append(dict(card, description=DESCRIPTIONS.get(task, ""), **groups,
-                          observations_title=("Ещё о подаче ролика" if groups['strengths'] or groups['limitations']
-                                              else "Что видно в ролике"),
-                          pending=list(dict.fromkeys(pending))))
+            if d.get('direction') != 'supports' and (absent or feature in {
+                    'character_close_up_seconds', 'pack_shot_duration_seconds',
+                    'product_demo_seconds', 'panel__distinct_benefit_count'} or
+                    (feature == 'panel__message_specificity_level' and value >= 1.5)):
+                directional = False
+            if not directional:
+                if abs(d.get('index_points', 0)) >= 2:
+                    uncertain['association'].append(label)
+                continue
+            group = 'strengths' if d.get('direction') == 'supports' else 'limitations'
+            groups[group].append(dict(feature=feature, label=label,
+                takeaway=takeaway(feature, value, d.get('direction')),
+                evidence=brief_evidence(observation_text(feature, support, value)),
+                episodes=support.get('episodes', [])[:1],
+                check=plain_text(d.get('check')) if group == 'limitations' else ''))
+        notes = []
+        reasons = {
+            'audio': 'Без полной озвучки нельзя уверенно оценить эти стороны сообщения. Выводы по ним стоит отложить до версии с речью.',
+            'unverified': 'По этим деталям не удалось уверенно подтвердить основание оценки. Поэтому они не названы ни сильными, ни слабыми сторонами.',
+            'unstable': 'Влияние этих деталей на оценку неустойчиво. Оснований рекомендовать их изменение пока недостаточно.',
+            'association': 'Модель учитывает эти детали, но не даёт понятного основания считать их достоинствами или недостатками. Менять их только ради балла не стоит.',
+            'production': 'Черновой звук и анимация влияют на оценку файла. По ним нельзя судить о качестве будущего готового ролика или советовать менять громкость и темп.',
+        }
+        if interpretation.get('material_kind') != 'neuromatics':
+            reasons['production'] = 'Модель учитывает звук и движение, но эти измерения сами по себе не объясняют, что стоит изменить в подаче. По ним нельзя советовать менять громкость или темп.'
+        for kind, labels in uncertain.items():
+            if labels:
+                notes.append(dict(reason=kind, features=list(dict.fromkeys(labels)), text=reasons[kind]))
+        summary = ('Эта часть оценки объясняется лишь частично. Ниже - подтверждённые плюсы и ограничения.' if notes and any(groups.values()) else
+                   'По этой части пока нет надёжного объяснения сильных и слабых сторон. Это не означает, что у ролика их нет.' if not any(groups.values()) else
+                   'Эти детали объясняют оценку данной версии; эффект правок нужно проверять отдельно.')
+        cards.append(dict(card, description=DESCRIPTIONS.get(task, ''), summary=summary, **groups, unassessed=notes))
     return cards

@@ -14,7 +14,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-VERSION = 'manager-evidence-v6-plain-language'
+VERSION = 'manager-decisions-v7-neuromatics-pairs12'
 NAMES = {'n':'Заметность', 'm':'Считываемость', 'r':'Запоминаемость'}
 LABELS = {
  'character_close_up_seconds':'Крупные планы героя',
@@ -300,7 +300,10 @@ def semantic_measurement(head,frame,feature):
 
 def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,strict_evidence=True):
     from .latest_runtime import material_kind_for_result
+    from .display_calibration import neuromatics_reference, display_values, audio_status, audio_note
     material_kind=material_kind_for_result(result)
+    calibration=neuromatics_reference(result['scoring_version']) if material_kind=='neuromatics' else None
+    voice=audio_status(result) if material_kind=='neuromatics' else 'complete'
     if model is None or bundle_dir is None:
         from .latest_runtime import load_models,BUNDLE_DIR
         model=model or load_models(material_kind);bundle_dir=bundle_dir or BUNDLE_DIR
@@ -372,6 +375,11 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
           unresolved=[d['label'] for d in unresolved],unresolved_drivers=unresolved,
           explanation_status='partial' if partial else 'supported',
           verified_contribution_coverage=coverage)
+        if calibration:
+            display=calibration['references'][task]
+            card.update(display_values(score,display))
+            card['repeat_index_range']=[100*float(z)/display['mean'] for z in spread]
+        card['assessment_available']=voice not in {'partial','absent'}
         details[task]=dict(drivers=drivers,expected=base,actual=score,additivity_error=float(abs(base+vals.sum()-score)),
               per_repeat_scores=p.tolist(),per_repeat_shap=phi.tolist(),feature_order=columns)
         cards.append(card)
@@ -379,7 +387,10 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
     q=float(result['scores']['Q']);lo,hi=reference['Q_tertiles']
     overall=dict(title=('AIPM3.0 (для нейроматиков)' if material_kind=='neuromatics' else 'AIPM 3.0'),score=q,index=100*q/reference['Q_mean'],
       level='Выше типичного уровня' if q>hi else 'Ниже типичного уровня' if q<lo else 'Типичный уровень')
+    if calibration:overall.update(display_values(q,calibration['references']['Q']))
+    overall['assessment_available']=voice not in {'partial','absent'}
     return dict(version=VERSION,material_kind=material_kind,cards=cards,details=details,overall=overall,
+      display_calibration=calibration['version'] if calibration else None,audio_status=voice,audio_note=audio_note(voice),
       scale_note='100 - средняя оценка исторических роликов в этом компоненте. Это индекс модели, а не процент зрителей.',
       interpretation_note='Плюсы и ограничения объясняют расчет модели относительно исторических роликов. Проверки ниже помогут обсудить правки с Марком и ресерчем; эффект отдельной правки нужно проверить на новой версии.',
       repeat_note='Диапазон показывает разброс повторных разборов, а не доверительный интервал эффективности.',

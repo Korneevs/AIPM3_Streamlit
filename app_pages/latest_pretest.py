@@ -17,6 +17,7 @@ from aipm3.latest_runtime import (
 )
 from aipm3.runtime_resources import AnalysisBusy
 from aipm3.manager_report import LEVELS, report_cards
+from aipm3.display_calibration import audio_status
 
 
 VERTICALS = {"Товары": "Goods", "Авто": "Auto", "Работа": "Jobs",
@@ -32,9 +33,13 @@ def interpret_result(result: dict) -> dict:
     return _interpret_cached(result, VERSION)
 
 
-def _show_score(title: str, index: float, level: str) -> None:
+def _show_score(title: str, index: float, level: str, available: bool = True) -> None:
     label, color, background = LEVELS[level]
     with st.container(border=True):
+        if not available:
+            st.metric(title, "—")
+            st.caption("Нужна полная озвучка")
+            return
         st.metric(title, f"{index:.0f}")
         st.markdown(f'<div style="background:{background};color:{color};padding:8px 12px;'
                     f'border-radius:7px;font-weight:650">{escape(label)}</div>',
@@ -43,8 +48,9 @@ def _show_score(title: str, index: float, level: str) -> None:
 
 def _show_driver(item: dict) -> None:
     st.markdown(f'**{item["label"]}**')
-    st.write(item["observation"])
-    st.write(item["context"])
+    st.write(item["takeaway"])
+    if item.get("evidence"):
+        st.caption("Основание: " + item["evidence"])
     if item.get("episodes"):
         st.caption("В ролике: " + "; ".join(
             f'{float(ep["start"]):g}-{float(ep["end"]):g} с' for ep in item["episodes"]))
@@ -56,36 +62,37 @@ def show_latest_result(result: dict, interpretation: dict | None = None) -> None
     material_kind = material_kind_for_result(result)
     interpretation = interpretation or interpret_result(result)
     overall = interpretation.get("overall")
+    if interpretation.get("audio_note"):
+        st.warning(interpretation["audio_note"])
     if overall:
         st.subheader("Общая оценка")
-        _show_score("AIPM3.0", overall["index"], overall["level"])
-    st.caption("100 - средняя оценка роликов, с которыми сравниваем этот вариант.")
+        _show_score("AIPM3.0", overall["index"], overall["level"], overall.get("assessment_available", True))
+    if not overall or overall.get("assessment_available", True):
+        st.caption("100 - ориентир для нейроматиков, сопоставленный с готовыми роликами." if material_kind == "neuromatics"
+                   else "100 - средняя оценка роликов, с которыми сравниваем этот вариант.")
     for column, card in zip(st.columns(3), interpretation["cards"]):
         with column:
-            _show_score(card["title"], card["index"], card["level"])
+            _show_score(card["title"], card["index"], card["level"], card.get("assessment_available", True))
 
     cards = report_cards(interpretation)
     for card in cards:
         with st.container(border=True):
             st.subheader(card["title"])
             st.write(card["description"])
+            st.write(card["summary"])
             if card["strengths"]:
                 st.markdown("**Что поддерживает оценку**")
                 for item in card["strengths"]:
                     _show_driver(item)
             if card["limitations"]:
-                st.markdown("**На что обратить внимание**")
+                st.markdown("**Что ограничивает оценку**")
                 for item in card["limitations"]:
                     _show_driver(item)
-            if card["observations"]:
-                st.markdown(f'**{card["observations_title"]}**')
-                for item in card["observations"]:
-                    _show_driver(item)
-            if card["pending"]:
-                st.caption("Пока нет уверенного вывода по этим деталям: " +
-                           "; ".join(card["pending"]) + ". Их стоит пересмотреть перед правками.")
-            if not any(card[group] for group in ("strengths", "limitations", "observations")):
-                st.write("По этой части пока недостаточно подтверждённых наблюдений для подробного вывода.")
+            if card["unassessed"]:
+                st.markdown("**Что нельзя уверенно объяснить**")
+                for item in card["unassessed"]:
+                    st.markdown("**" + "; ".join(item["features"]) + "**")
+                    st.write(item["text"])
     st.caption("Оценка помогает сравнивать варианты. Финальное решение принимает Марком. "
                "Предложения по правкам стоит проверить на следующей версии ролика.")
     exported = clean_json(public_result(result, interpretation))
@@ -121,7 +128,7 @@ def main(material_kind: str = "finished") -> None:
     prefix = f"latest_{material_kind}_"
     result_key = prefix + "result"
     st.title(MATERIAL_LABELS[material_kind])
-    st.caption("Заметность, считываемость и запоминаемость - с наблюдениями для обсуждения ролика.")
+    st.caption("Что поддерживает оценку ролика, что её ограничивает и какие выводы пока нельзя сделать.")
     mode = st.radio("Источник результата", ["Загрузить ролик", "Открыть сохранённый результат"],
                     horizontal=True, key=prefix + "source")
     preset_env = "AIPM_LATEST_RESULT_JSON" if material_kind == "finished" else "AIPM_NEUROMATICS_RESULT_JSON"
@@ -208,6 +215,18 @@ def main(material_kind: str = "finished") -> None:
             st.error("Сохранённый результат относится к другому типу материала. Откройте соответствующий раздел.")
             st.stop()
         st.caption(result.get("source_name", result.get("name", result.get("record", ""))))
+        if material_kind == "neuromatics":
+            choices = {"Полнота озвучки не подтверждена": "unknown", "Вся речь есть (можно черновую)": "complete",
+                       "Есть только часть речи": "partial", "Речи нет": "absent"}
+            status = audio_status(result)
+            selected = st.selectbox("Озвучка в этом файле", list(choices),
+                                    index=list(choices.values()).index(status),
+                                    key=prefix + "audio_" + str(result.get("source_sha", "")),
+                                    help="Музыка и звуковые эффекты не заменяют реплики и закадровый текст. Если речи нет по замыслу, выберите «Речи нет»: отдельной нормы для таких роликов пока нет.")
+            if choices[selected] != status:
+                result = dict(result, audio_review=dict(status=choices[selected],
+                    source_sha=result.get("source_sha"), origin="user_declared"))
+                st.session_state[result_key] = result
         with st.spinner("Готовим объяснение оценок"):
             show_latest_result(result)
 
