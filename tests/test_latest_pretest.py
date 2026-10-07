@@ -67,13 +67,18 @@ def test_result_page_shows_three_indices_and_preserves_associations(repeat_count
     assert app.session_state["interpretation"] == before
 
 
-def test_loading_local_page_and_missing_upload_never_dispatch_live_calls(monkeypatch):
+@pytest.mark.parametrize("kind,page", [
+    ("finished", "latest_pretest.py"),
+    ("neuromatics", "neuromatics_pretest.py"),
+])
+def test_loading_local_page_and_missing_upload_never_dispatch_live_calls(kind, page, monkeypatch):
     monkeypatch.delenv("AIPM_LATEST_RESULT_JSON", raising=False)
     monkeypatch.setattr(latest_pipeline, "run_latest_analysis", lambda **_: pytest.fail("Unexpected analysis"))
-    app = AppTest.from_file(str(ROOT / "app_pages/latest_pretest.py")).run()
+    app = AppTest.from_file(str(ROOT / "app_pages" / page)).run()
     assert not app.exception
-    assert len(app.button) == 2
-    app.button[1].click().run()
+    assert [button.label for button in app.button] == ["Проанализировать ролик"]
+    assert app.button[0].proto.type == "primary"
+    app.button(key=f"latest_{kind}_live").click().run()
     assert not app.exception
     assert app.warning[0].value == "Сначала загрузите ролик."
 
@@ -115,7 +120,7 @@ def test_other_material_result_is_not_displayed(kind, page, monkeypatch):
     assert not app.metric
     assert not any("other-material.mp4" in caption.value for caption in app.caption)
     assert app.radio[0].key == f"latest_{kind}_source"
-    assert len(app.button) == 2
+    assert len(app.button) == 1
 
 
 def test_neuromatics_does_not_read_finished_preset(tmp_path, monkeypatch):
@@ -185,11 +190,33 @@ def test_live_action_passes_material_kind_and_uses_three_runs(kind, page, monkey
     assert not app.exception
     assert not calls
     assert any("Анализ и проверка наблюдений" in caption.value for caption in app.caption)
+    vertical = app.selectbox(key=f"latest_{kind}_vertical")
+    selected_vertical = vertical.options[-1]
+    vertical.select(selected_vertical).run(timeout=30)
+    assert not app.exception
+    assert not calls
+    # Replacing a file or rerunning the page must not dispatch the pipeline.
+    uploaded = BytesIO(b"replacement-video")
+    uploaded.name = "replacement.mp4"
+    app.run(timeout=30)
+    assert not app.exception
+    assert not calls
     app.button(key=f"latest_{kind}_live").click().run(timeout=30)
     assert not app.exception
     assert len(calls) == 1
     assert calls[0]["material_kind"] == kind
     assert calls[0]["repeat_count"] == 3
     assert calls[0]["allow_live"] is True
-    assert app.session_state[f"latest_{kind}_result"]["source_name"] == "clip.mp4"
+    assert calls[0]["api_key"] == "test-key"
+    assert app.session_state[f"latest_{kind}_result"]["source_name"] == "replacement.mp4"
     assert len(app.tabs) == 3
+    app.run(timeout=30)
+    assert not app.exception
+    assert len(calls) == 1
+    app.selectbox(key=f"latest_{kind}_vertical").select_index(0).run(timeout=30)
+    assert not app.exception
+    assert len(calls) == 1
+    uploaded = None
+    app.run(timeout=30)
+    assert not app.exception
+    assert len(calls) == 1
