@@ -54,7 +54,8 @@ def test_result_page_shows_three_indices_and_preserves_associations(repeat_count
     captions = " ".join(item.value for item in app.caption)
     assert "не даёт понятного основания" in text
     assert all(value in text for value in [">+1%<", ">−8%<", ">−2%<"])
-    assert "Изображение показывает заявленное действие." not in text
+    assert "**В этом ролике:** Изображение показывает заявленное действие." in text
+    assert "Различаем отсутствие связи" in text
     assert "На что обратить внимание" not in text
     assert "0% - средняя оценка" in captions
     for forbidden in ["Сравнение и разброс", "Версия расчёта", "пункта индекса", "SHAP", "исходные признаки", "Q", "OPM", "Особенность модели", "замороженная"]:

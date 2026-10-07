@@ -68,7 +68,7 @@ def test_export_reload_keeps_flag_and_rejects_cross_video_or_changed_scores(resu
         runtime.validate_cached_result(wrong)
 
 
-def test_interpretation_matches_adjusted_scores_and_shows_positive_reason(result):
+def test_interpretation_matches_adjusted_scores_without_media_person_output(result):
     adjusted = with_celebrity_review(result, True)
     explanation = build_latest_interpretation(adjusted)
     cards = {c["task"]: c for c in explanation["cards"]}
@@ -77,8 +77,7 @@ def test_interpretation_matches_adjusted_scores_and_shows_positive_reason(result
         assert explanation["details"][task]["additivity_error"] < 1e-9
     assert explanation["overall"]["score"] == adjusted["scores"]["Q"]
     recall = next(c for c in report_cards(explanation) if c["task"] == "r")
-    manual = next(d for d in recall["strengths"] if d["feature"] == "manual_celebrity")
-    assert "положительно влияет" in manual["takeaway"]
+    assert not any(d["feature"] == "manual_celebrity" for d in recall["strengths"])
     assert "1.2" not in json.dumps(recall, ensure_ascii=False)
 
 
@@ -102,7 +101,7 @@ def test_checkbox_updates_cached_result_without_calls_and_survives_reopen(result
     assert not app.exception
     adjusted = app.session_state[f"latest_{kind}_result"]
     assert adjusted["scores"]["norm_ad_recall"] == pytest.approx(result["scores"]["norm_ad_recall"] * 1.2)
-    assert any("положительно влияет" in x.value for x in app.success)
+    assert not any("медийн" in x.value for x in [*app.success, *app.markdown])
     app.run(timeout=45)
     assert app.session_state[f"latest_{kind}_result"]["scores"] == adjusted["scores"]
     app.checkbox(key=key).uncheck().run(timeout=45)
