@@ -27,10 +27,11 @@ def interpretation():
     driver = dict(feature="fresh__audiovisual_claim_alignment", value=3, label="Связь изображения и озвучки", evidence={"verified": True,
         "observation": "Изображение показывает заявленное действие.",
         "episodes": [{"start": 3., "end": 5.}]},
-        index_points=5, usable=True, direction="limits", interpretation_kind="association_only", why="Это связь в обученной модели.", check=None)
-    return dict(cards=[dict(title=title, index=index, level="Типичный уровень",
+        index_points=-5, contribution=-.05, usable=True, direction="limits", interpretation_kind="association_only", why="Это связь в обученной модели.", check=None)
+    return dict(cards=[dict(task=task, title=title, index=index, level="Типичный уровень",
                            repeat_index_range=[95., 105.], strengths=[], limitations=[driver], unresolved=[])
-                      for title, index in [("Заметность", 101), ("Считываемость", 92), ("Запоминаемость", 98)]],
+                      for task, title, index in [("n", "Заметность", 101), ("m", "Считываемость", 92), ("r", "Запоминаемость", 98)]],
+                details={task: {"drivers": [deepcopy(driver)]} for task in 'nmr'},
                 scale_note="100 — средняя оценка исторических роликов; не процент зрителей.",
                 repeat_note="Разброс повторов не является доверительным интервалом.",
                 interpretation_note="Отдельную правку нужно проверить на новой версии.", evidence_runs=3)
@@ -48,18 +49,18 @@ def test_result_page_shows_three_indices_and_preserves_associations(repeat_count
     app.session_state["interpretation"] = content
     app.run(timeout=30)
     assert not app.exception
-    assert [item.label for item in app.metric] == ["Заметность", "Считываемость", "Запоминаемость"]
-    assert [item.value for item in app.metric] == ["101", "92", "98"]
+    assert [tab.label for tab in app.tabs] == ["Заметность", "Запоминаемость", "Считываемость основной идеи"]
     text = " ".join(item.value for item in app.markdown)
     captions = " ".join(item.value for item in app.caption)
-    assert "Что нельзя уверенно объяснить" in text
+    assert "не даёт понятного основания" in text
+    assert all(value in text for value in [">+1%<", ">−8%<", ">−2%<"])
     assert "Изображение показывает заявленное действие." not in text
     assert "На что обратить внимание" not in text
-    assert "100 - средняя оценка" in captions
+    assert "0% - средняя оценка" in captions
     for forbidden in ["Сравнение и разброс", "Версия расчёта", "пункта индекса", "SHAP", "исходные признаки", "Q", "OPM", "Особенность модели", "замороженная"]:
         assert forbidden not in text + captions
-    assert not app.expander
-    assert len(app.get("plotly_chart")) == 0
+    assert len(app.expander) == 4
+    assert len(app.get("plotly_chart")) == 3
     assert "#FFF6D6" in text and "В норме" in text
     assert len(app.get("download_button")) == 1
     assert app.session_state["interpretation"] == before
@@ -88,7 +89,8 @@ def test_offline_saved_result_does_not_require_api_key(tmp_path, monkeypatch):
     monkeypatch.setattr(latest_interpretation, "build_latest_interpretation", lambda *_, **__: interpretation())
     app = AppTest.from_file(str(ROOT / "app_pages/latest_pretest.py")).run(timeout=30)
     assert not app.exception
-    assert [item.value for item in app.metric] == ["101", "92", "98"]
+    assert len(app.tabs) == 3
+    assert any('>+1%<' in item.value for item in app.markdown)
     assert any("cached.mp4" in item.value for item in app.caption)
 
 
@@ -189,4 +191,4 @@ def test_live_action_passes_material_kind_and_uses_three_runs(kind, page, monkey
     assert calls[0]["repeat_count"] == 3
     assert calls[0]["allow_live"] is True
     assert app.session_state[f"latest_{kind}_result"]["source_name"] == "clip.mp4"
-    assert len(app.metric) == 3
+    assert len(app.tabs) == 3
