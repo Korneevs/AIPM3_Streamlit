@@ -127,15 +127,13 @@ def main(material_kind: str = "finished") -> None:
             uploaded = st.file_uploader("Ролик Avito (MP4 / MOV)", type=["mp4", "mov"], key=prefix + "video")
         if uploaded is not None:
             st.video(uploaded)
-        cached_btn = st.sidebar.button("Использовать прошлый анализ", use_container_width=True,
-                                   key=prefix + "cached")
         live_btn = st.sidebar.button("Проанализировать ролик", type="primary", use_container_width=True,
                                key=prefix + "live")
         st.caption("Анализ и проверка наблюдений могут занять несколько минут.")
-        if cached_btn or live_btn:
+        if live_btn:
             if uploaded is None:
                 st.warning("Сначала загрузите ролик.")
-            elif live_btn and not _api_key():
+            elif not _api_key():
                 st.error("Новый анализ пока недоступен. Обратитесь к администратору приложения.")
             else:
                 cache = Path(os.environ.get("AIPM_LATEST_CACHE_DIR",
@@ -146,8 +144,8 @@ def main(material_kind: str = "finished") -> None:
                 try:
                     with st.status("Разбираем ролик", expanded=True) as status:
                         result = run_latest_analysis(
-                            source_video=source, output_root=cache, api_key=_api_key() if live_btn else "",
-                            vertical=VERTICALS[vertical], allow_live=bool(live_btn), material_kind=material_kind,
+                            source_video=source, output_root=cache, api_key=_api_key(),
+                            vertical=VERTICALS[vertical], allow_live=True, material_kind=material_kind,
                             repeat_count=ANALYSIS_REPEATS,
                             progress=lambda message: status.update(label=(
                                 "Проверяем наблюдения по ролику" if message.startswith("Проверяем")
@@ -173,7 +171,7 @@ def main(material_kind: str = "finished") -> None:
                 st.info("Ниже показан результат предыдущего ролика. Запустите анализ нового файла.")
             elif st.session_state[result_key].get("vertical") not in (None, VERTICALS[vertical]):
                 st.info("Вертикаль изменена. Ниже сохранён результат прежнего выбора; "
-                        "пересчитайте его по сохранённым наблюдениям.")
+                        "для обновления нажмите «Проанализировать ролик».")
 
     if result_key in st.session_state:
         st.divider()
