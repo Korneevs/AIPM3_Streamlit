@@ -1,7 +1,7 @@
 """Archive-style cards and feature tabs for the current model's explanations.
 
-No legacy score conversion or legacy SHAP is used. Attribution weights use all
-creative features of each current head, including unresolved contributions.
+No legacy score conversion or legacy SHAP is used. Attribution weights use
+the displayed creative features of each current head, including unresolved ones.
 """
 from __future__ import annotations
 
@@ -10,8 +10,9 @@ from html import escape
 import plotly.graph_objects as go
 import streamlit as st
 
-from .manager_report import LEVELS, PURPOSE, report_cards
+from .manager_report import LEVELS, HIDDEN_MANAGER_FEATURES, report_cards
 from .latest_interpretation import LABELS
+from .feature_explanations import FEATURE_MEANINGS, feature_observation
 
 
 ORDER = ("n", "r", "m")
@@ -52,13 +53,13 @@ def show_summary(interpretation: dict) -> None:
 
 
 def profile_rows(interpretation: dict) -> dict[str, list[dict]]:
-    """Every feature appears exactly once; business claims keep existing gates."""
+    """Every visible feature appears once; exclusions never alter scoring."""
     cards = {card["task"]: card for card in report_cards(interpretation)}
     result = {}
     for task in ORDER:
         card = cards[task]
         drivers = [d for d in interpretation["details"][task]["drivers"]
-                   if d["feature"] != "brand_history"]
+                   if d["feature"] not in HIDDEN_MANAGER_FEATURES]
         mass = sum(abs(d["contribution"]) for d in drivers)
         claims = {d["feature"]: d for group in ("strengths", "limitations") for d in card[group]}
         reasons = {label: note["text"] for note in card["unassessed"] for label in note["features"]}
@@ -70,13 +71,14 @@ def profile_rows(interpretation: dict) -> dict[str, list[dict]]:
             label = claim["label"] if claim else LABELS.get(driver["feature"], driver["label"])
             reason = reasons.get(label,
                 "По сохранённым наблюдениям нельзя уверенно назвать эту деталь достоинством или недостатком этого ролика.")
-            context = PURPOSE.get(driver["feature"], "")
             rows.append(dict(
                 feature=driver["feature"], label=label,
                 importance=100 * abs(contribution) / mass if mass else 0,
                 direction=sign, claim=claim,
-                finding=claim["takeaway"] if claim else (context + " " + reason).strip(),
-                observation=claim.get("evidence", "") if claim else "",
+                meaning=FEATURE_MEANINGS[driver["feature"]],
+                finding=claim["takeaway"] if claim else reason,
+                observation=feature_observation(driver,
+                    audio_incomplete=interpretation.get("audio_status") in {"partial", "absent"}),
                 check=claim.get("check", "") if claim else "",
             ))
         rows.sort(key=lambda row: ({"down": 0, "up": 1, "balanced": 2}[row["direction"]], -row["importance"]))
@@ -108,13 +110,14 @@ def show_profile(interpretation: dict) -> None:
     st.subheader("Профиль ролика")
     for tab, task in zip(st.tabs([TITLES[t] for t in ORDER]), ORDER):
         with tab:
-            if task == "r" and interpretation.get("celebrity_present") is True:
-                st.success("В конкретном ролике участие медийной персоны положительно влияет на оценку запоминаемости. Участие отмечено вами.")
             for row in rows[task]:
                 with st.container(border=True):
                     description, effects = st.columns([1.5, 1], gap="large")
                     with description:
                         st.markdown("#### " + row["label"])
+                        st.write(row["meaning"])
+                        if row["observation"]:
+                            st.markdown("**В этом ролике:** " + row["observation"])
                         st.write(row["finding"])
                         if row["check"]:
                             st.markdown("**Вариант для проверки:** " + row["check"])
@@ -125,17 +128,15 @@ def show_profile(interpretation: dict) -> None:
                         st.markdown(f'<div style="color:{color};font-weight:600;margin:12px 0 5px;">{status}</div>',
                                     unsafe_allow_html=True)
                         weight = "<1%" if 0 < row["importance"] < 1 else f'{row["importance"]:.0f}%'
-                        st.write("Вес среди свойств ролика: **" + weight + "**")
+                        st.write("Вес среди показанных свойств: **" + weight + "**")
                         st.plotly_chart(feature_figure(row), use_container_width=True,
                                         config={"displayModeBar": False},
                                         key=f'latest_profile_{task}_{row["feature"]}')
                     with st.expander("Что учтено и что означает вес"):
-                        if row["observation"]:
-                            st.write(row["observation"])
                         if not row["claim"]:
                             st.write("Направление справа показывает вклад в расчёт, но не подтверждённую причину успеха или недостаток ролика.")
-                        st.caption("Вес показывает долю свойства в сумме вкладов в эту оценку. Это не ожидаемый рост после правки ролика.")
+                        st.caption("Вес показывает долю свойства в сумме вкладов показанных признаков. Это не ожидаемый рост после правки ролика.")
     with st.expander("Как рассчитан вклад"):
         st.write("В каждой вкладке сначала показаны свойства, снижающие оценку, затем поддерживающие. Внутри этих групп они упорядочены по весу.")
-        st.write("Веса всех свойств внутри одной оценки составляют 100% до округления; если вкладов нет, веса равны нулю. Исторический ориентир бренда учтён отдельно. Веса разных оценок не складываются.")
+        st.write("Веса показанных свойств внутри одной оценки составляют 100% до округления; если вкладов нет, веса равны нулю. Веса разных оценок не складываются.")
         st.write("Вклад объясняет расчёт для конкретного ролика. Он не доказывает, что добавление или удаление приёма улучшит результат. Варианты правок нужно сравнивать.")

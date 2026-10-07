@@ -10,6 +10,10 @@ from .latest_interpretation import LABELS, observed_label
 
 NEGATIVE_MIN_INDEX_POINTS = .5
 NEGATIVE_MIN_STABILITY = 2 / 3
+HIDDEN_MANAGER_FEATURES = frozenset({
+    'brand_history', 'is_celeb', 'manual_celebrity',
+    'phys__motion_mean', 'phys__audio_dynamic_range_db',
+})
 
 
 LEVELS = {
@@ -226,7 +230,7 @@ def report_cards(interpretation):
             feature = d.get('feature', '')
             negative = d.get('direction') == 'limits'
             minimum = NEGATIVE_MIN_INDEX_POINTS if negative else 1
-            if feature in {'brand_history', 'is_celeb'} or abs(d.get('index_points', 0)) < minimum:
+            if feature in HIDDEN_MANAGER_FEATURES or abs(d.get('index_points', 0)) < minimum:
                 continue
             label = LABELS.get(feature, d.get('label', feature))
             if feature.startswith('phys__'):
@@ -275,11 +279,6 @@ def report_cards(interpretation):
                 evidence=brief_evidence(observation_text(feature, support, value)),
                 episodes=support.get('episodes', [])[:1],
                 check=plain_text(d.get('check')) if group == 'limitations' else ''))
-        if task == 'r' and interpretation.get('celebrity_present') is True:
-            groups['strengths'].insert(0, dict(
-                feature='manual_celebrity', label='Участие медийной персоны',
-                takeaway='В конкретном ролике участие медийной персоны положительно влияет на оценку запоминаемости.',
-                evidence='Участие медийной персоны отмечено вами.', episodes=[], check=''))
         notes = []
         reasons = {
             'audio': 'Без полной озвучки нельзя уверенно оценить эти стороны сообщения. Выводы по ним стоит отложить до версии с речью.',

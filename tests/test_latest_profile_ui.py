@@ -8,6 +8,7 @@ from streamlit.testing.v1 import AppTest
 from aipm3 import latest_runtime as runtime
 from aipm3.latest_interpretation import build_latest_interpretation
 from aipm3.latest_profile_ui import profile_rows
+from aipm3.manager_report import HIDDEN_MANAGER_FEATURES
 
 
 @pytest.mark.parametrize("kind", ["finished", "neuromatics"])
@@ -30,7 +31,7 @@ def test_profile_uses_current_heads_without_losing_features_or_changing_scores(k
     profiles = profile_rows(explanation)
     for task, score_name in runtime.SCORE_NAMES.items():
         assert explanation['details'][task]['actual'] == pytest.approx(result['scores'][score_name])
-        expected = set(result['model_inputs'][task]) - {'brand_history'}
+        expected = set(result['model_inputs'][task]) - HIDDEN_MANAGER_FEATURES
         assert {r['feature'] for r in profiles[task]} == expected
         assert len(profiles[task]) == len(expected)
         assert sum(r['importance'] for r in profiles[task]) == pytest.approx(100)
