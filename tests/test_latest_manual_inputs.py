@@ -102,7 +102,7 @@ def test_checkbox_updates_cached_result_without_calls_and_survives_reopen(result
     assert not app.exception
     adjusted = app.session_state[f"latest_{kind}_result"]
     assert adjusted["scores"]["norm_ad_recall"] == pytest.approx(result["scores"]["norm_ad_recall"] * 1.2)
-    assert any("положительно влияет" in x.value for x in app.markdown)
+    assert any("положительно влияет" in x.value for x in app.success)
     app.run(timeout=45)
     assert app.session_state[f"latest_{kind}_result"]["scores"] == adjusted["scores"]
     app.checkbox(key=key).uncheck().run(timeout=45)

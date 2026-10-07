@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import hashlib
-from html import escape
 import json
 import os
 from pathlib import Path
@@ -16,9 +15,13 @@ from aipm3.latest_runtime import (
     ANALYSIS_REPEATS, MATERIAL_LABELS, clean_json, material_kind_for_result, validate_cached_result,
 )
 from aipm3.runtime_resources import AnalysisBusy
-from aipm3.manager_report import LEVELS, report_cards
+from aipm3.manager_report import report_cards
 from aipm3.display_calibration import audio_status
 from aipm3.latest_manual_inputs import celebrity_presence, with_celebrity_review
+from aipm3.latest_profile_ui import show_summary, show_profile
+from aipm3.latest_uvp import main_idea, target_for_vertical, with_blind_answers, with_uvp
+from aipm3.vertical_uvp import GOODS
+from aipm3.uvp_ui import show_uvp
 
 
 VERTICALS = {"Товары": "Goods", "Авто": "Auto", "Работа": "Jobs",
@@ -34,69 +37,28 @@ def interpret_result(result: dict) -> dict:
     return _interpret_cached(result, VERSION)
 
 
-def _show_score(title: str, index: float, level: str, available: bool = True) -> None:
-    label, color, background = LEVELS[level]
-    with st.container(border=True):
-        if not available:
-            st.metric(title, "—")
-            st.caption("Нужна полная озвучка")
-            return
-        st.metric(title, f"{index:.0f}")
-        st.markdown(f'<div style="background:{background};color:{color};padding:8px 12px;'
-                    f'border-radius:7px;font-weight:650">{escape(label)}</div>',
-                    unsafe_allow_html=True)
-
-
-def _show_driver(item: dict) -> None:
-    st.markdown(f'**{item["label"]}**')
-    st.write(item["takeaway"])
-    if item.get("evidence"):
-        st.caption("Основание: " + item["evidence"])
-    if item.get("episodes"):
-        st.caption("В ролике: " + "; ".join(
-            f'{float(ep["start"]):g}-{float(ep["end"]):g} с' for ep in item["episodes"]))
-    if item.get("check"):
-        st.write(item["check"])
-
-
 def show_latest_result(result: dict, interpretation: dict | None = None) -> None:
     material_kind = material_kind_for_result(result)
     interpretation = interpretation or interpret_result(result)
-    overall = interpretation.get("overall")
     if interpretation.get("audio_note"):
         st.warning(interpretation["audio_note"])
-    if overall:
-        st.subheader("Общая оценка")
-        _show_score("AIPM3.0", overall["index"], overall["level"], overall.get("assessment_available", True))
-    if not overall or overall.get("assessment_available", True):
-        st.caption("100 - ориентир для нейроматиков, сопоставленный с готовыми роликами." if material_kind == "neuromatics"
-                   else "100 - средняя оценка роликов, с которыми сравниваем этот вариант.")
-    for column, card in zip(st.columns(3), interpretation["cards"]):
-        with column:
-            _show_score(card["title"], card["index"], card["level"], card.get("assessment_available", True))
-
-    cards = report_cards(interpretation)
-    for card in cards:
+    show_summary(interpretation)
+    with st.container(border=True):
+        st.markdown("### Основная идея ролика")
+        st.write(main_idea(result))
+    assessment = result.get("vertical_uvp")
+    if assessment and assessment.get("source_sha") == result.get("source_sha"):
+        show_uvp(result)
+    else:
         with st.container(border=True):
-            st.subheader(card["title"])
-            st.write(card["description"])
-            st.write(card["summary"])
-            if card["strengths"]:
-                st.markdown("**Что поддерживает оценку**")
-                for item in card["strengths"]:
-                    _show_driver(item)
-            if card["limitations"]:
-                st.markdown("**Что ограничивает оценку**")
-                for item in card["limitations"]:
-                    _show_driver(item)
-            if card["unassessed"]:
-                st.markdown("**Что нельзя уверенно объяснить**")
-                for item in card["unassessed"]:
-                    st.markdown("**" + "; ".join(item["features"]) + "**")
-                    st.write(item["text"])
+            st.markdown("### Попадание в UVP")
+            st.write("Выберите целевую выгоду в боковой панели и нажмите «Проверить UVP».")
+    show_profile(interpretation)
+    cards = report_cards(interpretation)
     st.caption("Оценка помогает сравнивать варианты. Финальное решение принимает Марком. "
                "Предложения по правкам стоит проверить на следующей версии ролика.")
-    exported = clean_json(public_result(result, interpretation))
+    exported = clean_json(public_result(with_blind_answers(result), interpretation))
+    exported["main_idea"] = main_idea(result)
     exported["manager_cards"] = clean_json(cards)
     name = Path(result.get("source_name", "ролик")).stem
     st.download_button("Скачать разбор", data=json.dumps(
@@ -130,7 +92,7 @@ def main(material_kind: str = "finished") -> None:
     result_key = prefix + "result"
     st.title(MATERIAL_LABELS[material_kind])
     st.caption("Что поддерживает оценку ролика, что её ограничивает и какие выводы пока нельзя сделать.")
-    mode = st.radio("Источник результата", ["Загрузить ролик", "Открыть сохранённый результат"],
+    mode = st.sidebar.radio("Источник результата", ["Загрузить ролик", "Открыть сохранённый результат"],
                     horizontal=True, key=prefix + "source")
     preset_env = "AIPM_LATEST_RESULT_JSON" if material_kind == "finished" else "AIPM_NEUROMATICS_RESULT_JSON"
     preset = os.environ.get(preset_env)
@@ -143,7 +105,8 @@ def main(material_kind: str = "finished") -> None:
             st.error("Не удалось открыть сохранённый разбор для этого типа роликов.")
 
     if mode == "Открыть сохранённый результат":
-        saved = st.file_uploader("Файл с результатом анализа", type=["json"], key=prefix + "saved")
+        with st.sidebar:
+            saved = st.file_uploader("Файл с результатом анализа", type=["json"], key=prefix + "saved")
         if saved is not None:
             digest = hashlib.sha256(saved.getvalue()).hexdigest()
             if st.session_state.get(prefix + "saved_sha") != digest:
@@ -156,14 +119,17 @@ def main(material_kind: str = "finished") -> None:
                     st.stop()
         st.caption("Готовый разбор открывается без повторного анализа ролика.")
     else:
-        vertical = st.selectbox("Вертикаль", list(VERTICALS), key=prefix + "vertical")
-        uploaded = st.file_uploader("Ролик Avito (MP4 / MOV)", type=["mp4", "mov"], key=prefix + "video")
+        stored_vertical = st.session_state.get(result_key, {}).get("vertical")
+        default_vertical = list(VERTICALS.values()).index(stored_vertical) if stored_vertical in VERTICALS.values() else 0
+        vertical = st.sidebar.selectbox("Вертикаль", list(VERTICALS), index=default_vertical,
+                                       key=prefix + "vertical")
+        with st.sidebar:
+            uploaded = st.file_uploader("Ролик Avito (MP4 / MOV)", type=["mp4", "mov"], key=prefix + "video")
         if uploaded is not None:
             st.video(uploaded)
-        cached, live = st.columns(2)
-        cached_btn = cached.button("Использовать прошлый анализ", use_container_width=True,
+        cached_btn = st.sidebar.button("Использовать прошлый анализ", use_container_width=True,
                                    key=prefix + "cached")
-        live_btn = live.button("Проанализировать ролик", type="primary", use_container_width=True,
+        live_btn = st.sidebar.button("Проанализировать ролик", type="primary", use_container_width=True,
                                key=prefix + "live")
         st.caption("Анализ и проверка наблюдений могут занять несколько минут.")
         if cached_btn or live_btn:
@@ -217,7 +183,7 @@ def main(material_kind: str = "finished") -> None:
             st.stop()
         st.caption(result.get("source_name", result.get("name", result.get("record", ""))))
         present = celebrity_presence(result)
-        selected_celebrity = st.checkbox(
+        selected_celebrity = st.sidebar.checkbox(
             "В ролике есть медийная персона", value=present is True,
             key=prefix + "celebrity_" + str(result.get("source_sha", result.get("record", ""))))
         if selected_celebrity != present:
@@ -227,7 +193,7 @@ def main(material_kind: str = "finished") -> None:
             choices = {"Полнота озвучки не подтверждена": "unknown", "Вся речь есть (можно черновую)": "complete",
                        "Есть только часть речи": "partial", "Речи нет": "absent"}
             status = audio_status(result)
-            selected = st.selectbox("Озвучка в этом файле", list(choices),
+            selected = st.sidebar.selectbox("Озвучка в этом файле", list(choices),
                                     index=list(choices.values()).index(status),
                                     key=prefix + "audio_" + str(result.get("source_sha", "")),
                                     help="Музыка и звуковые эффекты не заменяют реплики и закадровый текст. Если речи нет по замыслу, выберите «Речи нет»: отдельной нормы для таких роликов пока нет.")
@@ -235,6 +201,31 @@ def main(material_kind: str = "finished") -> None:
                 result = dict(result, audio_review=dict(status=choices[selected],
                     source_sha=result.get("source_sha"), origin="user_declared"))
                 st.session_state[result_key] = result
+        with st.sidebar:
+            st.subheader("Проверка UVP")
+            # Use the scored vertical, not a newly selected upload's settings.
+            scored_vertical = result.get("vertical") or result.get("metadata", {}).get("vertical")
+            goods = None
+            if scored_vertical == "Goods":
+                goods = st.selectbox("Направление товаров", list(GOODS), index=None,
+                                     placeholder="Ресейл или распродажа", key=prefix + "goods")
+            target = target_for_vertical(scored_vertical, goods) if scored_vertical else None
+            if target:
+                st.caption("Целевой UVP: " + target["label"] + " - " + target["meaning"])
+                current = result.get("vertical_uvp", {})
+                if current and current.get("target") != target:
+                    st.caption("Ниже сохранена проверка для прежнего выбора.")
+                if st.button("Проверить UVP", key=prefix + "uvp"):
+                    if not _api_key():
+                        st.warning("Для новой проверки UVP нужен доступ к анализу.")
+                    else:
+                        with st.spinner("Проверяем UVP по сохранённым ответам"):
+                            result = with_uvp(result, target, _api_key(),
+                                              Path(tempfile.gettempdir()) / "aipm3_uvp_cache")
+                        st.session_state[result_key] = result
+            else:
+                st.caption("Выберите направление товаров для проверки UVP." if scored_vertical == "Goods"
+                           else "В сохранённом разборе не указана вертикаль для проверки UVP.")
         with st.spinner("Готовим объяснение оценок"):
             show_latest_result(result)
 
