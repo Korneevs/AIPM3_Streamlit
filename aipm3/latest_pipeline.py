@@ -20,6 +20,7 @@ from typing import Callable
 import numpy as np
 
 from . import latest_contracts as fresh_contract
+from . import neuromatics_contracts as neuro_contract
 from . import message_delivery_runtime as md
 from .latest_physical import physical_updates
 from .latest_runtime import (ANALYSIS_REPEATS, PROTOCOL_VERSION, clean_json, scoring_version_for,
@@ -93,8 +94,13 @@ def _request(kwargs: dict, path: Path, *, video_sha: str, api_key: str,
 
 
 def _objective(component: str, encoded: str, prepared_sha: str, folder: Path,
-               api_key: str, allow_live: bool):
+               api_key: str, allow_live: bool, *, material_kind: str = "finished"):
     kwargs = request_kwargs(component, encoded)
+    if material_kind == "neuromatics" and component == "aipm2":
+        kwargs["messages"][0]["content"][0]["text"] = (
+            neuro_contract.NEUROMATICS_AIPM2_PROMPT.format(brand="Avito")
+            + neuro_contract.NEUROMATICS_AIPM2_SUPPLEMENT
+        )
     required = kwargs["response_format"]["json_schema"]["schema"]["required"]
 
     def validate(payload):
@@ -109,13 +115,16 @@ def _objective(component: str, encoded: str, prepared_sha: str, folder: Path,
     return aggregate(runs), runs
 
 
-def _panel(encoded: str, prepared_sha: str, folder: Path, api_key: str, allow_live: bool):
-    """Original panel30 prompts, request tokens, schema, temperature and coding."""
+def _panel(encoded: str, prepared_sha: str, folder: Path, api_key: str, allow_live: bool,
+           *, material_kind: str = "finished"):
+    """Keep panel30 intact; append the supplied semantics only for neuromatics."""
     def one(call_id):
         personas = md.PANEL30_PERSONAS[(call_id - 1) * 3:call_id * 3]
         task_key = f"panel30_{call_id:02d}"
         token = hashlib.sha256(f"md-final-v1|{prepared_sha}|{task_key}".encode()).hexdigest()[:16]
         prompt = md.panel_prompt(personas) + f"\n\nREQUEST_TOKEN: {token}\nВерни request_token дословно."
+        if material_kind == "neuromatics":
+            prompt += "\n" + neuro_contract.NEUROMATICS_SEMANTICS
         kwargs = dict(model=md.MODEL_NAME, temperature=0.2, response_format=md.panel_schema(),
                       messages=[{"role": "user", "content": [
                           {"type": "text", "text": prompt},
@@ -246,10 +255,17 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
     with analysis_slot():
         sha = file_sha256(source_video)
         family = family or family_for_video(sha)
-        root = Path(output_root).resolve() / PROTOCOL_VERSION / sha
+        root = Path(output_root).resolve() / PROTOCOL_VERSION
+        if material_kind == "neuromatics":
+            # A new measurement contract must not reuse observations from
+            # either finished creatives or the previous neuromatics prompts.
+            root = root / neuro_contract.NEUROMATICS_PROTOCOL
+        root = root / sha
         root.mkdir(parents=True, exist_ok=True)
         physical = _physical(source_video, root / "physical.json")
         prepared = _prepare_inputs(source_video, root)
+        if material_kind == "neuromatics":
+            prepared["fresh"] = prepared["panel"]
         prepared_hash = {key: file_sha256(path) for key, path in prepared.items()}
         measurements = []
         for repeat in range(1, repeat_count + 1):
@@ -260,10 +276,12 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
             for kind in ("aipm1", "aipm2"):
                 encoded = base64.b64encode(prepared[kind].read_bytes()).decode()
                 objective[kind], objective_runs[kind] = _objective(
-                    kind, encoded, prepared_hash[kind], folder / kind, api_key, allow_live)
+                    kind, encoded, prepared_hash[kind], folder / kind, api_key, allow_live,
+                    material_kind=material_kind)
                 del encoded
             encoded = base64.b64encode(prepared["panel"].read_bytes()).decode()
-            panel = _panel(encoded, prepared_hash["panel"], folder / "panel", api_key, allow_live)
+            panel = _panel(encoded, prepared_hash["panel"], folder / "panel", api_key, allow_live,
+                           material_kind=material_kind)
             del encoded
             encoded = base64.b64encode(prepared["fresh"].read_bytes()).decode()
             fresh = _fresh(encoded, prepared_hash["fresh"], folder / "fresh.json", api_key, allow_live)
