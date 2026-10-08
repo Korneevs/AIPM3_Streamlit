@@ -45,13 +45,18 @@ def test_modes_use_selected_heads_without_mutating_inputs(rows):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     portable = module.NeuroRecall(neuro.BUNDLE_DIR / "parameters.json")
-    np.testing.assert_array_equal(repeated.norm_ad_recall, portable.predict(rows["r"]))
+    frozen = runtime.load_latest_models()
+    legacy = neuro.NeuromaticsModels(frozen, runtime.model_module().coefficient,
+                                     use_mean_policy=False)
+    np.testing.assert_array_equal(legacy.heads["r"].predict(rows["r"]), portable.predict(rows["r"]))
     expected_n = rows["n"].copy()
     expected_n["phys__audio_dynamic_range_db"] = 19.09761743545532
     expected_n["phys__motion_mean"] = .0160984480753541
     expected_n["state_transformation_present"] = 0.
-    frozen = runtime.load_latest_models()
-    np.testing.assert_array_equal(repeated.noticeability, frozen.heads["n"].predict(expected_n))
+    np.testing.assert_array_equal(legacy.heads["n"].predict(rows["n"]), frozen.heads["n"].predict(expected_n))
+    current = runtime.load_models("neuromatics")
+    np.testing.assert_array_equal(repeated.noticeability, current.heads["n"].predict(rows["n"]))
+    np.testing.assert_array_equal(repeated.norm_ad_recall, current.heads["r"].predict(rows["r"]))
     np.testing.assert_array_equal(repeated.message_delivery, frozen.heads["m"].predict(rows["m"]))
     np.testing.assert_array_equal(repeated.Q, repeated.noticeability * repeated.message_delivery * repeated.norm_ad_recall)
     assert result["scores"]["Q"] == pytest.approx(repeated.Q.mean(), abs=1e-14)

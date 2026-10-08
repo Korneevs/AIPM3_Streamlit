@@ -3,6 +3,13 @@ import json
 
 
 def neuromatics_reference(scoring_version):
+    from .neuromatics_mean_policy import POLICY_DIR, SCORING_VERSION, artifact_hashes
+    if scoring_version == SCORING_VERSION:
+        artifact_hashes()
+        reference = json.loads((POLICY_DIR / 'display_reference.json').read_text())
+        if reference['scoring_version'] != scoring_version:
+            raise ValueError('Display calibration belongs to another neuromatics model')
+        return reference
     from .latest_runtime import MESSAGE_BUNDLE_DIR, message_artifact_hashes
     message_artifact_hashes()
     reference = json.loads((MESSAGE_BUNDLE_DIR / 'neuromatics_display_reference.json').read_text())

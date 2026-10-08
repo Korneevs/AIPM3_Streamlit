@@ -131,11 +131,14 @@ class RecallHead:
 
 
 class NeuromaticsModels:
-    def __init__(self, frozen, coefficient):
+    def __init__(self, frozen, coefficient, *, use_mean_policy=True):
         artifact_hashes()
         self.heads = {"n": NoticeabilityHead(frozen.heads["n"]), "m": frozen.heads["m"], "r": RecallHead()}
         self.coefficient = coefficient
         assert [len(self.heads[t].state["columns"]) for t in "nmr"] == [9, 8, 7]
+        if use_mean_policy:
+            from .neuromatics_mean_policy import apply_policy, load_policy
+            apply_policy(self, load_policy())
 
     def score(self, noticeability, message_delivery, recall, reference_mean=None):
         frames = {t: d.sort_values(["record", "repeat"]).reset_index(drop=True)

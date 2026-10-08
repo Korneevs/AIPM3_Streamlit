@@ -121,16 +121,12 @@ def test_incomplete_voice_withholds_norms_without_imputing_or_changing_scores(ne
                for c in report_cards(explained) for g in ['strengths','limitations'] for item in c[g])
 
 
-def test_physical_evidence_describes_original_file_not_clipped_input(neuro_explanation):
+def test_fixed_physical_means_are_not_described_as_video_evidence(neuro_explanation, neuro_result):
     drivers = {driver["feature"]: driver for driver in neuro_explanation["details"]["n"]["drivers"]}
-    audio = drivers["phys__audio_dynamic_range_db"]
-    assert audio["original_measurement_mean"] == 50.
-    assert audio["value"] < 50.
-    assert "50.0 дБ" in audio["evidence"]["observation"]
-    assert audio["evidence"]["source"] == "physical_neuromatics_adjusted"
     for feature in ("phys__audio_dynamic_range_db", "phys__motion_mean"):
-        assert drivers[feature]["interpretation_kind"] == "association_only"
-        assert drivers[feature]["check"] is None
+        assert feature not in drivers
+    assert all(row['phys__audio_dynamic_range_db'] == 50.
+               for row in neuro_result['feature_rows']['n'])
 
 
 def test_recall_evidence_uses_ten_repeat_consensus(neuro_explanation):

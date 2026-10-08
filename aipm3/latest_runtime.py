@@ -21,7 +21,7 @@ from .latest_manual_inputs import effective_feature_rows, recall_multiplier
 BUNDLE_DIR = Path(__file__).resolve().parent / "latest_bundle" / "20261001"
 MESSAGE_BUNDLE_DIR = Path(__file__).resolve().parent / "message_bundle" / "20261008"
 SCORING_VERSION = "three-heads-no-screen-number-20261008"
-NEUROMATICS_SCORING_VERSION = "neuromatics-no-screen-number-20261008"
+NEUROMATICS_SCORING_VERSION = "neuromatics-finished-means-20261008"
 PROTOCOL_VERSION = "latest-exact-inputs-20261001-v1"
 # Temporary throughput setting. This scoring version supports 3 or 10 runs.
 ANALYSIS_REPEATS = 3
@@ -111,8 +111,10 @@ def artifact_hashes_for(material_kind: str = "finished") -> dict[str, str]:
     if material_kind == "finished":
         return original
     from .neuromatics_models import artifact_hashes as neuro_hashes
+    from .neuromatics_mean_policy import artifact_hashes as mean_policy_hashes
     return {**{"finished/" + k: v for k, v in original.items()},
-            **{"neuromatics/" + k: v for k, v in neuro_hashes().items()}}
+            **{"neuromatics/" + k: v for k, v in neuro_hashes().items()},
+            **{"neuromatics_mean_policy/" + k: v for k, v in mean_policy_hashes().items()}}
 
 
 @lru_cache(maxsize=1)

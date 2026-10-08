@@ -81,7 +81,10 @@ def test_stored_loo_matches_previously_checked_ablation():
 def test_display_references_follow_new_message_head_without_changing_nr_calibration():
     current = json.loads((runtime.MESSAGE_BUNDLE_DIR / "neuromatics_display_reference.json").read_text())
     original = json.loads((runtime.BUNDLE_DIR.parents[1] / "neuromatics_display_reference.json").read_text())
-    assert current["scoring_version"] == runtime.NEUROMATICS_SCORING_VERSION
+    assert current["scoring_version"] == "neuromatics-no-screen-number-20261008"
+    from aipm3.display_calibration import neuromatics_reference
+    active = neuromatics_reference(runtime.NEUROMATICS_SCORING_VERSION)
+    assert active["references"]["m"] == current["references"]["m"]
     for task in "nr":
         assert current["references"][task] == original["references"][task]
     train = pd.read_csv(runtime.BUNDLE_DIR / "data/fit_m.csv", float_precision="round_trip")

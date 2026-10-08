@@ -334,6 +334,9 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
         spread=np.quantile(p,[.1,.9]);drivers=[]
         dur=float(pd.to_numeric(frame.get('phys__duration',frame.get('duration',frame.get('total_video_duration_sec',pd.Series([30])))),errors='coerce').mean())
         for j,c in enumerate(columns):
+            # A fixed reference value is not an observed property of this video.
+            if c in getattr(head,'neutralized_features',()):
+                continue
             v,original_mean=semantic_measurement(head,frame,c)
             # Physical measurements describe the file as observed. An adapted
             # scoring value must not be presented as its literal sound level.
