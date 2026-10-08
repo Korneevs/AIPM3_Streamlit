@@ -1,10 +1,11 @@
 """Display references only. Never used for raw scores or creative coefficients."""
 import json
-from pathlib import Path
 
 
 def neuromatics_reference(scoring_version):
-    reference = json.loads(Path(__file__).with_name('neuromatics_display_reference.json').read_text())
+    from .latest_runtime import MESSAGE_BUNDLE_DIR, message_artifact_hashes
+    message_artifact_hashes()
+    reference = json.loads((MESSAGE_BUNDLE_DIR / 'neuromatics_display_reference.json').read_text())
     if reference['scoring_version'] != scoring_version:
         raise ValueError('Display calibration belongs to another neuromatics model')
     return reference

@@ -67,7 +67,7 @@ def test_selected_head_design_and_exact_shap_match_every_prediction(rows, neuro_
                                details["per_repeat_scores"], atol=1e-9, rtol=0)
     assert details["actual"] == pytest.approx(neuro_result["scores"][runtime.SCORE_NAMES[task]], abs=1e-12)
     assert details["additivity_error"] < 1e-9
-    assert len(details["feature_order"]) == (7 if task == "r" else 9)
+    assert len(details["feature_order"]) == {"n": 9, "m": 8, "r": 7}[task]
 
 
 def test_default_finished_interpretation_preserves_frozen_model(rows):

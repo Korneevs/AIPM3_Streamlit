@@ -1,4 +1,4 @@
-"""Deterministic explanations of the selected 9/9/7 model, with evidence gates.
+"""Deterministic explanations of the selected 9/8/7 model, with evidence gates.
 
 Exact per-head Shapley values explain predictions, not causal edit effects.
 Independent video observations corroborate facts but never alter a score.
@@ -391,7 +391,9 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
               additivity_error=float(abs(base+vals.sum()+adjustment-score)),
               per_repeat_scores=(p*factor).tolist(),per_repeat_shap=phi.tolist(),feature_order=columns)
         cards.append(card)
-    reference=json.loads(Path(__file__).with_name('latest_display_reference.json').read_text())
+    from .latest_runtime import MESSAGE_BUNDLE_DIR, message_artifact_hashes
+    message_artifact_hashes()
+    reference=json.loads((MESSAGE_BUNDLE_DIR/'finished_display_reference.json').read_text())
     q=float(result['scores']['Q']);lo,hi=reference['Q_tertiles']
     overall=dict(title=('AIPM3.0 (для нейроматиков)' if material_kind=='neuromatics' else 'AIPM 3.0'),score=q,index=100*q/reference['Q_mean'],
       level='Выше типичного уровня' if q>hi else 'Ниже типичного уровня' if q<lo else 'Типичный уровень')

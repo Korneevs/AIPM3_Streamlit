@@ -55,7 +55,7 @@ def test_modes_use_selected_heads_without_mutating_inputs(rows):
     np.testing.assert_array_equal(repeated.message_delivery, frozen.heads["m"].predict(rows["m"]))
     np.testing.assert_array_equal(repeated.Q, repeated.noticeability * repeated.message_delivery * repeated.norm_ad_recall)
     assert result["scores"]["Q"] == pytest.approx(repeated.Q.mean(), abs=1e-14)
-    assert [len(result["model_inputs"][task]) for task in "nmr"] == [9, 9, 7]
+    assert [len(result["model_inputs"][task]) for task in "nmr"] == [9, 8, 7]
     finished = runtime.score_feature_rows(rows)
     expected = frozen.score(*(rows[task] for task in "nmr")).iloc[0]
     for name, score in finished["scores"].items():
