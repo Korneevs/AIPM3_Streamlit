@@ -123,6 +123,15 @@ def main(material_kind: str = "finished") -> None:
         default_vertical = list(VERTICALS.values()).index(stored_vertical) if stored_vertical in VERTICALS.values() else 0
         vertical = st.sidebar.selectbox("Вертикаль", list(VERTICALS), index=default_vertical,
                                        key=prefix + "vertical")
+        analysis_target = None
+        if material_kind == "neuromatics":
+            goods = None
+            if VERTICALS[vertical] == "Goods":
+                goods = st.sidebar.selectbox("Направление товаров", list(GOODS), index=None,
+                    placeholder="Ресейл или распродажа", key=prefix + "upload_goods")
+            analysis_target = target_for_vertical(VERTICALS[vertical], goods)
+            if analysis_target:
+                st.sidebar.caption("Целевой UVP: " + analysis_target["label"] + " - " + analysis_target["meaning"])
         with st.sidebar:
             uploaded = st.file_uploader("Ролик Avito (MP4 / MOV)", type=["mp4", "mov"], key=prefix + "video")
         if uploaded is not None:
@@ -133,6 +142,8 @@ def main(material_kind: str = "finished") -> None:
         if live_btn:
             if uploaded is None:
                 st.warning("Сначала загрузите ролик.")
+            elif material_kind == "neuromatics" and analysis_target is None:
+                st.warning("Выберите направление товаров для проверки UVP: ресейл или распродажа.")
             elif not _api_key():
                 st.error("Новый анализ пока недоступен. Обратитесь к администратору приложения.")
             else:
@@ -153,6 +164,12 @@ def main(material_kind: str = "finished") -> None:
                             evidence_collector=_review_collector())
                         result["source_name"] = uploaded.name
                         st.session_state[result_key] = result
+                        if material_kind == "neuromatics":
+                            result["main_idea"] = main_idea(result)
+                            status.update(label="Проверяем попадание в UVP")
+                            result = with_uvp(result, analysis_target, _api_key(),
+                                              Path(tempfile.gettempdir()) / "aipm3_uvp_cache")
+                            st.session_state[result_key] = result
                         status.update(label="Разбор завершён", state="complete", expanded=False)
                 except MissingMeasurement:
                     st.warning("Сохранённого анализа этого ролика пока нет. "
@@ -205,7 +222,10 @@ def main(material_kind: str = "finished") -> None:
             scored_vertical = result.get("vertical") or result.get("metadata", {}).get("vertical")
             goods = None
             if scored_vertical == "Goods":
-                goods = st.selectbox("Направление товаров", list(GOODS), index=None,
+                stored_goods = result.get("vertical_uvp", {}).get("target", {}).get("goods")
+                goods = st.selectbox("Направление товаров", list(GOODS),
+                                     index=(list(GOODS).index(stored_goods)
+                                            if material_kind == "neuromatics" and stored_goods in GOODS else None),
                                      placeholder="Ресейл или распродажа", key=prefix + "goods")
             target = target_for_vertical(scored_vertical, goods) if scored_vertical else None
             if target:
