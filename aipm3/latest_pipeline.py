@@ -1,4 +1,4 @@
-"""Rerunnable exact-protocol extraction for the accepted 9–9–7 model.
+"""Rerunnable exact-protocol extraction for the accepted 9–8–7 model.
 
 Every successful request has its own immutable repeat/stage cache. Inference
 uses the configured complete repeats; a retry is not another observation.

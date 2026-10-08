@@ -1,4 +1,4 @@
-"""Exact, immutable October 2 adaptation of the same 9 / 9 / 7 inputs.
+"""October 2 N/R adaptation plus the shared eight-input message head.
 
 The finished-video package remains the source for N/M and the creative link.
 This module performs no fitting, extraction, network requests or file writes.
@@ -135,7 +135,7 @@ class NeuromaticsModels:
         artifact_hashes()
         self.heads = {"n": NoticeabilityHead(frozen.heads["n"]), "m": frozen.heads["m"], "r": RecallHead()}
         self.coefficient = coefficient
-        assert [len(self.heads[t].state["columns"]) for t in "nmr"] == [9, 9, 7]
+        assert [len(self.heads[t].state["columns"]) for t in "nmr"] == [9, 8, 7]
 
     def score(self, noticeability, message_delivery, recall, reference_mean=None):
         frames = {t: d.sort_values(["record", "repeat"]).reset_index(drop=True)

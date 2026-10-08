@@ -49,13 +49,13 @@ def rows():
 def test_bundle_identity_matches_original(reference):
     for name, digest in runtime.artifact_hashes().items():
         assert hashlib.sha256((RECOMMENDED / name).read_bytes()).hexdigest() == digest
-    assert [len(h.state["columns"]) for h in runtime.load_latest_models().heads.values()] == [9, 9, 7]
+    assert [len(h.state["columns"]) for h in runtime.load_latest_models().heads.values()] == [9, 8, 7]
 
 
 @pytest.mark.parametrize("dataset", ["human_inputs", "campaign_inputs", "alternative_inputs"])
 def test_every_frozen_input_frame_matches_original(reference, dataset):
     model = runtime.load_latest_models()
-    for task in "nmr":
+    for task in "nr":
         frame = pd.read_csv(RECOMMENDED / "data" / f"{dataset}_{task}.csv", float_precision="round_trip")
         np.testing.assert_array_equal(model.heads[task].predict(frame), reference.heads[task].predict(frame))
 
@@ -63,7 +63,8 @@ def test_every_frozen_input_frame_matches_original(reference, dataset):
 def test_ten_aligned_repeats_and_mean_products_match_public_score(reference, rows):
     frames = {t: pd.DataFrame(v).sample(frac=1, random_state=42) for t, v in rows.items()}
     actual = runtime.score_feature_rows(frames, metadata={"source_name": "test.mp4"})
-    expected = reference.score(*(frames[t] for t in "nmr")).iloc[0]
+    current = runtime.load_latest_models()
+    expected = current.score(*(frames[t] for t in "nmr")).iloc[0]
     for key in actual["scores"]:
         assert actual["scores"][key] == expected[key]
     repeats = pd.DataFrame(actual["per_repeat"])

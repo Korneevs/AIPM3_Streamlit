@@ -1,7 +1,7 @@
-"""Exact inference adapter for the separately accepted October 1 three-head model.
+"""Frozen N/R inference with the October 8 eight-input message-delivery head.
 
-The existing Streamlit scorer is left intact. No training or inference calls to
-an external service take place in this module.
+The original bundles are preserved. No training or inference calls to an
+external service take place in this module.
 """
 from __future__ import annotations
 
@@ -19,10 +19,11 @@ import pandas as pd
 from .latest_manual_inputs import effective_feature_rows, recall_multiplier
 
 BUNDLE_DIR = Path(__file__).resolve().parent / "latest_bundle" / "20261001"
-SCORING_VERSION = "three-heads-effect15-20261001-979fdba8b527-f0aa4e015216-6d75e5e23d76"
-NEUROMATICS_SCORING_VERSION = "neuromatics-nclip-ridge100-20261002-c9e7282c127d"
+MESSAGE_BUNDLE_DIR = Path(__file__).resolve().parent / "message_bundle" / "20261008"
+SCORING_VERSION = "three-heads-no-screen-number-20261008"
+NEUROMATICS_SCORING_VERSION = "neuromatics-no-screen-number-20261008"
 PROTOCOL_VERSION = "latest-exact-inputs-20261001-v1"
-# Temporary throughput setting. Frozen ten-run results remain importable.
+# Temporary throughput setting. This scoring version supports 3 or 10 runs.
 ANALYSIS_REPEATS = 3
 MODEL_TASKS = ("n", "m", "r")
 SCORE_NAMES = {"n": "noticeability", "m": "message_delivery", "r": "norm_ad_recall"}
@@ -78,8 +79,20 @@ def model_module():
 
 @lru_cache(maxsize=1)
 def load_latest_models():
-    """Return the original AIPM3 runtime object, without refitting."""
-    return model_module().AIPM3(BUNDLE_DIR / "models")
+    """Load the frozen N/R heads and the separately rebuilt eight-input M head."""
+    message_artifact_hashes()
+    model = model_module().AIPM3(BUNDLE_DIR / "models")
+    model.heads["m"] = model_module().Head.load(MESSAGE_BUNDLE_DIR / "models/m")
+    return model
+
+
+def message_artifact_hashes() -> dict[str, str]:
+    manifest = json.loads((MESSAGE_BUNDLE_DIR / "manifest.json").read_text())
+    for name, expected in manifest.items():
+        actual = hashlib.sha256((MESSAGE_BUNDLE_DIR / name).read_bytes()).hexdigest()
+        if actual != expected:
+            raise ValueError(f"Message model artifact mismatch: {name}")
+    return manifest
 
 
 @lru_cache(maxsize=2)
@@ -93,7 +106,8 @@ def load_models(material_kind: str = "finished"):
 
 def artifact_hashes_for(material_kind: str = "finished") -> dict[str, str]:
     scoring_version_for(material_kind)
-    original = artifact_hashes()
+    original = {**artifact_hashes(),
+                **{"message_20261008/" + k: v for k, v in message_artifact_hashes().items()}}
     if material_kind == "finished":
         return original
     from .neuromatics_models import artifact_hashes as neuro_hashes

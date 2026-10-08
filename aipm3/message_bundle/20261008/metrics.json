@@ -1,0 +1,27 @@
+{
+  "scoring_version": "three-heads-no-screen-number-20261008",
+  "neuromatics_scoring_version": "neuromatics-no-screen-number-20261008",
+  "removed_feature": "numeric_offer_on_screen",
+  "features": {
+    "n": 9,
+    "m": 8,
+    "r": 7
+  },
+  "validation": "family-LOO; fixed settings, no feature or parameter search",
+  "records": 58,
+  "families": 56,
+  "previous": {
+    "spearman": 0.6215365773775191,
+    "pearson": 0.5361529315477336,
+    "mae": 0.05471905624635555,
+    "rmse": 0.0726739656557096
+  },
+  "current": {
+    "spearman": 0.6455372214787949,
+    "pearson": 0.5703105311499308,
+    "mae": 0.05265774802185094,
+    "rmse": 0.06999235438443147
+  },
+  "dtb_ev_recomputed": false,
+  "business_effect_recomputed": false
+}

@@ -50,17 +50,17 @@ NEURO_PROMPT_HASHES = {
     "panel/call_10.json": "ff40f59368d22cecd30f001fd0c700dcf3827e1b1cbe273f11af6fc603ff7b4b",
 }
 
-# Same synthetic observations were scored by both existing models before this
-# change. The two models retain their own outputs; they need not match each other.
+# Golden scores for the same synthetic observations after the eight-input M
+# refit. N/R and the complete extraction requests remain unchanged.
 BASELINE_SCORES = {
     "finished": {
-        "OPM": 0.04488135707210425, "Q": 0.005564500156069429,
-        "message_delivery": 0.11781356231427366,
+        "OPM": 0.044241491929948584, "Q": 0.005485168114534491,
+        "message_delivery": 0.11613391631611504,
         "norm_ad_recall": 0.12398243990549947, "noticeability": 0.38095238095238093,
     },
     "neuromatics": {
-        "OPM": 0.04488135707210425, "Q": 0.004543179195581195,
-        "message_delivery": 0.11781356231427366,
+        "OPM": 0.044241491929948584, "Q": 0.0044784079366117086,
+        "message_delivery": 0.11613391631611504,
         "norm_ad_recall": 0.10122642210400053, "noticeability": 0.38095238095238093,
     },
 }

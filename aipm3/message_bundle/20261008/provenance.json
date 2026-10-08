@@ -1,0 +1,57 @@
+{
+  "base_manifest": {
+    "data/fit_m.csv": "769eed8e129d9ef1ca1a3617dc007d6cdf8672a51435186f2dc0bdb25183ba0a",
+    "data/fit_n.csv": "da979f75d058c1a11d74bcfadcd8f26a2a69b2ef87e82610fb5eec2d50815772",
+    "data/fit_r.csv": "2aa51a7c103846d5f314c974480e209974b22843372db16516676e8e0d74e456",
+    "data/targets_m.csv": "fa305cb6fd396877503909fcca92e7b451d39e0934b3e84b1ab3ab5ff1494017",
+    "data/targets_n.csv": "af11849c687f34daa9f1e84dcc15eac22ae5fd2b87d99d3900697b0dd80531c3",
+    "data/targets_r.csv": "2aa51a7c103846d5f314c974480e209974b22843372db16516676e8e0d74e456",
+    "human_loo_m.csv": "589b2f6f16a5e8ad0ee877157b2c11834996da0e656cbd3ff9228454637caf01",
+    "human_loo_n.csv": "d05dcf72f05777732d3585e306b2ad0d24276f0c48fa2844db8c111a5f9eb074",
+    "human_loo_r.csv": "73202996ce3f614ce08ae6880348cb3591b05c7ddcfceabd9e7c4cb11d2743b0",
+    "metrics.json": "8d919e851b3d3328a0aa04ffd1a8807c17b38020fef25cade634b58faaadcd06",
+    "model.py": "94215fd0d385290139fcd584ead65321c91f2b7c3d4ac47b969d5b9624ea7022",
+    "models/m/estimator.joblib": "41e1b259d0c7378ebe7dc560b422fa367f96188a92a0f5d393745fa8edeaa938",
+    "models/m/features.json": "ec81091849923836fbd56d9917dcf3325889cfa53fe8a4c4c44b59b69829f4f9",
+    "models/m/state.json": "d11ab45efda9cdc83719291ea8fe2ccbfcbec5d309f9a11cd95a0bab2562f820",
+    "models/n/estimator.joblib": "8dfb2403d66682b14f7c384e255969e584a54c77901fbe4a94cbcaaefa4f112e",
+    "models/n/features.json": "3664100d0a58d8ff4fed706ce7a132254d2597a45936a935c4d1442a867ac00b",
+    "models/n/state.json": "d7681996d0ac2c0b98cd5b22baa0283548b62c0b66e30b371a81066787d9e189",
+    "models/r/estimator.joblib": "132da8dcb92cc815796b8ce0b505752b6aef4b3fccfc3f8a2377b5ecda1883af",
+    "models/r/features.json": "53654c967e97bce6e7992b3e06342d7f2f9eca819241db008d29852c9599c9bc",
+    "models/r/state.json": "df60ad3cb8c69d64ca7a2b2894f6bcac03267986dd694c3fa2a6871de74b45c9",
+    "selection.json": "42f643aa9dfa4ebd78dde5277f92a7b534b66a08270b97b527c284ce79494b4a"
+  },
+  "training_sha256": "769eed8e129d9ef1ca1a3617dc007d6cdf8672a51435186f2dc0bdb25183ba0a",
+  "pairs_sha256": "e115d9b80fb2e7fe4e8ff538b7b9f939ad204a35f0422b7c28d776e6bf15122f",
+  "pair_input_sha256": {
+    "n": "6a74cb37d3ced7aa4c5f7e37ff2334c897fe1c5e63b941d81aeca2e04508bc54",
+    "m": "ab6429ab55fde66c66bb3e12b5f40a71368c8ab5c94f6fc1db0910f0e3d9ea2f",
+    "r": "319f6dae7d1022a9520d2714416298f25423960c16dc0ee27290702c6a682632"
+  },
+  "changed_head": "m",
+  "retained_settings": {
+    "task": "m",
+    "fixed": [
+      "fresh__audiovisual_claim_alignment",
+      "main_character",
+      "panel__distinct_benefit_count",
+      "panel__mandatory_inference_chain_length",
+      "panel__message_specificity_level",
+      "panel__offer_novelty_explanation_need",
+      "panel__product_role_reveal_time_band",
+      "promo"
+    ],
+    "mode": "expanded",
+    "learner": "ridge",
+    "alpha": 1,
+    "target": "log",
+    "step": 0.5,
+    "calibration": "train_affine",
+    "repeat_training": true,
+    "panel_consensus": true,
+    "md_refinement": true,
+    "noticeability_weight_power": 2
+  },
+  "upstream_extraction_unchanged": true
+}
