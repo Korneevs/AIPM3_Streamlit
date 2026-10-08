@@ -32,6 +32,7 @@ def test_profile_uses_current_heads_without_losing_features_or_changing_scores(k
     for task, score_name in runtime.SCORE_NAMES.items():
         assert explanation['details'][task]['actual'] == pytest.approx(result['scores'][score_name])
         expected = set(result['model_inputs'][task]) - HIDDEN_MANAGER_FEATURES
+        expected -= set(getattr(runtime.load_models(kind).heads[task], 'neutralized_features', ()))
         assert {r['feature'] for r in profiles[task]} == expected
         assert len(profiles[task]) == len(expected)
         assert sum(r['importance'] for r in profiles[task]) == pytest.approx(100)

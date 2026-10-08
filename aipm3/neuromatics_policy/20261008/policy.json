@@ -1,0 +1,284 @@
+{
+  "scoring_version": "neuromatics-finished-means-20261008",
+  "rule": "Keep <=4/12; keep 5-7/12 only if new <=4/12; otherwise finished mean",
+  "pair_count": 12,
+  "new_repeats": 5,
+  "old_repeats": 10,
+  "weighting": "Equal weight per distinct finished video; average its repeats first",
+  "constants": {
+    "n": {
+      "character_close_up_seconds": {
+        "model_input_mean": 0.16497318307013595,
+        "design_value": 0.003620901306160986,
+        "video_count": 57,
+        "source_task": "n",
+        "scale": "fraction_of_duration",
+        "observed_mean": 3.1403508771929824
+      },
+      "pack_shot_duration_seconds": {
+        "model_input_mean": 3.4000000000000004,
+        "design_value": -0.1257851351351349,
+        "video_count": 57,
+        "source_task": "n",
+        "scale": "original_feature_scale",
+        "observed_mean": 3.4000000000000004
+      },
+      "phys__audio_dynamic_range_db": {
+        "model_input_mean": 12.348105060845093,
+        "design_value": 0.1813043899568893,
+        "video_count": 57,
+        "source_task": "n",
+        "scale": "original_feature_scale",
+        "observed_mean": 12.348105060845093
+      },
+      "phys__motion_mean": {
+        "model_input_mean": 0.04304453309037184,
+        "design_value": 0.0302751921448202,
+        "video_count": 57,
+        "source_task": "n",
+        "scale": "original_feature_scale",
+        "observed_mean": 0.04304453309037184
+      },
+      "product_demo_seconds": {
+        "model_input_mean": 4.121052631578947,
+        "design_value": -0.05364577702702712,
+        "video_count": 57,
+        "source_task": "n",
+        "scale": "original_feature_scale",
+        "observed_mean": 4.121052631578947
+      }
+    },
+    "m": {},
+    "r": {
+      "scene_pace_high": {
+        "model_input_mean": 0.3407766990291262,
+        "design_value": 0.008767245858639482,
+        "video_count": 103,
+        "source_task": "r",
+        "scale": "original_feature_scale",
+        "observed_mean": 0.3407766990291262
+      }
+    }
+  },
+  "decisions": [
+    {
+      "task": "n",
+      "feature": "character_close_up_seconds",
+      "label": "Крупные планы героя",
+      "before": 7,
+      "after": 9,
+      "action": "finished_mean"
+    },
+    {
+      "task": "n",
+      "feature": "is_celeb",
+      "label": "Участие медийного героя",
+      "before": 1,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "n",
+      "feature": "monologue_to_camera",
+      "label": "Обращение к зрителю",
+      "before": 1,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "n",
+      "feature": "pack_shot_duration_seconds",
+      "label": "Финальный кадр с брендом",
+      "before": 7,
+      "after": 6,
+      "action": "finished_mean"
+    },
+    {
+      "task": "n",
+      "feature": "panel__first_core_claim_time_band",
+      "label": "Когда появляется главное предложение",
+      "before": 3,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "n",
+      "feature": "phys__audio_dynamic_range_db",
+      "label": "Перепады громкости",
+      "before": 8,
+      "after": null,
+      "action": "finished_mean"
+    },
+    {
+      "task": "n",
+      "feature": "phys__motion_mean",
+      "label": "Движение в кадре",
+      "before": 10,
+      "after": null,
+      "action": "finished_mean"
+    },
+    {
+      "task": "n",
+      "feature": "product_demo_seconds",
+      "label": "Демонстрация сервиса",
+      "before": 5,
+      "after": 6,
+      "action": "finished_mean"
+    },
+    {
+      "task": "n",
+      "feature": "state_transformation_present",
+      "label": "Изменение состояния героя или объекта",
+      "before": 0,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "m",
+      "feature": "fresh__audiovisual_claim_alignment",
+      "label": "Связь изображения и озвучки",
+      "before": 4,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "m",
+      "feature": "main_character",
+      "label": "Один главный герой",
+      "before": 4,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "m",
+      "feature": "panel__distinct_benefit_count",
+      "label": "Число разных выгод",
+      "before": 1,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "m",
+      "feature": "panel__mandatory_inference_chain_length",
+      "label": "Что зрителю приходится додумывать",
+      "before": 0,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "m",
+      "feature": "panel__message_specificity_level",
+      "label": "Конкретность предложения",
+      "before": 1,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "m",
+      "feature": "panel__offer_novelty_explanation_need",
+      "label": "Сложность объяснения предложения",
+      "before": 1,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "m",
+      "feature": "panel__product_role_reveal_time_band",
+      "label": "Когда понятна роль сервиса",
+      "before": 1,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "m",
+      "feature": "promo",
+      "label": "Акция или бонус",
+      "before": 0,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "r",
+      "feature": "brand_first_mention_seconds",
+      "label": "Первое появление бренда",
+      "before": 4,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "r",
+      "feature": "brand_history",
+      "before": null,
+      "after": null,
+      "action": "keep",
+      "reason": "Historical context, not inferred from video"
+    },
+    {
+      "task": "r",
+      "feature": "has_callback_to_opening",
+      "label": "Возвращение к началу в финале",
+      "before": 3,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "r",
+      "feature": "human_characters_count",
+      "label": "Количество персонажей",
+      "before": 3,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "r",
+      "feature": "jingle_present",
+      "label": "Фирменная мелодия",
+      "before": 6,
+      "after": 4,
+      "action": "keep_neuromatics_prompt"
+    },
+    {
+      "task": "r",
+      "feature": "problem_solution_arc_present",
+      "label": "Связь проблемы с решением",
+      "before": 1,
+      "after": null,
+      "action": "keep"
+    },
+    {
+      "task": "r",
+      "feature": "scene_pace_high",
+      "label": "Темп смены сцен",
+      "before": 6,
+      "after": 5,
+      "action": "finished_mean"
+    }
+  ],
+  "sources": {
+    "n": {
+      "path": "aipm3/latest_bundle/20261001/data/fit_n.csv",
+      "sha256": "da979f75d058c1a11d74bcfadcd8f26a2a69b2ef87e82610fb5eec2d50815772",
+      "rows": 444,
+      "distinct_videos": 57
+    },
+    "m": {
+      "path": "aipm3/latest_bundle/20261001/data/fit_m.csv",
+      "sha256": "769eed8e129d9ef1ca1a3617dc007d6cdf8672a51435186f2dc0bdb25183ba0a",
+      "rows": 364,
+      "distinct_videos": 58
+    },
+    "r": {
+      "path": "aipm3/latest_bundle/20261001/data/fit_r.csv",
+      "sha256": "2aa51a7c103846d5f314c974480e209974b22843372db16516676e8e0d74e456",
+      "rows": 107,
+      "distinct_videos": 104
+    }
+  },
+  "fitted_weights_changed": false,
+  "finished_model_changed": false,
+  "evaluation": "Same 12 pairs used to choose features; descriptive diagnostic, not independent validation",
+  "selection_inputs": {
+    "outputs/AIPM_neuro_prompt_rerun_20261008/borderline_measurements.json": "7b3fee80f50ad2db7f9a7cdbf09910b85ca4de677918231e4c1931d03c264c06",
+    "outputs/AIPM_feature_pair_disagreement_20261008/feature_summary.csv": "c67d9ee8e29eb511a3969503801d7612b7ea15fb34d6db1e4bad2fe8f846aca2"
+  }
+}

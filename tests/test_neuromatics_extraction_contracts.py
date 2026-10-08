@@ -50,8 +50,8 @@ NEURO_PROMPT_HASHES = {
     "panel/call_10.json": "ff40f59368d22cecd30f001fd0c700dcf3827e1b1cbe273f11af6fc603ff7b4b",
 }
 
-# Golden scores for the same synthetic observations after the eight-input M
-# refit. N/R and the complete extraction requests remain unchanged.
+# Golden scores after the eight-input M refit and neuromatics-only mean policy.
+# Finished scores and the complete extraction requests remain unchanged.
 BASELINE_SCORES = {
     "finished": {
         "OPM": 0.044241491929948584, "Q": 0.005485168114534491,
@@ -59,9 +59,9 @@ BASELINE_SCORES = {
         "norm_ad_recall": 0.12398243990549947, "noticeability": 0.38095238095238093,
     },
     "neuromatics": {
-        "OPM": 0.044241491929948584, "Q": 0.0044784079366117086,
+        "OPM": 0.03716285322115681, "Q": 0.0034463431782574914,
         "message_delivery": 0.11613391631611504,
-        "norm_ad_recall": 0.10122642210400053, "noticeability": 0.38095238095238093,
+        "norm_ad_recall": 0.09273623738597897, "noticeability": 0.32,
     },
 }
 
