@@ -89,6 +89,7 @@ def main(material_kind: str = "finished") -> None:
     if material_kind not in MATERIAL_LABELS:
         raise ValueError(f"Unknown material kind: {material_kind}")
     prefix = f"latest_{material_kind}_"
+    analysis_repeats = 10 if material_kind == "neuromatics" else ANALYSIS_REPEATS
     result_key = prefix + "result"
     st.title(MATERIAL_LABELS[material_kind])
     st.caption("Что поддерживает оценку ролика, что её ограничивает и какие выводы пока нельзя сделать.")
@@ -138,7 +139,9 @@ def main(material_kind: str = "finished") -> None:
             st.video(uploaded)
         live_btn = st.sidebar.button("Проанализировать ролик", type="primary", use_container_width=True,
                                key=prefix + "live")
-        st.caption("Анализ и проверка наблюдений могут занять несколько минут.")
+        st.caption((f"Ролик оценивается {analysis_repeats} раз; итоговые оценки усредняются. "
+                    if material_kind == "neuromatics" else "")
+                   + "Анализ и проверка наблюдений могут занять несколько минут.")
         if live_btn:
             if uploaded is None:
                 st.warning("Сначала загрузите ролик.")
@@ -157,9 +160,10 @@ def main(material_kind: str = "finished") -> None:
                         result = run_latest_analysis(
                             source_video=source, output_root=cache, api_key=_api_key(),
                             vertical=VERTICALS[vertical], allow_live=True, material_kind=material_kind,
-                            repeat_count=ANALYSIS_REPEATS,
+                            repeat_count=analysis_repeats,
                             progress=lambda message: status.update(label=(
-                                "Проверяем наблюдения по ролику" if message.startswith("Проверяем")
+                                message if material_kind == "neuromatics" and message.startswith("Повтор ")
+                                else "Проверяем наблюдения по ролику" if message.startswith("Проверяем")
                                 else "Анализируем содержание ролика")),
                             evidence_collector=_review_collector())
                         result["source_name"] = uploaded.name
