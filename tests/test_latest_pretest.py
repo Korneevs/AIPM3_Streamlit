@@ -166,7 +166,7 @@ def test_saved_result_of_wrong_material_is_rejected(kind, page, monkeypatch):
     ("finished", "latest_pretest.py"),
     ("neuromatics", "neuromatics_pretest.py"),
 ])
-def test_live_action_passes_material_kind_and_uses_three_runs(kind, page, monkeypatch):
+def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, page, monkeypatch):
     from io import BytesIO
     import streamlit as st
 
@@ -190,6 +190,8 @@ def test_live_action_passes_material_kind_and_uses_three_runs(kind, page, monkey
     assert not app.exception
     assert not calls
     assert any("Анализ и проверка наблюдений" in caption.value for caption in app.caption)
+    if kind == "neuromatics":
+        assert any("10 раз; итоговые оценки усредняются" in caption.value for caption in app.caption)
     vertical = app.selectbox(key=f"latest_{kind}_vertical")
     selected_vertical = vertical.options[-1]
     vertical.select(selected_vertical).run(timeout=30)
@@ -205,7 +207,7 @@ def test_live_action_passes_material_kind_and_uses_three_runs(kind, page, monkey
     assert not app.exception
     assert len(calls) == 1
     assert calls[0]["material_kind"] == kind
-    assert calls[0]["repeat_count"] == 3
+    assert calls[0]["repeat_count"] == (10 if kind == "neuromatics" else 3)
     assert calls[0]["allow_live"] is True
     assert calls[0]["api_key"] == "test-key"
     assert app.session_state[f"latest_{kind}_result"]["source_name"] == "replacement.mp4"
