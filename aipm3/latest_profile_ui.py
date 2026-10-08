@@ -56,10 +56,15 @@ def profile_rows(interpretation: dict) -> dict[str, list[dict]]:
     """Every visible feature appears once; exclusions never alter scoring."""
     cards = {card["task"]: card for card in report_cards(interpretation)}
     result = {}
+    constants = {}
+    if interpretation.get("material_kind") == "neuromatics":
+        from .neuromatics_mean_policy import load_policy
+        constants = load_policy()["constants"]
     for task in ORDER:
         card = cards[task]
         drivers = [d for d in interpretation["details"][task]["drivers"]
-                   if d["feature"] not in HIDDEN_MANAGER_FEATURES]
+                   if d["feature"] not in HIDDEN_MANAGER_FEATURES
+                   and d["feature"] not in constants.get(task, {})]
         mass = sum(abs(d["contribution"]) for d in drivers)
         claims = {d["feature"]: d for group in ("strengths", "limitations") for d in card[group]}
         reasons = {label: note["text"] for note in card["unassessed"] for label in note["features"]}
@@ -107,6 +112,7 @@ def feature_figure(row: dict) -> go.Figure:
 
 def show_profile(interpretation: dict) -> None:
     rows = profile_rows(interpretation)
+    directions_only = interpretation.get("material_kind") == "neuromatics"
     st.subheader("Профиль ролика")
     for tab, task in zip(st.tabs([TITLES[t] for t in ORDER]), ORDER):
         with tab:
@@ -125,17 +131,27 @@ def show_profile(interpretation: dict) -> None:
                         status, color = {"up": ("Поддерживает оценку", "#137547"),
                                          "down": ("Снижает оценку", "#B42332"),
                                          "balanced": ("Нет вклада", "#667085")}[row["direction"]]
+                        if directions_only:
+                            status = {"up": "+ В плюс в этом ролике",
+                                      "down": "− В минус в этом ролике",
+                                      "balanced": "Нейтрально в этом ролике"}[row["direction"]]
                         st.markdown(f'<div style="color:{color};font-weight:600;margin:12px 0 5px;">{status}</div>',
                                     unsafe_allow_html=True)
-                        weight = "<1%" if 0 < row["importance"] < 1 else f'{row["importance"]:.0f}%'
-                        st.write("Вес среди показанных свойств: **" + weight + "**")
-                        st.plotly_chart(feature_figure(row), use_container_width=True,
-                                        config={"displayModeBar": False},
-                                        key=f'latest_profile_{task}_{row["feature"]}')
-                    with st.expander("Что учтено и что означает вес"):
-                        if not row["claim"]:
-                            st.write("Направление справа показывает вклад в расчёт, но не подтверждённую причину успеха или недостаток ролика.")
-                        st.caption("Вес показывает долю свойства в сумме вкладов показанных признаков. Это не ожидаемый рост после правки ролика.")
+                        if not directions_only:
+                            weight = "<1%" if 0 < row["importance"] < 1 else f'{row["importance"]:.0f}%'
+                            st.write("Вес среди показанных свойств: **" + weight + "**")
+                            st.plotly_chart(feature_figure(row), use_container_width=True,
+                                            config={"displayModeBar": False},
+                                            key=f'latest_profile_{task}_{row["feature"]}')
+                    if not directions_only:
+                        with st.expander("Что учтено и что означает вес"):
+                            if not row["claim"]:
+                                st.write("Направление справа показывает вклад в расчёт, но не подтверждённую причину успеха или недостаток ролика.")
+                            st.caption("Вес показывает долю свойства в сумме вкладов показанных признаков. Это не ожидаемый рост после правки ролика.")
+    if directions_only:
+        st.caption("Плюс и минус относятся к оценке конкретного ролика. "
+                   "Это не общее правило: эффект правки стоит проверить на следующей версии.")
+        return
     with st.expander("Как рассчитан вклад"):
         st.write("В каждой вкладке сначала показаны свойства, снижающие оценку, затем поддерживающие. Внутри этих групп они упорядочены по весу.")
         st.write("Веса показанных свойств внутри одной оценки составляют 100% до округления; если вкладов нет, веса равны нулю. Веса разных оценок не складываются.")

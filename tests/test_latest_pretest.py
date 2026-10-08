@@ -220,3 +220,83 @@ def test_live_action_passes_material_kind_and_uses_three_runs(kind, page, monkey
     app.run(timeout=30)
     assert not app.exception
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize("status,label", [("matched", "Попали в UVP"), ("absent", "Не попали в UVP")])
+def test_neuromatics_result_shows_directions_idea_and_uvp_without_weights(status, label):
+    from aipm3.latest_uvp import target_for_vertical
+    source = (ROOT / "app_pages/latest_pretest.py").read_text().split('\nif __name__ in {')[0]
+    app = AppTest.from_string(source + '\nshow_latest_result(st.session_state["result"], st.session_state["interpretation"])\n')
+    result = {"scores": {"Q": .04, "OPM": .2}, "source_sha": "a" * 64,
+              "material_kind": "neuromatics", "scoring_version": latest_runtime.NEUROMATICS_SCORING_VERSION,
+              "main_idea": "На Авито можно найти надёжного мастера.",
+              "vertical_uvp": {"source_sha": "a" * 64, "target": target_for_vertical("Services"),
+                               "status": status, "total": 30, "answers": [],
+                               "counts": {"matched": 30 if status == "matched" else 0,
+                                          "partial": 0, "absent": 30 if status == "absent" else 0,
+                                          "contradicted": 0}}}
+    content = interpretation()
+    content["material_kind"] = "neuromatics"
+    content["details"]["r"]["drivers"][0]["contribution"] = .05
+    # Even an externally supplied explanation cannot expose a fixed input.
+    fixed = deepcopy(content["details"]["n"]["drivers"][0])
+    fixed.update(feature="pack_shot_duration_seconds", label="Финальный кадр с брендом")
+    content["details"]["n"]["drivers"].append(fixed)
+    before = deepcopy(result)
+    app.session_state["result"] = result
+    app.session_state["interpretation"] = content
+    app.run(timeout=30)
+    assert not app.exception
+    text = ' '.join(x.value for x in app.markdown) + ' '.join(x.value for x in app.caption)
+    assert "+ В плюс в этом ролике" in text and "− В минус в этом ролике" in text
+    assert "Финальный кадр с брендом" not in text
+    assert "На Авито можно найти надёжного мастера." in text
+    assert any(x.value == label for x in [*app.success, *app.error])
+    assert not app.get("plotly_chart")
+    assert "Вес среди" not in text and "упорядочены по весу" not in text
+    assert not any("вес" in x.label.lower() or "вклад" in x.label.lower() for x in app.expander)
+    assert app.session_state["result"] == before
+
+
+@pytest.mark.parametrize("kind,page", [("finished", "latest_pretest.py"), ("neuromatics", "neuromatics_pretest.py")])
+def test_uvp_runs_with_neuromatics_analysis_only_and_retains_scores(kind, page, monkeypatch):
+    from io import BytesIO
+    import streamlit as st
+    from aipm3 import latest_uvp
+
+    monkeypatch.delenv("AIPM_LATEST_RESULT_JSON", raising=False)
+    uploaded = BytesIO(b"synthetic-video")
+    uploaded.name = "clip.mp4"
+    monkeypatch.setattr(st, "file_uploader", lambda *_, **__: uploaded)
+    calls = []
+    def analyze(**kwargs):
+        calls.append("video")
+        return {"material_kind": kind, "scoring_version": latest_runtime.scoring_version_for(kind),
+                "vertical": kwargs["vertical"], "source_sha": "a" * 64,
+                "scores": {"Q": .04, "OPM": .2},
+                "evidence": {"fresh": [{"main_claim": "На Авито можно найти надёжного мастера."}]}}
+    def uvp(result, target, *_):
+        calls.append("uvp")
+        assert target == latest_uvp.target_for_vertical("Services")
+        assert result["scores"] == {"Q": .04, "OPM": .2}
+        assert result["main_idea"] == "На Авито можно найти надёжного мастера."
+        return dict(result, vertical_uvp={"source_sha": "a" * 64, "target": target, "status": "insufficient"})
+    monkeypatch.setattr(latest_pipeline, "run_latest_analysis", analyze)
+    monkeypatch.setattr(latest_uvp, "with_uvp", uvp)
+    def explain(*_, **__):
+        value = interpretation()
+        value["material_kind"] = kind
+        return value
+    monkeypatch.setattr(latest_interpretation, "build_latest_interpretation", explain)
+    app = AppTest.from_file(str(ROOT / "app_pages" / page))
+    app.secrets["VSELLM_API_KEY"] = "test-key"
+    app.run(timeout=30)
+    app.selectbox(key=f"latest_{kind}_vertical").select("Услуги").run(timeout=30)
+    assert not calls
+    app.button(key=f"latest_{kind}_live").click().run(timeout=30)
+    assert not app.exception
+    assert calls == (["video", "uvp"] if kind == "neuromatics" else ["video"])
+    assert app.session_state[f"latest_{kind}_result"]["scores"] == {"Q": .04, "OPM": .2}
+    app.run(timeout=30)
+    assert not app.exception
+    assert calls == (["video", "uvp"] if kind == "neuromatics" else ["video"])
