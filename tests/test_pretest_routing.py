@@ -4,7 +4,10 @@ from pathlib import Path
 import pytest
 import streamlit as st
 from streamlit.testing.v1 import AppTest
-from streamlit.util import calc_md5
+try:
+    from streamlit.util import calc_hash as calc_md5
+except ImportError:
+    from streamlit.util import calc_md5
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 

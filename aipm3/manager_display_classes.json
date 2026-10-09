@@ -1,0 +1,26 @@
+{
+  "version": "html-classes-finished-fixed-means-20261009-v1",
+  "scoring_version": "neuromatics-finished-means-20261008",
+  "purpose": "Display class labels and colours only; model scores, percentages and coefficients unchanged",
+  "references": {
+    "n": {
+      "cuts": [
+        0.38095238095238093,
+        0.4
+      ]
+    },
+    "r": {
+      "cuts": [
+        0.07847532967368726,
+        0.10933385285023009
+      ]
+    },
+    "Q": {
+      "cuts": [
+        0.0091208701817056,
+        0.010478966050871237
+      ]
+    }
+  },
+  "provenance_sha256": "bb7844a679fb2452f1fc8be3bac333eef7fcc54a89e542a5b9be7616db40a89c"
+}

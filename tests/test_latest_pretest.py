@@ -54,14 +54,14 @@ def test_result_page_shows_three_indices_and_preserves_associations(repeat_count
     captions = " ".join(item.value for item in app.caption)
     assert "не даёт понятного основания" in text
     assert all(value in text for value in [">+1%<", ">−8%<", ">−2%<"])
-    assert "**В этом ролике:** Изображение показывает заявленное действие." in text
     assert "Различаем отсутствие связи" in text
     assert "На что обратить внимание" not in text
     assert "0% - средняя оценка" in captions
     for forbidden in ["Сравнение и разброс", "Версия расчёта", "пункта индекса", "SHAP", "исходные признаки", "Q", "OPM", "Особенность модели", "замороженная"]:
         assert forbidden not in text + captions
-    assert len(app.expander) == 4
-    assert len(app.get("plotly_chart")) == 3
+    assert not app.expander
+    assert not app.get("plotly_chart")
+    assert "Вес среди" not in text
     assert "#FFF6D6" in text and "В норме" in text
     assert len(app.get("download_button")) == 1
     assert app.session_state["interpretation"] == before
@@ -176,6 +176,20 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
     uploaded.name = "clip.mp4"
     monkeypatch.setattr(st, "file_uploader", lambda *_, **__: uploaded)
     calls = []
+    reviews = []
+    from aipm3 import interpretation_checker
+
+    def review(draft, **kwargs):
+        reviews.append(draft)
+        return {"status": "unavailable"}
+
+    monkeypatch.setattr(interpretation_checker, "review_draft", review)
+
+    def explain(*_, **__):
+        content = interpretation()
+        content.update(material_kind=kind, manager_semantic={
+            "profiles": {task: [] for task in 'nmr'}, "fingerprint": "test-draft"})
+        return content
 
     def analyze(**kwargs):
         calls.append(kwargs)
@@ -183,12 +197,13 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
                 "scores": {"Q": .04, "OPM": .2}}
 
     monkeypatch.setattr(latest_pipeline, "run_latest_analysis", analyze)
-    monkeypatch.setattr(latest_interpretation, "build_latest_interpretation", lambda *_, **__: interpretation())
+    monkeypatch.setattr(latest_interpretation, "build_latest_interpretation", explain)
     app = AppTest.from_file(str(ROOT / "app_pages" / page))
     app.secrets["VSELLM_API_KEY"] = "test-key"
     app.run(timeout=30)
     assert not app.exception
     assert not calls
+    assert not reviews
     assert any("Анализ и проверка наблюдений" in caption.value for caption in app.caption)
     if kind == "neuromatics":
         assert any("10 раз; итоговые оценки усредняются" in caption.value for caption in app.caption)
@@ -210,6 +225,7 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
     assert calls[0]["repeat_count"] == (10 if kind == "neuromatics" else 3)
     assert calls[0]["allow_live"] is True
     assert calls[0]["api_key"] == "test-key"
+    assert len(reviews) == 1
     assert app.session_state[f"latest_{kind}_result"]["source_name"] == "replacement.mp4"
     assert len(app.tabs) == 3
     app.run(timeout=30)
@@ -222,15 +238,17 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
     app.run(timeout=30)
     assert not app.exception
     assert len(calls) == 1
+    assert len(reviews) == 1
 
 
 @pytest.mark.parametrize("status,label", [("matched", "Попали в UVP"), ("absent", "Не попали в UVP")])
-def test_neuromatics_result_shows_directions_idea_and_uvp_without_weights(status, label):
+@pytest.mark.parametrize('kind', ['finished', 'neuromatics'])
+def test_both_results_show_directions_idea_and_uvp_without_weights(status, label, kind):
     from aipm3.latest_uvp import target_for_vertical
     source = (ROOT / "app_pages/latest_pretest.py").read_text().split('\nif __name__ in {')[0]
     app = AppTest.from_string(source + '\nshow_latest_result(st.session_state["result"], st.session_state["interpretation"])\n')
     result = {"scores": {"Q": .04, "OPM": .2}, "source_sha": "a" * 64,
-              "material_kind": "neuromatics", "scoring_version": latest_runtime.NEUROMATICS_SCORING_VERSION,
+              "material_kind": kind, "scoring_version": latest_runtime.scoring_version_for(kind),
               "main_idea": "На Авито можно найти надёжного мастера.",
               "vertical_uvp": {"source_sha": "a" * 64, "target": target_for_vertical("Services"),
                                "status": status, "total": 30, "answers": [],
@@ -238,7 +256,7 @@ def test_neuromatics_result_shows_directions_idea_and_uvp_without_weights(status
                                           "partial": 0, "absent": 30 if status == "absent" else 0,
                                           "contradicted": 0}}}
     content = interpretation()
-    content["material_kind"] = "neuromatics"
+    content["material_kind"] = kind
     content["details"]["r"]["drivers"][0]["contribution"] = .05
     # Even an externally supplied explanation cannot expose a fixed input.
     fixed = deepcopy(content["details"]["n"]["drivers"][0])
@@ -251,7 +269,8 @@ def test_neuromatics_result_shows_directions_idea_and_uvp_without_weights(status
     assert not app.exception
     text = ' '.join(x.value for x in app.markdown) + ' '.join(x.value for x in app.caption)
     assert "+ В плюс в этом ролике" in text and "− В минус в этом ролике" in text
-    assert "Финальный кадр с брендом" not in text
+    if kind == 'neuromatics':
+        assert "Финальный кадр с брендом" not in text
     assert "На Авито можно найти надёжного мастера." in text
     assert any(x.value == label for x in [*app.success, *app.error])
     assert not app.get("plotly_chart")
@@ -261,7 +280,7 @@ def test_neuromatics_result_shows_directions_idea_and_uvp_without_weights(status
 
 
 @pytest.mark.parametrize("kind,page", [("finished", "latest_pretest.py"), ("neuromatics", "neuromatics_pretest.py")])
-def test_uvp_runs_with_neuromatics_analysis_only_and_retains_scores(kind, page, monkeypatch):
+def test_uvp_runs_with_both_analyses_and_retains_scores(kind, page, monkeypatch):
     from io import BytesIO
     import streamlit as st
     from aipm3 import latest_uvp
@@ -297,8 +316,8 @@ def test_uvp_runs_with_neuromatics_analysis_only_and_retains_scores(kind, page, 
     assert not calls
     app.button(key=f"latest_{kind}_live").click().run(timeout=30)
     assert not app.exception
-    assert calls == (["video", "uvp"] if kind == "neuromatics" else ["video"])
+    assert calls == ["video", "uvp"]
     assert app.session_state[f"latest_{kind}_result"]["scores"] == {"Q": .04, "OPM": .2}
     app.run(timeout=30)
     assert not app.exception
-    assert calls == (["video", "uvp"] if kind == "neuromatics" else ["video"])
+    assert calls == ["video", "uvp"]
