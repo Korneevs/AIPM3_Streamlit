@@ -291,8 +291,10 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
                         record: str | None = None, allow_live: bool = False,
                         progress: Callable[[str], None] | None = None,
                         evidence_collector: Callable | None = None,
+                        on_queue: Callable[[int], None] | None = None,
+                        postprocess: Callable[[dict], dict] | None = None,
                         material_kind: str = "finished", repeat_count: int = ANALYSIS_REPEATS):
-    """Resume completed stages and score the requested number of full runs."""
+    """Keep the shared queue slot through scoring and optional final checks."""
     version = scoring_version_for(material_kind)
     validate_repeat_count(repeat_count)
     if brand != "Avito":
@@ -300,7 +302,7 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
     source_video = Path(source_video).resolve()
     if not source_video.is_file():
         raise FileNotFoundError(source_video)
-    with analysis_slot(wait=True, progress=progress), analysis_deadline():
+    with analysis_slot(wait=True, progress=progress, on_queue=on_queue), analysis_deadline():
         if progress:
             progress("Подготавливаем ролик")
         sha = file_sha256(source_video)
@@ -361,4 +363,4 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
                 result["evidence_status"] = "incomplete"
                 result["evidence_error_type"] = type(exc).__name__
             _write_json(root / f"result_{identity}.json", result)
-        return result
+        return postprocess(result) if postprocess is not None else result

@@ -108,6 +108,18 @@ def _review_collector():
     return collect_full_evidence
 
 
+def show_queue_notice(position, notice, status, bar):
+    if position:
+        text = (f"Сервер уже анализирует другой ролик. Ваш номер в очереди: {position}. "
+                "Анализ начнётся автоматически. Оставьте эту страницу открытой.")
+        notice.warning(text)
+        status.update(label=f"Ожидаем запуска. Номер в очереди: {position}", expanded=True)
+        bar.progress(0, text=f"Номер в очереди: {position}")
+    else:
+        notice.empty()
+        status.update(label="Разбираем ролик")
+
+
 def main(material_kind: str = "finished") -> None:
     if material_kind not in MATERIAL_LABELS:
         raise ValueError(f"Unknown material kind: {material_kind}")
@@ -167,6 +179,7 @@ def main(material_kind: str = "finished") -> None:
         st.caption(f"Ролик оценивается {analysis_repeats} {'раза' if analysis_repeats == 3 else 'раз'}; "
                    "итоговые оценки усредняются. "
                    "Анализ и проверка наблюдений могут занять несколько минут. "
+                   "Очередь общая для всех пользователей. "
                    "Если сервер занят, ролик встанет в очередь и анализ начнётся автоматически.")
         if live_btn:
             if uploaded is None:
@@ -181,6 +194,7 @@ def main(material_kind: str = "finished") -> None:
                 with tempfile.NamedTemporaryFile(suffix=Path(uploaded.name).suffix, delete=False) as stream:
                     stream.write(uploaded.getvalue())
                     source = Path(stream.name)
+                queue_notice = st.empty()
                 try:
                     with st.status("Разбираем ролик", expanded=True) as status:
                         bar = st.progress(0, text="Ожидаем запуска анализа")
@@ -203,25 +217,29 @@ def main(material_kind: str = "finished") -> None:
                                 step = measurement_steps + 3 + int(message.rsplit(" ", 1)[1].split("/")[0]) - 1
                             bar.progress(step / total_steps, text=message)
 
+                        def finish_analysis(result):
+                            result["source_name"] = uploaded.name
+                            if celebrity_presence(result) is None:
+                                result = with_celebrity_review(result, False)
+                            st.session_state[result_key] = result
+                            result["main_idea"] = main_idea(result)
+                            if analysis_target:
+                                status.update(label="Проверяем попадание в UVP")
+                                bar.progress((measurement_steps + 6) / total_steps, text="Проверяем попадание в UVP")
+                                result = with_uvp(result, analysis_target, _api_key(),
+                                                  Path(tempfile.gettempdir()) / "aipm3_uvp_cache")
+                            status.update(label="Проверяем пояснения к ролику")
+                            bar.progress((total_steps - 1) / total_steps, text="Проверяем пояснения к ролику")
+                            return check_manager_interpretation(result, _api_key(), cache)
+
                         result = run_latest_analysis(
                             source_video=source, output_root=cache, api_key=_api_key(),
                             vertical=VERTICALS[vertical], allow_live=True, material_kind=material_kind,
                             repeat_count=analysis_repeats,
                             progress=progress,
+                            on_queue=lambda position: show_queue_notice(position, queue_notice, status, bar),
+                            postprocess=finish_analysis,
                             evidence_collector=_review_collector())
-                        result["source_name"] = uploaded.name
-                        if celebrity_presence(result) is None:
-                            result = with_celebrity_review(result, False)
-                        st.session_state[result_key] = result
-                        result["main_idea"] = main_idea(result)
-                        if analysis_target:
-                            status.update(label="Проверяем попадание в UVP")
-                            bar.progress((measurement_steps + 6) / total_steps, text="Проверяем попадание в UVP")
-                            result = with_uvp(result, analysis_target, _api_key(),
-                                              Path(tempfile.gettempdir()) / "aipm3_uvp_cache")
-                        status.update(label="Проверяем пояснения к ролику")
-                        bar.progress((total_steps - 1) / total_steps, text="Проверяем пояснения к ролику")
-                        result = check_manager_interpretation(result, _api_key(), cache)
                         st.session_state[result_key] = result
                         bar.progress(1., text="Разбор готов")
                         status.update(label="Разбор завершён", state="complete", expanded=False)
@@ -237,6 +255,7 @@ def main(material_kind: str = "finished") -> None:
                              "Готовые этапы сохранены; повторный запуск продолжит расчёт.")
                 finally:
                     source.unlink(missing_ok=True)
+                    queue_notice.empty()
         if uploaded is not None and result_key in st.session_state:
             current_sha = hashlib.sha256(uploaded.getvalue()).hexdigest()
             stored_sha = st.session_state[result_key].get("source_sha")

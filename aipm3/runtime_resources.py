@@ -30,7 +30,7 @@ class AnalysisTimeout(RuntimeError):
 
 
 @contextmanager
-def analysis_slot(*, wait=False, progress=None, timeout=2700):
+def analysis_slot(*, wait=False, progress=None, on_queue=None, timeout=None):
     """Keep one heavy job active; optionally wait in a cancellable FIFO queue."""
     ticket = object()
     acquired = False
@@ -52,16 +52,21 @@ def analysis_slot(*, wait=False, progress=None, timeout=2700):
                         _ANALYSIS_QUEUE.popleft()
                         acquired = True
                         break
-                    ahead = _ANALYSIS_QUEUE.index(ticket) + int(_ANALYSIS_LOCK.locked())
+                    position = _ANALYSIS_QUEUE.index(ticket) + 1
                 elapsed = time.monotonic() - started
-                if elapsed >= timeout:
+                if timeout is not None and elapsed >= timeout:
                     raise AnalysisBusy("Не удалось дождаться запуска анализа. Повторите запуск позже.")
-                notice = (ahead, int(elapsed // 5))
-                if progress and notice != last_notice:
-                    progress(f"В очереди. Перед вами роликов: {ahead}. Анализ начнётся автоматически.")
+                notice = (position, int(elapsed // 5))
+                if notice != last_notice:
+                    if progress:
+                        progress(f"Сервер занят. Ваш номер в очереди: {position}. Анализ начнётся автоматически.")
+                    if on_queue:
+                        on_queue(position)
                     last_notice = notice
                 with _QUEUE_CONDITION:
-                    _QUEUE_CONDITION.wait(timeout=min(1.0, timeout - elapsed))
+                    _QUEUE_CONDITION.wait(timeout=1.0 if timeout is None else max(0., min(1.0, timeout - elapsed)))
+            if on_queue:
+                on_queue(0)
         yield
     finally:
         with _QUEUE_CONDITION:

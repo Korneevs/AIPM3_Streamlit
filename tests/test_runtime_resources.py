@@ -55,8 +55,8 @@ def test_waiting_analyses_start_automatically_in_fifo_order():
         first.result(timeout=4)
         second.result(timeout=4)
     assert started == [0, 1]
-    assert any("роликов: 1" in notice for notice in notices[0])
-    assert any("роликов: 2" in notice for notice in notices[1])
+    assert any("номер в очереди: 1" in notice for notice in notices[0])
+    assert any("номер в очереди: 2" in notice for notice in notices[1])
     assert not resources._ANALYSIS_QUEUE and not resources._ANALYSIS_LOCK.locked()
 
 

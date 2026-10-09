@@ -67,6 +67,28 @@ def test_result_page_shows_three_indices_and_preserves_associations(repeat_count
     assert app.session_state["interpretation"] == before
 
 
+@pytest.mark.parametrize("positions,expected", [([3], 3), ([2, 1], 1), ([2, 0], 0)])
+def test_queue_warning_is_visible_updates_position_and_clears_on_start(positions, expected):
+    source = (ROOT / "app_pages/latest_pretest.py").read_text().split('\nif __name__ in {')[0]
+    app = AppTest.from_string(source + '''
+notice = st.empty()
+with st.status("Разбираем ролик", expanded=True) as status:
+    bar = st.progress(0)
+    for position in st.session_state["positions"]:
+        show_queue_notice(position, notice, status, bar)
+''')
+    app.session_state["positions"] = positions
+    app.run(timeout=30)
+    assert not app.exception
+    if expected:
+        assert len(app.warning) == 1
+        assert f"Ваш номер в очереди: {expected}." in app.warning[0].value
+        assert "Анализ начнётся автоматически" in app.warning[0].value
+        assert "Оставьте эту страницу открытой" in app.warning[0].value
+    else:
+        assert not app.warning
+
+
 @pytest.mark.parametrize("kind,page", [
     ("finished", "latest_pretest.py"),
     ("neuromatics", "neuromatics_pretest.py"),
@@ -193,14 +215,17 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
 
     def analyze(**kwargs):
         calls.append(kwargs)
-        kwargs["progress"]("В очереди. Перед вами роликов: 1. Анализ начнётся автоматически.")
+        kwargs["on_queue"](2)
+        kwargs["on_queue"](1)
+        kwargs["on_queue"](0)
         kwargs["progress"]("Подготавливаем ролик")
         count = kwargs["repeat_count"]
         kwargs["progress"](f"Повтор {count}/{count}: выполнено проверок 16/16")
         kwargs["progress"]("Проверяем наблюдения по видео: 1/3")
         kwargs["progress"]("Проверяем показанные действие и результат: 3/3")
-        return {"material_kind": kind, "scoring_version": latest_runtime.scoring_version_for(kind),
-                "scores": {"Q": .04, "OPM": .2}}
+        return kwargs["postprocess"]({"material_kind": kind,
+                "scoring_version": latest_runtime.scoring_version_for(kind),
+                "scores": {"Q": .04, "OPM": .2}})
 
     monkeypatch.setattr(latest_pipeline, "run_latest_analysis", analyze)
     monkeypatch.setattr(latest_interpretation, "build_latest_interpretation", explain)
@@ -234,6 +259,7 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
     assert app.session_state[f"latest_{kind}_result"]["source_name"] == "replacement.mp4"
     assert len(app.tabs) == 3
     assert app.get("progress")[0].proto.value == 100
+    assert not app.warning
     app.run(timeout=30)
     assert not app.exception
     assert len(calls) == 1
@@ -298,10 +324,10 @@ def test_uvp_runs_with_both_analyses_and_retains_scores(kind, page, monkeypatch)
     calls = []
     def analyze(**kwargs):
         calls.append("video")
-        return {"material_kind": kind, "scoring_version": latest_runtime.scoring_version_for(kind),
+        return kwargs["postprocess"]({"material_kind": kind, "scoring_version": latest_runtime.scoring_version_for(kind),
                 "vertical": kwargs["vertical"], "source_sha": "a" * 64,
                 "scores": {"Q": .04, "OPM": .2},
-                "evidence": {"fresh": [{"main_claim": "На Авито можно найти надёжного мастера."}]}}
+                "evidence": {"fresh": [{"main_claim": "На Авито можно найти надёжного мастера."}]}})
     def uvp(result, target, *_):
         calls.append("uvp")
         assert target == latest_uvp.target_for_vertical("Services")
