@@ -111,48 +111,21 @@ def feature_figure(row: dict) -> go.Figure:
 
 
 def show_profile(interpretation: dict) -> None:
-    rows = profile_rows(interpretation)
-    directions_only = interpretation.get("material_kind") == "neuromatics"
+    from .neuromatics_manager import manager_profile_rows, effect_label
+    rows = manager_profile_rows(interpretation)
     st.subheader("Профиль ролика")
     for tab, task in zip(st.tabs([TITLES[t] for t in ORDER]), ORDER):
         with tab:
             for row in rows[task]:
                 with st.container(border=True):
-                    description, effects = st.columns([1.5, 1], gap="large")
-                    with description:
+                    heading, effect = st.columns([3, 1], gap="large")
+                    with heading:
                         st.markdown("#### " + row["label"])
-                        st.write(row["meaning"])
-                        if row["observation"]:
-                            st.markdown("**В этом ролике:** " + row["observation"])
-                        st.write(row["finding"])
-                        if row["check"]:
-                            st.markdown("**Вариант для проверки:** " + row["check"])
-                    with effects:
-                        status, color = {"up": ("Поддерживает оценку", "#137547"),
-                                         "down": ("Снижает оценку", "#B42332"),
-                                         "balanced": ("Нет вклада", "#667085")}[row["direction"]]
-                        if directions_only:
-                            status = {"up": "+ В плюс в этом ролике",
-                                      "down": "− В минус в этом ролике",
-                                      "balanced": "Нейтрально в этом ролике"}[row["direction"]]
-                        st.markdown(f'<div style="color:{color};font-weight:600;margin:12px 0 5px;">{status}</div>',
-                                    unsafe_allow_html=True)
-                        if not directions_only:
-                            weight = "<1%" if 0 < row["importance"] < 1 else f'{row["importance"]:.0f}%'
-                            st.write("Вес среди показанных свойств: **" + weight + "**")
-                            st.plotly_chart(feature_figure(row), use_container_width=True,
-                                            config={"displayModeBar": False},
-                                            key=f'latest_profile_{task}_{row["feature"]}')
-                    if not directions_only:
-                        with st.expander("Что учтено и что означает вес"):
-                            if not row["claim"]:
-                                st.write("Направление справа показывает вклад в расчёт, но не подтверждённую причину успеха или недостаток ролика.")
-                            st.caption("Вес показывает долю свойства в сумме вкладов показанных признаков. Это не ожидаемый рост после правки ролика.")
-    if directions_only:
-        st.caption("Плюс и минус относятся к оценке конкретного ролика. "
-                   "Это не общее правило: эффект правки стоит проверить на следующей версии.")
-        return
-    with st.expander("Как рассчитан вклад"):
-        st.write("В каждой вкладке сначала показаны свойства, снижающие оценку, затем поддерживающие. Внутри этих групп они упорядочены по весу.")
-        st.write("Веса показанных свойств внутри одной оценки составляют 100% до округления; если вкладов нет, веса равны нулю. Веса разных оценок не складываются.")
-        st.write("Вклад объясняет расчёт для конкретного ролика. Он не доказывает, что добавление или удаление приёма улучшит результат. Варианты правок нужно сравнивать.")
+                    with effect:
+                        color = {"up": "#137547", "down": "#B42332", "balanced": "#667085"}[row["direction"]]
+                        st.markdown(f'<div style="color:{color};font-weight:600;margin:8px 0;">'
+                                    + escape(effect_label(row)) + '</div>', unsafe_allow_html=True)
+                    st.write(row["meaning"])
+                    st.write(row["finding"])
+                    if row["check"]:
+                        st.markdown("**Вариант для проверки:** " + row["check"])

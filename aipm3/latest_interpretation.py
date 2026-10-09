@@ -402,10 +402,16 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
       level='Выше типичного уровня' if q>hi else 'Ниже типичного уровня' if q<lo else 'Типичный уровень')
     if calibration:overall.update(display_values(q,calibration['references']['Q']))
     overall['assessment_available']=voice not in {'partial','absent'}
-    return dict(version=VERSION,material_kind=material_kind,cards=cards,details=details,overall=overall,
+    interpretation=dict(version=VERSION,material_kind=material_kind,cards=cards,details=details,overall=overall,
       celebrity_present=celebrity_presence(result),
       display_calibration=calibration['version'] if calibration else None,audio_status=voice,audio_note=audio_note(voice),
       scale_note='100 - средняя оценка исторических роликов в этом компоненте. Это индекс модели, а не процент зрителей.',
       interpretation_note='Плюсы и ограничения объясняют расчет модели относительно исторических роликов. Проверки ниже помогут обсудить правки с Марком и ресерчем; эффект отдельной правки нужно проверить на новой версии.',
       repeat_note='Диапазон показывает разброс повторных разборов, а не доверительный интервал эффективности.',
       evidence_runs=len(evidence),evidence_rejected=rejected)
+    from .neuromatics_manager import build_manager_draft
+    from .latest_alignment_evidence import validate_record
+    interpretation['manager_semantic']=build_manager_draft(interpretation,evidence,
+        source_sha=result.get('source_sha'),duration=dur,validate_alignment_record=validate_record)
+    from .manager_display import with_display_classes
+    return with_display_classes(interpretation,result['scoring_version'])

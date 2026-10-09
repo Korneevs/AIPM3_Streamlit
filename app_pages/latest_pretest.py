@@ -19,6 +19,8 @@ from aipm3.manager_report import report_cards
 from aipm3.display_calibration import audio_status
 from aipm3.latest_manual_inputs import celebrity_presence, with_celebrity_review
 from aipm3.latest_profile_ui import show_summary, show_profile
+from aipm3.neuromatics_manager import VERSION as MANAGER_VERSION, FINISHED_VERSION
+from aipm3.manager_display import VERSION as DISPLAY_VERSION
 from aipm3.latest_uvp import main_idea, target_for_vertical, with_blind_answers, with_uvp
 from aipm3.vertical_uvp import GOODS
 from aipm3.uvp_ui import show_uvp
@@ -34,7 +36,25 @@ def _interpret_cached(result: dict, version: str) -> dict:
 
 
 def interpret_result(result: dict) -> dict:
-    return _interpret_cached(result, VERSION)
+    # Review metadata must not force a second attribution calculation.
+    neuro = material_kind_for_result(result) == "neuromatics"
+    base = {k: v for k, v in result.items() if k != "manager_review"}
+    cache_version = ':'.join([VERSION, MANAGER_VERSION if neuro else FINISHED_VERSION, DISPLAY_VERSION])
+    interpretation = _interpret_cached(base, cache_version)
+    if result.get("manager_review"):
+        from aipm3.interpretation_checker import apply_review
+        return apply_review(interpretation, result["manager_review"])
+    return interpretation
+
+
+def check_manager_interpretation(result: dict, api_key: str, cache: Path) -> dict:
+    interpretation = interpret_result({k: v for k, v in result.items() if k != "manager_review"})
+    draft = interpretation.get("manager_semantic")
+    if not draft:
+        return result
+    from aipm3.interpretation_checker import review_draft
+    receipt = review_draft(draft, api_key=api_key, cache_dir=cache)
+    return dict(result, manager_review=receipt)
 
 
 def show_latest_result(result: dict, interpretation: dict | None = None) -> None:
@@ -54,7 +74,8 @@ def show_latest_result(result: dict, interpretation: dict | None = None) -> None
             st.markdown("### Попадание в UVP")
             st.write("Выберите целевую выгоду в боковой панели и нажмите «Проверить UVP».")
     show_profile(interpretation)
-    cards = report_cards(interpretation)
+    from aipm3.neuromatics_manager import manager_cards
+    cards = manager_cards(interpretation)
     st.caption("Оценка помогает сравнивать варианты. Финальное решение принимает Марком. "
                "Предложения по правкам стоит проверить на следующей версии ролика.")
     exported = clean_json(public_result(with_blind_answers(result), interpretation))
@@ -133,6 +154,8 @@ def main(material_kind: str = "finished") -> None:
             analysis_target = target_for_vertical(VERTICALS[vertical], goods)
             if analysis_target:
                 st.sidebar.caption("Целевой UVP: " + analysis_target["label"] + " - " + analysis_target["meaning"])
+        else:
+            analysis_target = target_for_vertical(VERTICALS[vertical])
         with st.sidebar:
             uploaded = st.file_uploader("Ролик Avito (MP4 / MOV)", type=["mp4", "mov"], key=prefix + "video")
         if uploaded is not None:
@@ -167,13 +190,17 @@ def main(material_kind: str = "finished") -> None:
                                 else "Анализируем содержание ролика")),
                             evidence_collector=_review_collector())
                         result["source_name"] = uploaded.name
+                        if celebrity_presence(result) is None:
+                            result = with_celebrity_review(result, False)
                         st.session_state[result_key] = result
-                        if material_kind == "neuromatics":
-                            result["main_idea"] = main_idea(result)
+                        result["main_idea"] = main_idea(result)
+                        if analysis_target:
                             status.update(label="Проверяем попадание в UVP")
                             result = with_uvp(result, analysis_target, _api_key(),
                                               Path(tempfile.gettempdir()) / "aipm3_uvp_cache")
-                            st.session_state[result_key] = result
+                        status.update(label="Проверяем пояснения к ролику")
+                        result = check_manager_interpretation(result, _api_key(), cache)
+                        st.session_state[result_key] = result
                         status.update(label="Разбор завершён", state="complete", expanded=False)
                 except MissingMeasurement:
                     st.warning("Сохранённого анализа этого ролика пока нет. "
