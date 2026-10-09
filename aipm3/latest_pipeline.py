@@ -7,7 +7,8 @@ Paid calls are disabled unless the caller explicitly passes allow_live=True.
 from __future__ import annotations
 
 import base64
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextvars import copy_context
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -28,7 +29,8 @@ from .latest_runtime import (ANALYSIS_REPEATS, PROTOCOL_VERSION, clean_json, sco
                              family_for_video, rows_from_measurements, score_feature_rows)
 from .objective_features import (aggregate_aipm1, aggregate_aipm2,
                                   prepare_legacy_video, request_kwargs)
-from .runtime_resources import analysis_slot, file_sha256, run_video_command
+from .runtime_resources import (AnalysisTimeout, analysis_deadline, analysis_slot,
+                                file_sha256, request_timeout, run_video_command)
 
 
 class MissingMeasurement(RuntimeError):
@@ -72,7 +74,7 @@ def _request(kwargs: dict, path: Path, *, video_sha: str, api_key: str,
     for attempt in range(3):
         try:
             started = time.monotonic()
-            with OpenAI(api_key=api_key, base_url=md.BASE_URL, timeout=300, max_retries=0) as client:
+            with OpenAI(api_key=api_key, base_url=md.BASE_URL, timeout=request_timeout(), max_retries=0) as client:
                 response = client.chat.completions.create(**kwargs)
             payload = json.loads(response.choices[0].message.content)
             if validate:
@@ -85,6 +87,8 @@ def _request(kwargs: dict, path: Path, *, video_sha: str, api_key: str,
                 elapsed_seconds=time.monotonic() - started,
             ))
             return payload
+        except AnalysisTimeout:
+            raise
         except Exception as exc:
             _write_json(path.with_name(path.stem + f".failure_{attempt + 1}.json"),
                         dict(error_type=type(exc).__name__, status=getattr(exc, "status_code", None)))
@@ -94,7 +98,7 @@ def _request(kwargs: dict, path: Path, *, video_sha: str, api_key: str,
 
 
 def _objective(component: str, encoded: str, prepared_sha: str, folder: Path,
-               api_key: str, allow_live: bool, *, material_kind: str = "finished"):
+               api_key: str, allow_live: bool, *, material_kind: str = "finished", call_numbers=None):
     kwargs = request_kwargs(component, encoded)
     if material_kind == "neuromatics" and component == "aipm2":
         kwargs["messages"][0]["content"][0]["text"] = (
@@ -110,13 +114,13 @@ def _objective(component: str, encoded: str, prepared_sha: str, folder: Path,
     count = 3 if component == "aipm1" else 2
     runs = [_request(kwargs, folder / f"call_{number:02d}.json", video_sha=prepared_sha,
                      api_key=api_key, allow_live=allow_live, validate=validate)
-            for number in range(1, count + 1)]
+            for number in (call_numbers if call_numbers is not None else range(1, count + 1))]
     aggregate = aggregate_aipm1 if component == "aipm1" else aggregate_aipm2
     return aggregate(runs), runs
 
 
 def _panel(encoded: str, prepared_sha: str, folder: Path, api_key: str, allow_live: bool,
-           *, material_kind: str = "finished"):
+           *, material_kind: str = "finished", call_ids=None):
     """Keep panel30 intact; append the supplied semantics only for neuromatics."""
     def one(call_id):
         personas = md.PANEL30_PERSONAS[(call_id - 1) * 3:call_id * 3]
@@ -157,9 +161,12 @@ def _panel(encoded: str, prepared_sha: str, folder: Path, api_key: str, allow_li
             rows.append(row)
         return rows
 
-    # Bound memory the same way as the existing cloud pipeline.
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        groups = list(pool.map(one, range(1, 11)))
+    ids = tuple(range(1, 11) if call_ids is None else call_ids)
+    if len(ids) == 1:
+        groups = [one(ids[0])]
+    else:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            groups = list(pool.map(one, ids))
     return sorted([row for group in groups for row in group],
                   key=lambda row: (row["call_id"], row["respondent_id"]))
 
@@ -187,6 +194,47 @@ def _fresh(encoded: str, prepared_sha: str, path: Path, api_key: str, allow_live
 
     return _request(kwargs, path, video_sha=prepared_sha, api_key=api_key,
                     allow_live=allow_live, validate=validate)
+
+
+def _measure_repeat(prepared, prepared_hash, folder, api_key, allow_live,
+                    material_kind, repeat, repeat_count, progress):
+    """Same 16 observations, at most two encoded video payloads in memory."""
+    jobs = [(kind, number) for kind, count in (("aipm1", 3), ("aipm2", 2), ("panel", 10), ("fresh", 1))
+            for number in range(1, count + 1)]
+
+    def one(kind, number):
+        request_timeout()
+        encoded = base64.b64encode(prepared[kind].read_bytes()).decode()
+        if kind in {"aipm1", "aipm2"}:
+            _, runs = _objective(kind, encoded, prepared_hash[kind], folder / kind,
+                                 api_key, allow_live, material_kind=material_kind,
+                                 call_numbers=(number,))
+            return runs[0]
+        if kind == "panel":
+            return _panel(encoded, prepared_hash[kind], folder / kind, api_key, allow_live,
+                          material_kind=material_kind, call_ids=(number,))
+        return _fresh(encoded, prepared_hash[kind], folder / "fresh.json", api_key, allow_live)
+
+    pool = ThreadPoolExecutor(max_workers=2)
+    futures = {pool.submit(copy_context().run, one, kind, number): (kind, number)
+               for kind, number in jobs}
+    values = {}
+    try:
+        for done, future in enumerate(as_completed(futures), 1):
+            values[futures[future]] = future.result()
+            if progress:
+                progress(f"Повтор {repeat}/{repeat_count}: выполнено проверок {done}/16")
+    finally:
+        for future in futures:
+            future.cancel()
+        pool.shutdown(wait=True, cancel_futures=True)
+    runs = {kind: [values[kind, i] for i in range(1, count + 1)]
+            for kind, count in (("aipm1", 3), ("aipm2", 2))}
+    objective = {"aipm1": aggregate_aipm1(runs["aipm1"]),
+                 "aipm2": aggregate_aipm2(runs["aipm2"])}
+    panel = sorted([row for i in range(1, 11) for row in values["panel", i]],
+                   key=lambda row: (row["call_id"], row["respondent_id"]))
+    return objective, runs, panel, values["fresh", 1]
 
 
 def _physical(source: Path, cache: Path):
@@ -252,7 +300,9 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
     source_video = Path(source_video).resolve()
     if not source_video.is_file():
         raise FileNotFoundError(source_video)
-    with analysis_slot():
+    with analysis_slot(wait=True, progress=progress), analysis_deadline():
+        if progress:
+            progress("Подготавливаем ролик")
         sha = file_sha256(source_video)
         family = family or family_for_video(sha)
         root = Path(output_root).resolve() / PROTOCOL_VERSION
@@ -272,20 +322,9 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
             if progress:
                 progress(f"Повтор {repeat}/{repeat_count}: проверяем свойства ролика")
             folder = root / f"repeat_{repeat:02d}"
-            objective, objective_runs = {}, {}
-            for kind in ("aipm1", "aipm2"):
-                encoded = base64.b64encode(prepared[kind].read_bytes()).decode()
-                objective[kind], objective_runs[kind] = _objective(
-                    kind, encoded, prepared_hash[kind], folder / kind, api_key, allow_live,
-                    material_kind=material_kind)
-                del encoded
-            encoded = base64.b64encode(prepared["panel"].read_bytes()).decode()
-            panel = _panel(encoded, prepared_hash["panel"], folder / "panel", api_key, allow_live,
-                           material_kind=material_kind)
-            del encoded
-            encoded = base64.b64encode(prepared["fresh"].read_bytes()).decode()
-            fresh = _fresh(encoded, prepared_hash["fresh"], folder / "fresh.json", api_key, allow_live)
-            del encoded
+            objective, objective_runs, panel, fresh = _measure_repeat(
+                prepared, prepared_hash, folder, api_key, allow_live,
+                material_kind, repeat, repeat_count, progress)
             measured = dict(repeat=repeat, source_sha=sha, objective_features=objective,
                             objective_runs=objective_runs, diagnostic_panel=panel, fresh=fresh)
             _write_json(folder / "measurements.json", measured)

@@ -23,8 +23,9 @@ MESSAGE_BUNDLE_DIR = Path(__file__).resolve().parent / "message_bundle" / "20261
 SCORING_VERSION = "three-heads-no-screen-number-20261008"
 NEUROMATICS_SCORING_VERSION = "neuromatics-finished-means-20261008"
 PROTOCOL_VERSION = "latest-exact-inputs-20261001-v1"
-# Temporary throughput setting. This scoring version supports 3 or 10 runs.
+# Retain saved 3/10-run results; new neuromatics use five complete runs.
 ANALYSIS_REPEATS = 3
+NEUROMATICS_ANALYSIS_REPEATS = 5
 MODEL_TASKS = ("n", "m", "r")
 SCORE_NAMES = {"n": "noticeability", "m": "message_delivery", "r": "norm_ad_recall"}
 MATERIAL_LABELS = {"finished": "AIPM3.0 (для готовых)",
@@ -32,8 +33,8 @@ MATERIAL_LABELS = {"finished": "AIPM3.0 (для готовых)",
 
 
 def validate_repeat_count(repeat_count: int) -> int:
-    if type(repeat_count) is not int or repeat_count not in (3, 10):
-        raise ValueError("Поддерживаются только 3 или 10 полных прогонов.")
+    if type(repeat_count) is not int or repeat_count not in (3, 5, 10):
+        raise ValueError("Поддерживаются только 3, 5 или 10 полных прогонов.")
     return repeat_count
 
 

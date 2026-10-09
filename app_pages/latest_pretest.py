@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import tempfile
 
 import streamlit as st
@@ -12,9 +13,10 @@ import streamlit as st
 from aipm3.latest_interpretation import VERSION, build_latest_interpretation, public_result
 from aipm3.latest_pipeline import MissingMeasurement, run_latest_analysis
 from aipm3.latest_runtime import (
-    ANALYSIS_REPEATS, MATERIAL_LABELS, clean_json, material_kind_for_result, validate_cached_result,
+    ANALYSIS_REPEATS, NEUROMATICS_ANALYSIS_REPEATS, MATERIAL_LABELS, clean_json,
+    material_kind_for_result, validate_cached_result,
 )
-from aipm3.runtime_resources import AnalysisBusy
+from aipm3.runtime_resources import AnalysisBusy, AnalysisTimeout
 from aipm3.manager_report import report_cards
 from aipm3.display_calibration import audio_status
 from aipm3.latest_manual_inputs import celebrity_presence, with_celebrity_review
@@ -110,7 +112,7 @@ def main(material_kind: str = "finished") -> None:
     if material_kind not in MATERIAL_LABELS:
         raise ValueError(f"Unknown material kind: {material_kind}")
     prefix = f"latest_{material_kind}_"
-    analysis_repeats = 10 if material_kind == "neuromatics" else ANALYSIS_REPEATS
+    analysis_repeats = NEUROMATICS_ANALYSIS_REPEATS if material_kind == "neuromatics" else ANALYSIS_REPEATS
     result_key = prefix + "result"
     st.title(MATERIAL_LABELS[material_kind])
     st.caption("Что поддерживает оценку ролика, что её ограничивает и какие выводы пока нельзя сделать.")
@@ -162,9 +164,9 @@ def main(material_kind: str = "finished") -> None:
             st.video(uploaded)
         live_btn = st.sidebar.button("Проанализировать ролик", type="primary", use_container_width=True,
                                key=prefix + "live")
-        st.caption((f"Ролик оценивается {analysis_repeats} раз; итоговые оценки усредняются. "
-                    if material_kind == "neuromatics" else "")
-                   + "Анализ и проверка наблюдений могут занять несколько минут.")
+        st.caption(f"Ролик оценивается {analysis_repeats} раз; итоговые оценки усредняются. "
+                   "Анализ и проверка наблюдений могут занять несколько минут. "
+                   "Если сервер занят, ролик встанет в очередь и анализ начнётся автоматически.")
         if live_btn:
             if uploaded is None:
                 st.warning("Сначала загрузите ролик.")
@@ -180,14 +182,31 @@ def main(material_kind: str = "finished") -> None:
                     source = Path(stream.name)
                 try:
                     with st.status("Разбираем ролик", expanded=True) as status:
+                        bar = st.progress(0, text="Ожидаем запуска анализа")
+                        measurement_steps = 16 * analysis_repeats
+                        total_steps = measurement_steps + 8
+
+                        def progress(message):
+                            status.update(label=message)
+                            reading = re.match(r"Повтор (\d+)/(\d+): выполнено проверок (\d+)/16", message)
+                            step = 0
+                            if reading:
+                                repeat, _, done = map(int, reading.groups())
+                                step = (repeat - 1) * 16 + done
+                            elif message.startswith("Повтор "):
+                                repeat = int(message.split()[1].split("/")[0])
+                                step = (repeat - 1) * 16
+                            elif message.startswith("Проверяем наблюдения по видео:"):
+                                step = measurement_steps + int(message.rsplit(" ", 1)[1].split("/")[0]) - 1
+                            elif message.startswith("Проверяем показанные действие и результат:"):
+                                step = measurement_steps + 3 + int(message.rsplit(" ", 1)[1].split("/")[0]) - 1
+                            bar.progress(step / total_steps, text=message)
+
                         result = run_latest_analysis(
                             source_video=source, output_root=cache, api_key=_api_key(),
                             vertical=VERTICALS[vertical], allow_live=True, material_kind=material_kind,
                             repeat_count=analysis_repeats,
-                            progress=lambda message: status.update(label=(
-                                message if material_kind == "neuromatics" and message.startswith("Повтор ")
-                                else "Проверяем наблюдения по ролику" if message.startswith("Проверяем")
-                                else "Анализируем содержание ролика")),
+                            progress=progress,
                             evidence_collector=_review_collector())
                         result["source_name"] = uploaded.name
                         if celebrity_presence(result) is None:
@@ -196,16 +215,21 @@ def main(material_kind: str = "finished") -> None:
                         result["main_idea"] = main_idea(result)
                         if analysis_target:
                             status.update(label="Проверяем попадание в UVP")
+                            bar.progress((measurement_steps + 6) / total_steps, text="Проверяем попадание в UVP")
                             result = with_uvp(result, analysis_target, _api_key(),
                                               Path(tempfile.gettempdir()) / "aipm3_uvp_cache")
                         status.update(label="Проверяем пояснения к ролику")
+                        bar.progress((total_steps - 1) / total_steps, text="Проверяем пояснения к ролику")
                         result = check_manager_interpretation(result, _api_key(), cache)
                         st.session_state[result_key] = result
+                        bar.progress(1., text="Разбор готов")
                         status.update(label="Разбор завершён", state="complete", expanded=False)
                 except MissingMeasurement:
                     st.warning("Сохранённого анализа этого ролика пока нет. "
                                "Для продолжения нажмите «Проанализировать ролик».")
                 except AnalysisBusy as exc:
+                    st.warning(str(exc))
+                except AnalysisTimeout as exc:
                     st.warning(str(exc))
                 except Exception as exc:
                     st.error("Не удалось завершить анализ. "

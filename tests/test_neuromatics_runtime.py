@@ -72,23 +72,24 @@ def test_modes_use_selected_heads_without_mutating_inputs(rows):
 
 
 @pytest.mark.parametrize("mode", ["finished", "neuromatics"])
-def test_three_runs_use_unchanged_heads_and_require_explicit_count(rows, mode):
-    short = {task: frame.iloc[:3].copy() for task, frame in rows.items()}
-    short["n"]["phys__motion_mean"] = [.01, .04, .10]
-    short["r"]["brand_first_mention_seconds"] = [1., 5., 15.]
+@pytest.mark.parametrize("repeat_count", [3, 5])
+def test_short_runs_use_unchanged_heads_and_require_explicit_count(rows, mode, repeat_count):
+    short = {task: frame.iloc[:repeat_count].copy() for task, frame in rows.items()}
+    short["n"]["phys__motion_mean"] = np.linspace(.01, .10, repeat_count)
+    short["r"]["brand_first_mention_seconds"] = np.linspace(1., 15., repeat_count)
     model = runtime.load_models(mode)
     expected = {task: model.heads[task].predict(short[task]) for task in "nmr"}
-    result = runtime.score_feature_rows(short, material_kind=mode, repeat_count=3)
+    result = runtime.score_feature_rows(short, material_kind=mode, repeat_count=repeat_count)
     for task, name in runtime.SCORE_NAMES.items():
         np.testing.assert_array_equal(pd.DataFrame(result["per_repeat"])[name], expected[task])
     assert result["scores"]["Q"] == pytest.approx(np.mean(expected["n"] * expected["m"] * expected["r"]), abs=1e-14)
     assert result["model_sha256"] == runtime.artifact_hashes_for(mode)
-    assert result["repeat_count"] == 3
+    assert result["repeat_count"] == repeat_count
     assert runtime.validate_cached_result(result)["scores"] == result["scores"]
     from aipm3.latest_interpretation import build_latest_interpretation
     explanation = build_latest_interpretation(result)
     for task, details in explanation["details"].items():
-        assert len(details["per_repeat_scores"]) == 3
+        assert len(details["per_repeat_scores"]) == repeat_count
         assert details["actual"] == pytest.approx(result["scores"][runtime.SCORE_NAMES[task]], abs=1e-12)
         assert details["additivity_error"] < 1e-9
     with pytest.raises(ValueError):

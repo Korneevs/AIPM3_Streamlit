@@ -9,6 +9,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import threading
+import time
 
 import numpy as np
 import pandas as pd
@@ -190,7 +192,8 @@ def test_request_cache_reuses_exact_contract_and_rejects_changes(tmp_path, monke
 
 
 @pytest.mark.parametrize("material_kind", ["finished", "neuromatics"])
-def test_three_runs_reuse_ten_run_stage_paths_without_overwriting_results(tmp_path, monkeypatch, material_kind):
+@pytest.mark.parametrize("repeat_count", [3, 5])
+def test_short_runs_reuse_ten_run_stage_paths_without_overwriting_results(tmp_path, monkeypatch, material_kind, repeat_count):
     source = tmp_path / "source.mp4"
     source.write_bytes(b"test video")
     monkeypatch.setattr(pipeline, "_physical", lambda *_: {
@@ -224,12 +227,13 @@ def test_three_runs_reuse_ten_run_stage_paths_without_overwriting_results(tmp_pa
     monkeypatch.setattr(pipeline, "_request", request)
     progress = []
     result = pipeline.run_latest_analysis(source_video=source, output_root=tmp_path / "cache",
-                                         material_kind=material_kind, progress=progress.append)
-    assert len(requests) == len(set(requests)) == 48
-    assert len(result["per_repeat"]) == result["repeat_count"] == result["extraction"]["repeats"] == 3
-    assert any("3/3" in message for message in progress)
+                                         material_kind=material_kind, progress=progress.append,
+                                         repeat_count=repeat_count)
+    assert len(requests) == len(set(requests)) == 16 * repeat_count
+    assert len(result["per_repeat"]) == result["repeat_count"] == result["extraction"]["repeats"] == repeat_count
+    assert any(f"{repeat_count}/{repeat_count}" in message for message in progress)
     assert result["extraction"]["transcript_and_recovery_used"] is False
-    for repeat in range(1, 4):
+    for repeat in range(1, repeat_count + 1):
         paths = [p for p in requests if f"repeat_{repeat:02d}" in p.parts]
         assert len(paths) == 16
         assert sum(p.parent.name == "aipm1" for p in paths) == 3
@@ -248,6 +252,81 @@ def test_three_runs_reuse_ten_run_stage_paths_without_overwriting_results(tmp_pa
     assert all(path.read_bytes() == data for path, data in short_results.items())
     assert runtime.validate_cached_result(result)["scores"] == result["scores"]
     assert runtime.validate_cached_result(long_result)["scores"] == long_result["scores"]
+
+
+@pytest.mark.parametrize("material_kind", ["finished", "neuromatics"])
+def test_parallel_measurements_preserve_sequential_aggregation_and_bound_payloads(tmp_path, monkeypatch, material_kind):
+    from aipm3 import runtime_resources
+    source = tmp_path / "video.mp4"
+    source.write_bytes(b"prepared video")
+    prepared = {k: source for k in ("aipm1", "aipm2", "panel", "fresh")}
+    hashes = {k: "sha" for k in prepared}
+    owner = threading.get_ident()
+    counts = {"active": 0, "peak": 0}
+    lock = threading.Lock()
+    parallel = [False]
+
+    def request(kwargs, path, **options):
+        if parallel[0]:
+            assert threading.get_ident() != owner
+            assert runtime_resources.request_timeout() == pytest.approx(120)
+            with lock:
+                counts["active"] += 1
+                counts["peak"] = max(counts["peak"], counts["active"])
+            time.sleep(.01)
+        number = 1 if path.name == "fresh.json" else int(path.stem.rsplit("_", 1)[1])
+        if path.parent.name in {"aipm1", "aipm2"}:
+            payload = _sample(kwargs["response_format"])
+            # The order of equal votes must remain the call order, even if
+            # completions arrive in a different order.
+            for key, spec in kwargs["response_format"]["json_schema"]["schema"]["properties"].items():
+                if spec.get("type") == "boolean":
+                    payload[key] = number == 1
+            if path.parent.name == "aipm1":
+                payload["voiceover_text"] = "claim " * number
+                payload["unique_offer_count"] = number
+        elif path.parent.name == "panel":
+            token = kwargs["messages"][0]["content"][0]["text"].split("REQUEST_TOKEN: ")[1].splitlines()[0]
+            answers = []
+            for ident, _ in reversed(pipeline.md.PANEL30_PERSONAS[(number - 1) * 3:number * 3]):
+                answer = dict(respondent_id=ident, main_message_summary=f"claim {number}")
+                answer.update({name: False if kind == "boolean" else low
+                               for name, kind, low, high, rule in pipeline.md.ROUND4_FEATURES})
+                answers.append(answer)
+            payload = dict(request_token=token, answers=answers)
+        else:
+            payload = {key: 1 for key in pipeline.fresh_contract.FIELDS}
+            payload.update(main_claim="claim", evidence={key: "observation" for key in pipeline.fresh_contract.FIELDS})
+        options["validate"](payload)
+        if parallel[0]:
+            with lock:
+                counts["active"] -= 1
+        return payload
+
+    monkeypatch.setattr(pipeline, "_request", request)
+    objective, runs = {}, {}
+    for kind in ("aipm1", "aipm2"):
+        objective[kind], runs[kind] = pipeline._objective(kind, "video", "sha", tmp_path / kind,
+            "", False, material_kind=material_kind)
+    panel = pipeline._panel("video", "sha", tmp_path / "panel", "", False, material_kind=material_kind)
+    fresh = pipeline._fresh("video", "sha", tmp_path / "fresh.json", "", False)
+    original_read = Path.read_bytes
+
+    def read_in_worker(path):
+        assert threading.get_ident() != owner, "Do not encode videos before submitting bounded work"
+        return original_read(path)
+
+    monkeypatch.setattr(Path, "read_bytes", read_in_worker)
+    parallel[0] = True
+    progress = []
+    def observe(message):
+        assert threading.get_ident() == owner, "UI progress must run on the Streamlit thread"
+        progress.append(message)
+    with runtime_resources.analysis_deadline():
+        actual = pipeline._measure_repeat(prepared, hashes, tmp_path, "", False, material_kind, 1, 5, observe)
+    assert actual == (objective, runs, panel, fresh)
+    assert counts == {"active": 0, "peak": 2}
+    assert len(progress) == 16 and progress[-1] == "Повтор 1/5: выполнено проверок 16/16"
 
 
 def test_prepared_media_resume_uses_saved_bytes_even_for_renamed_upload(tmp_path, monkeypatch):

@@ -1,5 +1,6 @@
 """Bound concurrent work, preserve complete panels and discard failed media."""
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 import hashlib
 from pathlib import Path
 import subprocess
@@ -26,6 +27,75 @@ def test_another_analysis_cannot_overlap_and_lock_recovers_after_failure():
             raise ValueError("failed stage")
     with resources.analysis_slot():
         pass
+
+
+def test_waiting_analyses_start_automatically_in_fifo_order():
+    queued = [threading.Event(), threading.Event()]
+    started = []
+    notices = [[], []]
+
+    def job(number):
+        def progress(message):
+            notices[number].append(message)
+            queued[number].set()
+        with resources.analysis_slot(wait=True, progress=progress, timeout=3):
+            started.append(number)
+            # The active heavy job keeps the single server slot.
+            with pytest.raises(resources.AnalysisBusy):
+                with resources.analysis_slot():
+                    pass
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        with resources.analysis_slot():
+            first = pool.submit(job, 0)
+            assert queued[0].wait(1)
+            second = pool.submit(job, 1)
+            assert queued[1].wait(1)
+            assert not started
+        first.result(timeout=4)
+        second.result(timeout=4)
+    assert started == [0, 1]
+    assert any("роликов: 1" in notice for notice in notices[0])
+    assert any("роликов: 2" in notice for notice in notices[1])
+    assert not resources._ANALYSIS_QUEUE and not resources._ANALYSIS_LOCK.locked()
+
+
+@pytest.mark.parametrize("failure", ["cancelled", "timeout"])
+def test_abandoned_waiter_is_removed_without_blocking_next_job(failure):
+    class PageStopped(BaseException):
+        pass
+
+    def wait():
+        def progress(_):
+            if failure == "cancelled":
+                raise PageStopped()
+        with resources.analysis_slot(wait=True, progress=progress, timeout=.03):
+            pytest.fail("An active job was bypassed")
+
+    expected = PageStopped if failure == "cancelled" else resources.AnalysisBusy
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        with resources.analysis_slot():
+            with pytest.raises(expected):
+                pool.submit(wait).result(timeout=2)
+    assert not resources._ANALYSIS_QUEUE
+    with resources.analysis_slot(wait=True, timeout=.1):
+        pass
+
+
+def test_request_budget_propagates_to_workers_and_resets(monkeypatch):
+    clock = [100.]
+    monkeypatch.setattr(resources.time, "monotonic", lambda: clock[0])
+    assert resources.request_timeout() == 300
+    with resources.analysis_deadline(1800):
+        assert resources.request_timeout() == 120
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            assert pool.submit(copy_context().run, resources.request_timeout).result() == 120
+        clock[0] = 1890.
+        assert resources.request_timeout() == 10
+        clock[0] = 1901.
+        with pytest.raises(resources.AnalysisTimeout):
+            resources.request_timeout()
+    assert resources.request_timeout() == 300
 
 
 def test_file_hash_streams_instead_of_loading_whole_upload(tmp_path, monkeypatch):

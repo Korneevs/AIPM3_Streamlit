@@ -6,7 +6,7 @@ import json
 import math
 import time
 from . import message_delivery_runtime as md
-from .runtime_resources import file_sha256
+from .runtime_resources import AnalysisTimeout, file_sha256, request_timeout
 from .latest_contracts import MODEL, BASE_URL
 
 VERSION='independent-video-evidence-v4'
@@ -92,24 +92,26 @@ def _collect_unlocked(*,source_video,output_root,api_key=None,allow_live=False,p
         if encoded is None:encoded=base64.b64encode(prepared.read_bytes()).decode()
         if progress:progress(f'Проверяем наблюдения по видео: {repeat}/3')
         from openai import OpenAI
-        with OpenAI(api_key=api_key,base_url=BASE_URL,timeout=300,max_retries=0) as client:
-            for attempt in range(3):
-                try:
+        for attempt in range(3):
+            try:
+                with OpenAI(api_key=api_key,base_url=BASE_URL,timeout=request_timeout(),max_retries=0) as client:
                     response=client.chat.completions.create(model=MODEL,temperature=0,
                       messages=[{'role':'user','content':[{'type':'text','text':PROMPT},
                       {'type':'image_url','image_url':{'url':'data:video/mp4;base64,'+encoded}}]}],response_format=response_schema())
-                    data=dict(evidence_version=4,values=json.loads(response.choices[0].message.content),
-                        source_sha=sha,prepared_sha256=prepared_sha,repeat=repeat,model=response.model,request_id=response.id,
-                        prompt_sha=PROMPT_SHA,usage=response.usage.model_dump() if response.usage else None)
-                    (root/f'attempt_{repeat}_{attempt}.json').write_text(json.dumps(data,ensure_ascii=False,indent=2))
-                    validate_evidence(data,sha,duration)
-                    tmp=dest.with_suffix('.tmp');tmp.write_text(json.dumps(data,ensure_ascii=False,indent=2));tmp.replace(dest)
-                    rows.append(data);break
-                except Exception as exc:
-                    # Retain failure class, never HTTP bodies or credentials.
-                    (root/f'failure_{repeat}_{attempt}.json').write_text(json.dumps({'type':type(exc).__name__,'status':getattr(exc,'status_code',None),'validation_reason':str(exc)[:160] if isinstance(exc,ValueError) else None}))
-                    if attempt==2:raise RuntimeError('Independent video evidence failed: '+type(exc).__name__) from None
-                    time.sleep(2)
+                data=dict(evidence_version=4,values=json.loads(response.choices[0].message.content),
+                    source_sha=sha,prepared_sha256=prepared_sha,repeat=repeat,model=response.model,request_id=response.id,
+                    prompt_sha=PROMPT_SHA,usage=response.usage.model_dump() if response.usage else None)
+                (root/f'attempt_{repeat}_{attempt}.json').write_text(json.dumps(data,ensure_ascii=False,indent=2))
+                validate_evidence(data,sha,duration)
+                tmp=dest.with_suffix('.tmp');tmp.write_text(json.dumps(data,ensure_ascii=False,indent=2));tmp.replace(dest)
+                rows.append(data);break
+            except AnalysisTimeout:
+                raise
+            except Exception as exc:
+                # Retain failure class, never HTTP bodies or credentials.
+                (root/f'failure_{repeat}_{attempt}.json').write_text(json.dumps({'type':type(exc).__name__,'status':getattr(exc,'status_code',None),'validation_reason':str(exc)[:160] if isinstance(exc,ValueError) else None}))
+                if attempt==2:raise RuntimeError('Independent video evidence failed: '+type(exc).__name__) from None
+                time.sleep(2)
     if len({x['request_id'] for x in rows})!=3:raise ValueError('Evidence readings are not independent requests')
     return rows
 
@@ -127,6 +129,8 @@ def collect_full_evidence(**kwargs):
     try:
         alignment=collect_alignment_evidence(**kwargs)
         return [dict(row,alignment_evidence=a) for row,a in zip(rows,alignment)]
+    except AnalysisTimeout:
+        raise
     except Exception:
         # Scores and other observations remain usable; alignment stays unverified.
         return rows
