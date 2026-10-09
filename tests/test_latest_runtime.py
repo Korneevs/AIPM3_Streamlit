@@ -329,6 +329,84 @@ def test_parallel_measurements_preserve_sequential_aggregation_and_bound_payload
     assert len(progress) == 16 and progress[-1] == "Повтор 1/5: выполнено проверок 16/16"
 
 
+@pytest.mark.parametrize("first_fails", [False, True])
+def test_shared_queue_keeps_multiple_users_in_order_through_final_checks(tmp_path, monkeypatch, first_fails):
+    from concurrent.futures import ThreadPoolExecutor
+    from aipm3 import runtime_resources
+    sources = [tmp_path / f"user_{i}.mp4" for i in range(4)]
+    for i, source in enumerate(sources):
+        source.write_bytes(f"video {i}".encode())
+    events = []
+    queued = [threading.Event() for _ in sources]
+    final_checks = [threading.Event() for _ in sources]
+    released = [threading.Event() for _ in sources]
+    advanced = threading.Event()
+    positions = [[] for _ in sources]
+
+    def physical(source, _):
+        assert runtime_resources._ANALYSIS_LOCK.locked()
+        events.append(("analysis", int(source.stem.rsplit("_", 1)[1])))
+        return {"phys__duration": 15.}
+
+    monkeypatch.setattr(pipeline, "_physical", physical)
+    monkeypatch.setattr(pipeline, "_prepare_inputs", lambda source, _: {
+        key: source for key in ("aipm1", "aipm2", "panel", "fresh")})
+    monkeypatch.setattr(pipeline, "_measure_repeat", lambda *args: ({}, {"aipm1": [], "aipm2": []}, [], {}))
+    monkeypatch.setattr(pipeline, "rows_from_measurements", lambda *args, **kwargs: {})
+    monkeypatch.setattr(pipeline, "score_feature_rows", lambda *args, **kwargs: {"scores": {"Q": .1}})
+    monkeypatch.setattr(pipeline.md, "video_duration", lambda _: 15.)
+
+    def job(number):
+        def waiting(position):
+            positions[number].append(position)
+            if position:
+                queued[number].set()
+            if number == 2 and position == 1:
+                advanced.set()
+        def finish(result):
+            assert runtime_resources._ANALYSIS_LOCK.locked()
+            final_checks[number].set()
+            if number < 2:
+                assert released[number].wait(5)
+            events.append(("complete", number))
+            if number == 0 and first_fails:
+                raise ValueError("final check failed")
+            return dict(result, checked=True)
+        return pipeline.run_latest_analysis(source_video=sources[number], output_root=tmp_path / "cache",
+            family=f"user_{number}", record=f"user_{number}",
+            material_kind="finished" if number % 2 == 0 else "neuromatics",
+            on_queue=waiting, postprocess=finish)
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        jobs = [pool.submit(job, 0)]
+        try:
+            if not final_checks[0].wait(2):
+                jobs[0].result(timeout=1)
+                pytest.fail("First job did not reach its final checks")
+            for number in range(1, 4):
+                jobs.append(pool.submit(job, number))
+                assert queued[number].wait(2)
+                assert positions[number][0] == number
+            assert events == [("analysis", 0)]
+            released[0].set()
+            assert final_checks[1].wait(2)
+            assert advanced.wait(2)
+            assert not final_checks[2].is_set()
+            released[1].set()
+            for number, future in enumerate(jobs):
+                if number == 0 and first_fails:
+                    with pytest.raises(ValueError, match="final check failed"):
+                        future.result(timeout=3)
+                else:
+                    assert future.result(timeout=3)["checked"] is True
+        finally:
+            for event in released:
+                event.set()
+    assert events == [(phase, number) for number in range(4) for phase in ("analysis", "complete")]
+    assert all(p[-1] == 0 for p in positions)
+    assert not runtime_resources._ANALYSIS_QUEUE and not runtime_resources._ANALYSIS_LOCK.locked()
+
+
 def test_prepared_media_resume_uses_saved_bytes_even_for_renamed_upload(tmp_path, monkeypatch):
     first, second = tmp_path / "one.mp4", tmp_path / "renamed.mov"
     first.write_bytes(b"source")
