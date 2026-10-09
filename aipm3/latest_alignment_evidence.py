@@ -8,7 +8,7 @@ import fcntl
 import time
 from datetime import datetime, timezone
 from . import latest_contracts, message_delivery_runtime as media
-from .runtime_resources import file_sha256
+from .runtime_resources import AnalysisTimeout, file_sha256, request_timeout
 
 VERSION = "alignment-structured-evidence-v2-20261002"
 LEGACY_CONTRACTS = {
@@ -201,7 +201,7 @@ def collect_alignment_evidence(*,source_video,output_root,api_key=None,allow_liv
             from openai import OpenAI
             for attempt in range(3):
                 try:
-                    with OpenAI(api_key=api_key,base_url=BASE_URL,timeout=300,max_retries=0) as client:
+                    with OpenAI(api_key=api_key,base_url=BASE_URL,timeout=request_timeout(),max_retries=0) as client:
                         response=client.chat.completions.create(model=MODEL,temperature=0,response_format=response_schema(),
                           messages=[{'role':'user','content':[{'type':'text','text':PROMPT},
                           {'type':'image_url','image_url':{'url':'data:video/mp4;base64,'+encoded}}]}])
@@ -212,6 +212,8 @@ def collect_alignment_evidence(*,source_video,output_root,api_key=None,allow_liv
                     write_json(root/f'attempt_{repeat}_{attempt}.json',row)
                     validate_record(row,sha,prepared_sha,repeat,duration)
                     write_json(dest,row);rows.append(row);break
+                except AnalysisTimeout:
+                    raise
                 except Exception as exc:
                     write_json(root/f'failure_{repeat}_{attempt}.json',dict(type=type(exc).__name__,status=getattr(exc,'status_code',None)))
                     if attempt==2:raise RuntimeError('Alignment evidence failed: '+type(exc).__name__) from None

@@ -37,7 +37,7 @@ def interpretation():
                 interpretation_note="Отдельную правку нужно проверить на новой версии.", evidence_runs=3)
 
 
-@pytest.mark.parametrize("repeat_count", [3, 10])
+@pytest.mark.parametrize("repeat_count", [3, 5, 10])
 def test_result_page_shows_three_indices_and_preserves_associations(repeat_count):
     source = (ROOT / "app_pages/latest_pretest.py").read_text().split('\nif __name__ in {')[0]
     app = AppTest.from_string(source + '\nshow_latest_result(st.session_state["result"], st.session_state["interpretation"])\n')
@@ -193,6 +193,12 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
 
     def analyze(**kwargs):
         calls.append(kwargs)
+        kwargs["progress"]("В очереди. Перед вами роликов: 1. Анализ начнётся автоматически.")
+        kwargs["progress"]("Подготавливаем ролик")
+        count = kwargs["repeat_count"]
+        kwargs["progress"](f"Повтор {count}/{count}: выполнено проверок 16/16")
+        kwargs["progress"]("Проверяем наблюдения по видео: 1/3")
+        kwargs["progress"]("Проверяем показанные действие и результат: 3/3")
         return {"material_kind": kind, "scoring_version": latest_runtime.scoring_version_for(kind),
                 "scores": {"Q": .04, "OPM": .2}}
 
@@ -206,7 +212,7 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
     assert not reviews
     assert any("Анализ и проверка наблюдений" in caption.value for caption in app.caption)
     if kind == "neuromatics":
-        assert any("10 раз; итоговые оценки усредняются" in caption.value for caption in app.caption)
+        assert any("5 раз; итоговые оценки усредняются" in caption.value for caption in app.caption)
     vertical = app.selectbox(key=f"latest_{kind}_vertical")
     selected_vertical = vertical.options[-1]
     vertical.select(selected_vertical).run(timeout=30)
@@ -222,12 +228,13 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
     assert not app.exception
     assert len(calls) == 1
     assert calls[0]["material_kind"] == kind
-    assert calls[0]["repeat_count"] == (10 if kind == "neuromatics" else 3)
+    assert calls[0]["repeat_count"] == (5 if kind == "neuromatics" else 3)
     assert calls[0]["allow_live"] is True
     assert calls[0]["api_key"] == "test-key"
     assert len(reviews) == 1
     assert app.session_state[f"latest_{kind}_result"]["source_name"] == "replacement.mp4"
     assert len(app.tabs) == 3
+    assert app.get("progress")[0].proto.value == 100
     app.run(timeout=30)
     assert not app.exception
     assert len(calls) == 1

@@ -2,31 +2,94 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from collections import deque
+from contextvars import ContextVar
 import hashlib
 import json
 import os
 from pathlib import Path
 import subprocess
 import threading
+import time
 import uuid
 
 
 _ANALYSIS_LOCK = threading.Lock()
 _MEDIA_LOCK = threading.Lock()
+_QUEUE_CONDITION = threading.Condition()
+_ANALYSIS_QUEUE = deque()
+_REQUEST_DEADLINE = ContextVar("aipm_request_deadline", default=None)
 
 
 class AnalysisBusy(RuntimeError):
     pass
 
 
+class AnalysisTimeout(RuntimeError):
+    pass
+
+
 @contextmanager
-def analysis_slot():
-    if not _ANALYSIS_LOCK.acquire(blocking=False):
-        raise AnalysisBusy("Сервер уже анализирует другой ролик. Дождитесь завершения и повторите запуск.")
+def analysis_slot(*, wait=False, progress=None, timeout=2700):
+    """Keep one heavy job active; optionally wait in a cancellable FIFO queue."""
+    ticket = object()
+    acquired = False
+    started = time.monotonic()
+    if not wait:
+        with _QUEUE_CONDITION:
+            acquired = not _ANALYSIS_QUEUE and _ANALYSIS_LOCK.acquire(blocking=False)
+        if not acquired:
+            raise AnalysisBusy("Сервер уже анализирует другой ролик. Дождитесь завершения и повторите запуск.")
+    else:
+        with _QUEUE_CONDITION:
+            _ANALYSIS_QUEUE.append(ticket)
+    try:
+        if wait:
+            last_notice = None
+            while not acquired:
+                with _QUEUE_CONDITION:
+                    if _ANALYSIS_QUEUE[0] is ticket and _ANALYSIS_LOCK.acquire(blocking=False):
+                        _ANALYSIS_QUEUE.popleft()
+                        acquired = True
+                        break
+                    ahead = _ANALYSIS_QUEUE.index(ticket) + int(_ANALYSIS_LOCK.locked())
+                elapsed = time.monotonic() - started
+                if elapsed >= timeout:
+                    raise AnalysisBusy("Не удалось дождаться запуска анализа. Повторите запуск позже.")
+                notice = (ahead, int(elapsed // 5))
+                if progress and notice != last_notice:
+                    progress(f"В очереди. Перед вами роликов: {ahead}. Анализ начнётся автоматически.")
+                    last_notice = notice
+                with _QUEUE_CONDITION:
+                    _QUEUE_CONDITION.wait(timeout=min(1.0, timeout - elapsed))
+        yield
+    finally:
+        with _QUEUE_CONDITION:
+            if acquired:
+                _ANALYSIS_LOCK.release()
+            elif ticket in _ANALYSIS_QUEUE:
+                _ANALYSIS_QUEUE.remove(ticket)
+            _QUEUE_CONDITION.notify_all()
+
+
+@contextmanager
+def analysis_deadline(seconds=1800):
+    """Propagate the job budget to requests, including copied worker contexts."""
+    token = _REQUEST_DEADLINE.set(time.monotonic() + seconds)
     try:
         yield
     finally:
-        _ANALYSIS_LOCK.release()
+        _REQUEST_DEADLINE.reset(token)
+
+
+def request_timeout(max_seconds=300):
+    deadline = _REQUEST_DEADLINE.get()
+    if deadline is None:
+        return max_seconds
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise AnalysisTimeout("Анализ занял слишком много времени. Готовые этапы сохранены; повторите запуск.")
+    return min(max_seconds, 120, remaining)
 
 
 def file_sha256(path: Path) -> str:
