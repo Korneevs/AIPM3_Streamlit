@@ -213,6 +213,8 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
     assert any("Анализ и проверка наблюдений" in caption.value for caption in app.caption)
     if kind == "neuromatics":
         assert any("5 раз; итоговые оценки усредняются" in caption.value for caption in app.caption)
+    else:
+        assert any("3 раза; итоговые оценки усредняются" in caption.value for caption in app.caption)
     vertical = app.selectbox(key=f"latest_{kind}_vertical")
     selected_vertical = vertical.options[-1]
     vertical.select(selected_vertical).run(timeout=30)

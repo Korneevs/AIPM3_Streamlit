@@ -164,7 +164,8 @@ def main(material_kind: str = "finished") -> None:
             st.video(uploaded)
         live_btn = st.sidebar.button("Проанализировать ролик", type="primary", use_container_width=True,
                                key=prefix + "live")
-        st.caption(f"Ролик оценивается {analysis_repeats} раз; итоговые оценки усредняются. "
+        st.caption(f"Ролик оценивается {analysis_repeats} {'раза' if analysis_repeats == 3 else 'раз'}; "
+                   "итоговые оценки усредняются. "
                    "Анализ и проверка наблюдений могут занять несколько минут. "
                    "Если сервер занят, ролик встанет в очередь и анализ начнётся автоматически.")
         if live_btn:
