@@ -23,9 +23,9 @@ MESSAGE_BUNDLE_DIR = Path(__file__).resolve().parent / "message_bundle" / "20261
 SCORING_VERSION = "three-heads-no-screen-number-20261008"
 NEUROMATICS_SCORING_VERSION = "neuromatics-finished-means-20261008"
 PROTOCOL_VERSION = "latest-exact-inputs-20261001-v1"
-# Retain saved 3/10-run results; new neuromatics use five complete runs.
+# Retain saved 3/5/10-run results; new analyses use three complete runs.
 ANALYSIS_REPEATS = 3
-NEUROMATICS_ANALYSIS_REPEATS = 5
+NEUROMATICS_ANALYSIS_REPEATS = 3
 MODEL_TASKS = ("n", "m", "r")
 SCORE_NAMES = {"n": "noticeability", "m": "message_delivery", "r": "norm_ad_recall"}
 MATERIAL_LABELS = {"finished": "AIPM3.0 (для готовых)",
