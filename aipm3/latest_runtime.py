@@ -16,7 +16,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from .latest_manual_inputs import (LEGACY_CELEBRITY_VERSION, celebrity_presence,
+from .latest_manual_inputs import (LEGACY_CELEBRITY_VERSIONS, celebrity_presence,
                                    effective_feature_rows, noticeability_multiplier,
                                    recall_multiplier, with_celebrity_review)
 
@@ -275,7 +275,7 @@ def validate_cached_result(result: dict, *, material_kind: str | None = None) ->
         if not np.isclose(result.get("scores", {}).get(name, np.nan), actual,
                           rtol=1e-12, atol=1e-14):
             raise ValueError("Сохранённые оценки не совпадают с признаками ролика.")
-    if (metadata.get("celebrity_review") or {}).get("version") == LEGACY_CELEBRITY_VERSION:
+    if (metadata.get("celebrity_review") or {}).get("version") in LEGACY_CELEBRITY_VERSIONS:
         return with_celebrity_review(recomputed, celebrity_presence(recomputed))
     return recomputed
 
