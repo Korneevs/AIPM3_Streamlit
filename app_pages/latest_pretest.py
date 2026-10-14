@@ -19,7 +19,8 @@ from aipm3.latest_runtime import (
 from aipm3.runtime_resources import AnalysisBusy, AnalysisTimeout
 from aipm3.manager_report import report_cards
 from aipm3.display_calibration import audio_status
-from aipm3.latest_manual_inputs import celebrity_presence, with_celebrity_review
+from aipm3.latest_manual_inputs import (LEGACY_CELEBRITY_VERSION, celebrity_presence,
+                                       with_celebrity_review)
 from aipm3.latest_profile_ui import show_summary, show_profile
 from aipm3.neuromatics_manager import VERSION as MANAGER_VERSION, FINISHED_VERSION
 from aipm3.manager_display import VERSION as DISPLAY_VERSION
@@ -271,6 +272,9 @@ def main(material_kind: str = "finished") -> None:
         if material_kind_for_result(result) != material_kind:
             st.error("Сохранённый результат относится к другому типу материала. Откройте соответствующий раздел.")
             st.stop()
+        if (result.get("celebrity_review") or {}).get("version") == LEGACY_CELEBRITY_VERSION:
+            result = validate_cached_result(result, material_kind=material_kind)
+            st.session_state[result_key] = result
         st.caption(result.get("source_name", result.get("name", result.get("record", ""))))
         present = celebrity_presence(result)
         selected_celebrity = st.sidebar.checkbox(

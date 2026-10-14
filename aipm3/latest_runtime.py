@@ -16,7 +16,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from .latest_manual_inputs import effective_feature_rows, recall_multiplier
+from .latest_manual_inputs import (LEGACY_CELEBRITY_VERSION, celebrity_presence,
+                                   effective_feature_rows, noticeability_multiplier,
+                                   recall_multiplier, with_celebrity_review)
 
 BUNDLE_DIR = Path(__file__).resolve().parent / "latest_bundle" / "20261001"
 MESSAGE_BUNDLE_DIR = Path(__file__).resolve().parent / "message_bundle" / "20261008"
@@ -223,6 +225,10 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
     for name in ("norm_ad_recall", "Q"):
         per_repeat[name] *= factor
         scores[name] *= factor
+    factor = noticeability_multiplier(metadata or {})
+    for name in ("noticeability", "OPM", "Q"):
+        per_repeat[name] *= factor
+        scores[name] *= factor
     result = dict(metadata or {})
     result["metadata"] = {**dict(metadata or {}), "material_kind": material_kind}
     result.update(
@@ -269,6 +275,8 @@ def validate_cached_result(result: dict, *, material_kind: str | None = None) ->
         if not np.isclose(result.get("scores", {}).get(name, np.nan), actual,
                           rtol=1e-12, atol=1e-14):
             raise ValueError("Сохранённые оценки не совпадают с признаками ролика.")
+    if (metadata.get("celebrity_review") or {}).get("version") == LEGACY_CELEBRITY_VERSION:
+        return with_celebrity_review(recomputed, celebrity_presence(recomputed))
     return recomputed
 
 

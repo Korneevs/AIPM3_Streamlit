@@ -7,7 +7,9 @@ import pandas as pd
 import pytest
 
 from aipm3 import latest_runtime as runtime
-from aipm3.latest_manual_inputs import with_celebrity_review, effective_feature_rows
+from aipm3.latest_manual_inputs import (CELEBRITY_VERSION, LEGACY_CELEBRITY_VERSION,
+                                       with_celebrity_review, effective_feature_rows,
+                                       noticeability_multiplier)
 from aipm3.latest_interpretation import build_latest_interpretation, public_result
 from aipm3.manager_report import report_cards
 
@@ -49,9 +51,59 @@ def test_manual_presence_replaces_detector_and_scales_recall_once(result):
     effective = effective_feature_rows(adjusted["feature_rows"], adjusted)
     assert all(r["is_celeb"] == 1 for r in effective["n"])
     expected_n = runtime.load_models(result["material_kind"]).heads["n"].predict(pd.DataFrame(effective["n"]))
-    np.testing.assert_allclose([p["noticeability"] for p in adjusted["per_repeat"]], expected_n)
+    np.testing.assert_allclose([p["noticeability"] for p in adjusted["per_repeat"]], expected_n * 1.3)
     for p in adjusted["per_repeat"]:
+        assert p["OPM"] == pytest.approx(p["noticeability"] * p["message_delivery"])
         assert p["Q"] == pytest.approx(p["noticeability"] * p["message_delivery"] * p["norm_ad_recall"])
+
+
+def test_legacy_manual_result_is_validated_then_upgraded_without_compounding(result):
+    current = with_celebrity_review(result, True)
+    legacy = deepcopy(current)
+    for metadata in (legacy, legacy["metadata"]):
+        metadata["celebrity_review"]["version"] = LEGACY_CELEBRITY_VERSION
+    for name in ("noticeability", "OPM", "Q"):
+        legacy["scores"][name] /= 1.3
+        for row in legacy["per_repeat"]:
+            row[name] /= 1.3
+    before = deepcopy(legacy)
+    upgraded = runtime.validate_cached_result(legacy)
+    assert legacy == before
+    assert upgraded["celebrity_review"]["version"] == CELEBRITY_VERSION
+    assert upgraded["scores"] == pytest.approx(current["scores"])
+    assert runtime.validate_cached_result(upgraded)["scores"] == upgraded["scores"]
+    wrong = deepcopy(legacy)
+    wrong["scores"]["noticeability"] *= 1.3
+    with pytest.raises(ValueError, match="оценки"):
+        runtime.validate_cached_result(wrong)
+
+
+def test_noticeability_bonus_requires_current_source_bound_manual_presence(result):
+    assert noticeability_multiplier(result) == 1.0
+    assert noticeability_multiplier(dict(result, celebrity_review=None)) == 1.0
+    assert noticeability_multiplier(with_celebrity_review(result, False)) == 1.0
+    assert noticeability_multiplier(with_celebrity_review(result, True)) == 1.3
+
+
+@pytest.mark.parametrize("repeat_count", [5, 10])
+@pytest.mark.parametrize("kind", ["finished", "neuromatics"])
+def test_noticeability_bonus_scales_existing_manual_policy_for_all_run_lengths(rows, repeat_count, kind):
+    data = {task: pd.DataFrame([frame.iloc[0].to_dict() for _ in range(repeat_count)])
+            for task, frame in rows.items()}
+    for frame in data.values():
+        frame["repeat"] = range(1, repeat_count + 1)
+    legacy = runtime.score_feature_rows(data, metadata={"source_sha": "a" * 64,
+        "celebrity_review": {"version": LEGACY_CELEBRITY_VERSION, "present": True,
+                             "source_sha": "a" * 64, "origin": "user_declared"}},
+        material_kind=kind, repeat_count=repeat_count)
+    adjusted = with_celebrity_review(legacy, True)
+    for name in ("noticeability", "OPM", "Q"):
+        assert adjusted["scores"][name] == pytest.approx(legacy["scores"][name] * 1.3)
+        np.testing.assert_allclose([p[name] for p in adjusted["per_repeat"]],
+                                   [p[name] * 1.3 for p in legacy["per_repeat"]])
+    for name in ("message_delivery", "norm_ad_recall"):
+        assert adjusted["scores"][name] == legacy["scores"][name]
+    assert runtime.validate_cached_result(adjusted)["scores"] == adjusted["scores"]
 
 
 def test_export_reload_keeps_flag_and_rejects_cross_video_or_changed_scores(result):

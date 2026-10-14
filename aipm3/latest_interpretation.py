@@ -13,7 +13,8 @@ import re
 import sys
 import numpy as np
 import pandas as pd
-from .latest_manual_inputs import effective_feature_rows, celebrity_presence, recall_multiplier
+from .latest_manual_inputs import (effective_feature_rows, celebrity_presence,
+                                   noticeability_multiplier, recall_multiplier)
 
 VERSION = 'manager-decisions-v8-local-criticism-manual-celebrity'
 NAMES = {'n':'Заметность', 'm':'Считываемость', 'r':'Запоминаемость'}
@@ -373,7 +374,8 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
         coverage=1-missed_mass/total_mass if total_mass else 1.
         partial=coverage<.75 or any(abs(d['index_points'])>=5 for d in unresolved)
         unadjusted_score=score
-        factor=recall_multiplier(result) if task=='r' else 1.
+        factor=(recall_multiplier(result) if task=='r' else
+                noticeability_multiplier(result) if task=='n' else 1.)
         score*=factor;spread*=factor
         bgpred=predict(bg);q1,q2=np.quantile(bgpred,[1/3,2/3])
         level='Выше типичного уровня' if score>q2 else 'Ниже типичного уровня' if score<q1 else 'Типичный уровень'
