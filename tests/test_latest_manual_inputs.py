@@ -183,7 +183,9 @@ def test_checkbox_updates_cached_result_without_calls_and_survives_reopen(result
     monkeypatch.setenv(env, str(preset))
     monkeypatch.setattr(latest_pipeline, "run_latest_analysis", lambda **kw: pytest.fail("Unexpected analysis"))
     page = "latest_pretest.py" if kind == "finished" else "neuromatics_pretest.py"
-    app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app_pages" / page)).run(timeout=45)
+    app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app_pages" / page))
+    app.session_state[f"latest_{kind}_source"] = "Открыть сохранённый результат"
+    app.run(timeout=45)
     assert not app.exception
     key = f"latest_{kind}_celebrity_" + result["source_sha"]
     assert app.checkbox(key=key).value is False

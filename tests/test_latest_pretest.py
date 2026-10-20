@@ -98,6 +98,10 @@ def test_loading_local_page_and_missing_upload_never_dispatch_live_calls(kind, p
     monkeypatch.setattr(latest_pipeline, "run_latest_analysis", lambda **_: pytest.fail("Unexpected analysis"))
     app = AppTest.from_file(str(ROOT / "app_pages" / page)).run()
     assert not app.exception
+    assert app.checkbox(key=f"latest_{kind}_upload_celebrity").value is False
+    app.checkbox(key=f"latest_{kind}_upload_celebrity").check().run()
+    assert not app.exception
+    assert f"latest_{kind}_result" not in app.session_state
     assert [button.label for button in app.button] == ["Проанализировать ролик"]
     assert app.button[0].proto.type == "primary"
     app.button(key=f"latest_{kind}_live").click().run()
@@ -188,7 +192,8 @@ def test_saved_result_of_wrong_material_is_rejected(kind, page, monkeypatch):
     ("finished", "latest_pretest.py"),
     ("neuromatics", "neuromatics_pretest.py"),
 ])
-def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, page, monkeypatch):
+@pytest.mark.parametrize("celebrity", [False, True])
+def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, page, celebrity, monkeypatch):
     from io import BytesIO
     import streamlit as st
 
@@ -199,7 +204,17 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
     monkeypatch.setattr(st, "file_uploader", lambda *_, **__: uploaded)
     calls = []
     reviews = []
+    manual_choices = []
     from aipm3 import interpretation_checker
+
+    def apply_manual_choice(result, present):
+        manual_choices.append(present)
+        return dict(result, source_sha="a" * 64, celebrity_review={
+            "version": latest_manual_inputs.CELEBRITY_VERSION,
+            "source_sha": "a" * 64, "present": present,
+        })
+
+    monkeypatch.setattr(latest_manual_inputs, "with_celebrity_review", apply_manual_choice)
 
     def review(draft, **kwargs):
         reviews.append(draft)
@@ -207,7 +222,8 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
 
     monkeypatch.setattr(interpretation_checker, "review_draft", review)
 
-    def explain(*_, **__):
+    def explain(result, **_):
+        assert latest_manual_inputs.celebrity_presence(result) is celebrity
         content = interpretation()
         content.update(material_kind=kind, manager_semantic={
             "profiles": {task: [] for task in 'nmr'}, "fingerprint": "test-draft"})
@@ -242,6 +258,8 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
     vertical.select(selected_vertical).run(timeout=30)
     assert not app.exception
     assert not calls
+    app.checkbox(key=f"latest_{kind}_upload_celebrity").set_value(celebrity).run(timeout=30)
+    assert not calls and not manual_choices and not reviews
     # Replacing a file or rerunning the page must not dispatch the pipeline.
     uploaded = BytesIO(b"replacement-video")
     uploaded.name = "replacement.mp4"
@@ -251,6 +269,7 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
     app.button(key=f"latest_{kind}_live").click().run(timeout=30)
     assert not app.exception
     assert len(calls) == 1
+    assert manual_choices == [celebrity]
     assert calls[0]["material_kind"] == kind
     assert calls[0]["repeat_count"] == 3
     assert calls[0]["allow_live"] is True
@@ -260,6 +279,12 @@ def test_live_action_passes_material_kind_and_uses_selected_repeat_count(kind, p
     assert len(app.tabs) == 3
     assert app.get("progress")[0].proto.value == 100
     assert not app.warning
+    scored = deepcopy(app.session_state[f"latest_{kind}_result"])
+    app.checkbox(key=f"latest_{kind}_upload_celebrity").set_value(not celebrity).run(timeout=30)
+    assert not app.exception
+    assert manual_choices == [celebrity]
+    assert app.session_state[f"latest_{kind}_result"] == scored
+    assert len(calls) == len(reviews) == 1
     app.run(timeout=30)
     assert not app.exception
     assert len(calls) == 1

@@ -160,6 +160,10 @@ def main(material_kind: str = "finished") -> None:
         default_vertical = list(VERTICALS.values()).index(stored_vertical) if stored_vertical in VERTICALS.values() else 0
         vertical = st.sidebar.selectbox("Вертикаль", list(VERTICALS), index=default_vertical,
                                        key=prefix + "vertical")
+        selected_celebrity = st.sidebar.checkbox(
+            "В ролике есть медийная персона",
+            value=celebrity_presence(st.session_state.get(result_key, {})) is True,
+            key=prefix + "upload_celebrity")
         analysis_target = None
         if material_kind == "neuromatics":
             goods = None
@@ -220,8 +224,7 @@ def main(material_kind: str = "finished") -> None:
 
                         def finish_analysis(result):
                             result["source_name"] = uploaded.name
-                            if celebrity_presence(result) is None:
-                                result = with_celebrity_review(result, False)
+                            result = with_celebrity_review(result, selected_celebrity)
                             st.session_state[result_key] = result
                             result["main_idea"] = main_idea(result)
                             if analysis_target:
@@ -265,6 +268,9 @@ def main(material_kind: str = "finished") -> None:
             elif st.session_state[result_key].get("vertical") not in (None, VERTICALS[vertical]):
                 st.info("Вертикаль изменена. Ниже сохранён результат прежнего выбора; "
                         "для обновления нажмите «Проанализировать ролик».")
+            elif celebrity_presence(st.session_state[result_key]) not in (None, selected_celebrity):
+                st.info("Отметка о медийной персоне изменена. Ниже сохранён результат прежнего выбора; "
+                        "для обновления нажмите «Проанализировать ролик».")
 
     if result_key in st.session_state:
         st.divider()
@@ -276,13 +282,14 @@ def main(material_kind: str = "finished") -> None:
             result = validate_cached_result(result, material_kind=material_kind)
             st.session_state[result_key] = result
         st.caption(result.get("source_name", result.get("name", result.get("record", ""))))
-        present = celebrity_presence(result)
-        selected_celebrity = st.sidebar.checkbox(
-            "В ролике есть медийная персона", value=present is True,
-            key=prefix + "celebrity_" + str(result.get("source_sha", result.get("record", ""))))
-        if selected_celebrity != present:
-            result = with_celebrity_review(result, selected_celebrity)
-            st.session_state[result_key] = result
+        if mode == "Открыть сохранённый результат":
+            present = celebrity_presence(result)
+            selected_celebrity = st.sidebar.checkbox(
+                "В ролике есть медийная персона", value=present is True,
+                key=prefix + "celebrity_" + str(result.get("source_sha", result.get("record", ""))))
+            if selected_celebrity != present:
+                result = with_celebrity_review(result, selected_celebrity)
+                st.session_state[result_key] = result
         if material_kind == "neuromatics":
             choices = {"Полнота озвучки не подтверждена": "unknown", "Вся речь есть (можно черновую)": "complete",
                        "Есть только часть речи": "partial", "Речи нет": "absent"}
