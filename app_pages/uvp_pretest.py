@@ -50,6 +50,9 @@ def analyze(uploaded, vertical, key, queued, progress):
 
 
 def show_result(result):
+    import plotly.graph_objects as go
+    from textwrap import wrap
+
     st.subheader("Основная идея ролика")
     st.html(f"<p>{escape(result['main_idea'])}</p>")
     groups = defaultdict(list)
@@ -57,9 +60,23 @@ def show_result(result):
         groups[image["group"]].append(image)
     ordered_groups = sorted(groups.items(), key=lambda item: -max(i["score"] for i in item[1]))
     st.subheader("Как ролик работает на имиджи")
-    for score in sorted({i["score"] for i in result["images"]}, reverse=True):
-        names = [escape(i["label"]) for i in result["images"] if i["score"] == score]
-        st.html(f'<p><b>{LABELS[score]}</b> · {"; ".join(names)}</p>')
+    ranked = sorted(result["images"], key=lambda i: -i["score"])
+    ticks = ["<br>".join(escape(line) for line in wrap(i["label"], width=32)) for i in ranked]
+    fig = go.Figure(go.Scatter(
+        x=[i["score"] for i in ranked], y=list(range(len(ranked))), mode="markers",
+        marker=dict(size=12, color=[COLORS.get(i["score"], ("", "#80382E"))[1] for i in ranked],
+                    symbol=["diamond-open" if i["review"] else "circle" for i in ranked]),
+        text=[escape(i["label"]) for i in ranked],
+        customdata=[LABELS[i["score"]] + (" · Требует проверки" if i["review"] else "") for i in ranked],
+        hovertemplate="%{text}<br>%{customdata} · %{x}<extra></extra>",
+    ))
+    fig.update_yaxes(autorange="reversed", tickmode="array", tickvals=list(range(len(ranked))),
+                     ticktext=ticks, automargin=True, fixedrange=True)
+    fig.update_xaxes(range=[-3.35, 3.35], dtick=1, side="top", fixedrange=True, zeroline=True)
+    fig.update_layout(height=100 + sum(max(32, 16 * (t.count("<br>") + 1) + 9) for t in ticks),
+                      margin=dict(l=0, r=15, t=32, b=8), showlegend=False)
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.caption("Шкала от −3 до +3. Пустой ромб – оценка требует проверки.")
     st.subheader("UVP и связанные с ними имиджи")
     for group, images in ordered_groups:
         st.markdown(f"#### {group}")
