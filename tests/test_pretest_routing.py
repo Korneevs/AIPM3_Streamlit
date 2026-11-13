@@ -11,13 +11,14 @@ except ImportError:
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 
-from aipm3 import latest_pipeline
+from aipm3 import latest_pipeline, uvp_scoring
 
 
 ROOT = Path(__file__).resolve().parents[1]
 ROUTES = {
     "video_pretest": ("AIPM3.0 (для готовых)", "latest_pretest.py"),
     "neuromatics_pretest": ("AIPM3.0 (для нейроматиков)", "neuromatics_pretest.py"),
+    "uvp": ("UVP", "uvp_pretest.py"),
 }
 
 
@@ -31,6 +32,7 @@ def offline_navigation(monkeypatch):
         pytest.fail("Opening or navigating the app must not run inference")
 
     monkeypatch.setattr(latest_pipeline, "run_latest_analysis", forbidden)
+    monkeypatch.setattr(uvp_scoring, "score_video", forbidden)
     # AppTest creates PagesManager without its child-page script cache.
     script_cache = ScriptCache()
     monkeypatch.setattr(PagesManager, "get_page_script_byte_code",
@@ -77,6 +79,17 @@ def test_old_url_cannot_open_legacy_page(offline_navigation):
     assert offline_navigation == ROUTES
     assert app.title[0].value == "🎬 AI-Pretest MesSage · AIPM 3.0"
     assert not any(button.label == "Начать анализ" for button in app.button)
+
+
+def test_uvp_link_opens_standalone_pretest_after_login(offline_navigation):
+    app = open_url("uvp")
+    assert not app.exception
+    assert offline_navigation == ROUTES
+    assert app.title[0].value == "UVP"
+    assert len(app.selectbox) == 1 and app.selectbox[0].label == "Вертикаль"
+    assert app.selectbox[0].value is None
+    assert app.get("file_uploader")[0].proto.id.endswith("uvp_test_upload")
+    assert app.button(key="uvp_test_run").disabled
 
 
 def test_home_describes_both_sections(offline_navigation):

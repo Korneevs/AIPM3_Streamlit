@@ -35,6 +35,9 @@ def home() -> None:
         Приложение показывает, **что модель учла в плюс и в минус**:
         наблюдения по ролику, их вклад в оценку и варианты для проверки.
         Неподтверждённые причины отмечены отдельно.
+
+        В разделе **UVP** можно проверить, какие обещания Авито и имиджи
+        своей вертикали передаёт ролик.
         """
     )
 
@@ -53,5 +56,6 @@ pages = [
 pages.extend([
     st.Page("app_pages/latest_pretest.py", title="AIPM3.0 (для готовых)", icon="🎬", url_path="video_pretest"),
     st.Page("app_pages/neuromatics_pretest.py", title="AIPM3.0 (для нейроматиков)", icon="📝", url_path="neuromatics_pretest"),
+    st.Page("app_pages/uvp_pretest.py", title="UVP", icon="🎯", url_path="uvp"),
 ])
 st.navigation(pages).run()
