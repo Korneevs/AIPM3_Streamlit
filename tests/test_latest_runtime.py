@@ -205,7 +205,10 @@ def test_short_runs_reuse_ten_run_stage_paths_without_overwriting_results(tmp_pa
     def request(kwargs, path, **options):
         assert options["allow_live"] is False
         requests.append(path)
-        if path.parent.name in {"aipm1", "aipm2"}:
+        if path.parent.name == "content-precision-fixed-claim-20261111":
+            payload = ({"main_claim": "main claim", "evidence": "0:01"} if path.name == "claim.json" else
+                       dict(main_claim="main claim", claim=True, function=True, details=[], score=2, reason="function"))
+        elif path.parent.name in {"aipm1", "aipm2"}:
             payload = _sample(kwargs["response_format"])
             if "total_video_duration_sec" in payload:
                 payload["total_video_duration_sec"] = 15
@@ -229,7 +232,7 @@ def test_short_runs_reuse_ten_run_stage_paths_without_overwriting_results(tmp_pa
     result = pipeline.run_latest_analysis(source_video=source, output_root=tmp_path / "cache",
                                          material_kind=material_kind, progress=progress.append,
                                          repeat_count=repeat_count)
-    assert len(requests) == len(set(requests)) == 16 * repeat_count
+    assert len(requests) == len(set(requests)) == 16 * repeat_count + 4
     assert len(result["per_repeat"]) == result["repeat_count"] == result["extraction"]["repeats"] == repeat_count
     assert any(f"{repeat_count}/{repeat_count}" in message for message in progress)
     assert result["extraction"]["transcript_and_recovery_used"] is False
@@ -245,7 +248,7 @@ def test_short_runs_reuse_ten_run_stage_paths_without_overwriting_results(tmp_pa
     requests.clear()
     long_result = pipeline.run_latest_analysis(source_video=source, output_root=tmp_path / "cache",
                                               material_kind=material_kind, repeat_count=10)
-    assert len(requests) == len(set(requests)) == 160
+    assert len(requests) == len(set(requests)) == 164
     assert short_paths.issubset(set(requests))
     assert len(long_result["per_repeat"]) == long_result["repeat_count"] == 10
     assert len(list((tmp_path / "cache").rglob("result_*.json"))) == 2
@@ -275,7 +278,10 @@ def test_parallel_measurements_preserve_sequential_aggregation_and_bound_payload
                 counts["peak"] = max(counts["peak"], counts["active"])
             time.sleep(.01)
         number = 1 if path.name == "fresh.json" else int(path.stem.rsplit("_", 1)[1])
-        if path.parent.name in {"aipm1", "aipm2"}:
+        if path.parent.name == "content-precision-fixed-claim-20261111":
+            payload = ({"main_claim": "main claim", "evidence": "0:01"} if path.name == "claim.json" else
+                       dict(main_claim="main claim", claim=True, function=True, details=[], score=2, reason="function"))
+        elif path.parent.name in {"aipm1", "aipm2"}:
             payload = _sample(kwargs["response_format"])
             # The order of equal votes must remain the call order, even if
             # completions arrive in a different order.
@@ -351,6 +357,8 @@ def test_shared_queue_keeps_multiple_users_in_order_through_final_checks(tmp_pat
     monkeypatch.setattr(pipeline, "_physical", physical)
     monkeypatch.setattr(pipeline, "_prepare_inputs", lambda source, _: {
         key: source for key in ("aipm1", "aipm2", "panel", "fresh")})
+    from aipm3 import content_precision
+    monkeypatch.setattr(content_precision, "measure", lambda *args, **kwargs: {"mean": 2., "protocol_version": "test"})
     monkeypatch.setattr(pipeline, "_measure_repeat", lambda *args: ({}, {"aipm1": [], "aipm2": []}, [], {}))
     monkeypatch.setattr(pipeline, "rows_from_measurements", lambda *args, **kwargs: {})
     monkeypatch.setattr(pipeline, "score_feature_rows", lambda *args, **kwargs: {"scores": {"Q": .1}})

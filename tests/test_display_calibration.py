@@ -5,7 +5,7 @@ from aipm3.latest_runtime import NEUROMATICS_SCORING_VERSION
 
 def test_display_reference_rejects_a_different_model():
     with pytest.raises(ValueError): neuromatics_reference('another-model')
-    assert neuromatics_reference(NEUROMATICS_SCORING_VERSION)['pair_count'] == 12
+    assert neuromatics_reference(NEUROMATICS_SCORING_VERSION)['source'] == 'selected_family_loo'
 
 
 def test_audio_metadata_is_bound_to_the_actual_source_not_filename():

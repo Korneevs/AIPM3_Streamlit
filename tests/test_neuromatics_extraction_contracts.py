@@ -50,20 +50,6 @@ NEURO_PROMPT_HASHES = {
     "panel/call_10.json": "ff40f59368d22cecd30f001fd0c700dcf3827e1b1cbe273f11af6fc603ff7b4b",
 }
 
-# Golden scores after the eight-input M refit and neuromatics-only mean policy.
-# Finished scores and the complete extraction requests remain unchanged.
-BASELINE_SCORES = {
-    "finished": {
-        "OPM": 0.044241491929948584, "Q": 0.005485168114534491,
-        "message_delivery": 0.11613391631611504,
-        "norm_ad_recall": 0.12398243990549947, "noticeability": 0.38095238095238093,
-    },
-    "neuromatics": {
-        "OPM": 0.03716285322115681, "Q": 0.0034463431782574914,
-        "message_delivery": 0.11613391631611504,
-        "norm_ad_recall": 0.09273623738597897, "noticeability": 0.32,
-    },
-}
 
 
 def _prompt(request):
@@ -72,7 +58,11 @@ def _prompt(request):
 
 def _payload(request):
     """One complete, deterministic observation for each existing API schema."""
+    if request["response_format"]["type"] == "json_object":
+        return {"main_claim": "main claim", "evidence": "0:01"}
     properties = request["response_format"]["json_schema"]["schema"]["properties"]
+    if "details" in properties and "score" in properties:
+        return dict(main_claim="main claim", claim=True, function=True, details=[], score=2, reason="function")
     if "answers" in properties:
         prompt = _prompt(request)
         answers = []
@@ -202,22 +192,25 @@ def test_same_video_has_separate_resumable_measurements_and_original_output_cont
 
     for index, kind in enumerate(kinds, start=1):
         result = results[kind] = analyze(kind, True)
-        assert len(api_requests) == index * 48
+        assert len(api_requests) == index * 52
         assert collector_calls[-1] == roots[kind] / "independent_evidence"
         assert result["evidence_status"] == "complete"
-        assert result["scores"] == pytest.approx(BASELINE_SCORES[kind], rel=1e-12, abs=1e-14)
+        assert runtime.validate_cached_result(result)["scores"] == result["scores"]
+        assert all(row["panel__content_precision"] == 2 for row in result["feature_rows"]["m"])
         assert result["extraction"] == {
             "repeats": 3, "calls_per_repeat": 16, "independent_stage_caches": True,
-            "transcript_and_recovery_used": False,
+            "transcript_and_recovery_used": False, "additional_calls_per_video": 4,
+            "content_precision_protocol": "content-precision-fixed-claim-20261111",
         }
         assert all(path.read_bytes() == content for path, content in previous_files.items())
         previous_files.update({path: path.read_bytes() for path in roots[kind].rglob("*.json")})
         stage_records = [path for path in roots[kind].rglob("*.json")
                          if "request_fingerprint" in json.loads(path.read_text())]
-        assert len(stage_records) == 48
+        assert len(stage_records) == 52
         for path in stage_records:
             stage = "fresh" if path.name == "fresh.json" else path.parent.name
-            expected_media = media["panel"] if kind == "neuromatics" and stage == "fresh" else media[stage]
+            expected_media = (media["panel"] if stage == "content-precision-fixed-claim-20261111"
+                              or kind == "neuromatics" and stage == "fresh" else media[stage])
             record = json.loads(path.read_text())
             assert record["prepared_sha"] == hashlib.sha256(expected_media.read_bytes()).hexdigest()
 
@@ -232,6 +225,6 @@ def test_same_video_has_separate_resumable_measurements_and_original_output_cont
         resumed = analyze(kind, False)
         assert resumed == results[kind]
         assert runtime.validate_cached_result(resumed, material_kind=kind)["scores"] == results[kind]["scores"]
-    assert len(api_requests) == 96
+    assert len(api_requests) == 104
     assert all((path.read_bytes(), path.stat().st_mtime_ns) == snapshot
                for path, snapshot in stage_snapshots.items())

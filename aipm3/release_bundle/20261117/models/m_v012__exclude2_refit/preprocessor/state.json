@@ -1,0 +1,72 @@
+{
+  "spec": {
+    "task": "m",
+    "fixed": [
+      "fresh__audiovisual_claim_alignment",
+      "main_character",
+      "panel__distinct_benefit_count",
+      "panel__mandatory_inference_chain_length",
+      "panel__content_precision",
+      "panel__offer_novelty_explanation_need",
+      "panel__product_role_reveal_time_band",
+      "promo"
+    ],
+    "mode": "expanded",
+    "learner": "ridge",
+    "alpha": 100,
+    "target": "log",
+    "step": 0.5,
+    "calibration": null,
+    "repeat_training": true,
+    "panel_consensus": false,
+    "md_refinement": true,
+    "noticeability_weight_power": 2,
+    "C": 1,
+    "gamma": 0.045,
+    "epsilon": 0.15
+  },
+  "columns": [
+    "fresh__audiovisual_claim_alignment",
+    "main_character",
+    "panel__distinct_benefit_count",
+    "panel__mandatory_inference_chain_length",
+    "panel__content_precision",
+    "panel__offer_novelty_explanation_need",
+    "panel__product_role_reveal_time_band",
+    "promo"
+  ],
+  "median": [
+    3.0,
+    0.0,
+    2.066666666666667,
+    1.0,
+    4.0,
+    0.0,
+    1.0,
+    0.0
+  ],
+  "center": [
+    2.660326086956522,
+    0.48097826086956524,
+    2.259420289855075,
+    0.9745471014492757,
+    3.5824275362318856,
+    0.3184782608695652,
+    0.8906702898550729,
+    0.358695652173913
+  ],
+  "scale": [
+    0.49050983034725953,
+    0.49963804242716897,
+    0.7159598146590899,
+    0.1635619524039959,
+    0.5987853250723082,
+    0.4152690801729651,
+    0.7311069860886614,
+    0.4796176407154378
+  ],
+  "target_mean": -1.4298403013272607,
+  "target_scale": 0.3412146171687183,
+  "calibration_intercept": 0.0,
+  "calibration_slope": 1.0
+}

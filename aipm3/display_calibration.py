@@ -3,6 +3,11 @@ import json
 
 
 def neuromatics_reference(scoring_version):
+    from .latest_runtime import NEUROMATICS_SCORING_VERSION, display_reference
+    if scoring_version == NEUROMATICS_SCORING_VERSION:
+        references = display_reference()
+        return dict(version=scoring_version, scoring_version=scoring_version,
+                    source='selected_family_loo', references={**references, 'Q': references['q']})
     from .neuromatics_mean_policy import POLICY_DIR, SCORING_VERSION, artifact_hashes
     if scoring_version == SCORING_VERSION:
         artifact_hashes()

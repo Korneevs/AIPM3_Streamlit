@@ -19,7 +19,7 @@ FEATURE = "numeric_offer_on_screen"
 def frames():
     rows = {}
     for task in "nmr":
-        fit = pd.read_csv(runtime.BUNDLE_DIR / "data" / f"fit_{task}.csv", float_precision="round_trip")
+        fit = pd.read_csv(runtime.RELEASE_BUNDLE_DIR / "data" / f"fit_{task}.csv", float_precision="round_trip")
         frame = pd.DataFrame([fit.iloc[0].to_dict()] * 3)
         frame["record"] = frame["family"] = "m8-regression"
         frame["sha"] = "b" * 64
@@ -29,22 +29,14 @@ def frames():
     return rows
 
 
-def test_new_artifact_is_exact_full_refit_and_original_bundles_are_preserved():
-    module = runtime.model_module()
-    old = module.AIPM3(runtime.BUNDLE_DIR / "models")
-    current = runtime.load_latest_models()
-    spec = deepcopy(old.heads["m"].state["spec"])
-    spec["fixed"].remove(FEATURE)
-    train = pd.read_csv(runtime.BUNDLE_DIR / "data/fit_m.csv", float_precision="round_trip")
-    expected = module.Head.fit(train.drop(columns=[FEATURE]), spec)
-    np.testing.assert_array_equal(current.heads["m"].predict(train), expected.predict(train))
-    assert current.heads["m"].state == expected.state
-    assert [len(current.heads[t].state["columns"]) for t in "nmr"] == [9, 8, 7]
-    for task in "nr":
-        frame = pd.read_csv(runtime.BUNDLE_DIR / "data" / f"fit_{task}.csv", float_precision="round_trip")
-        np.testing.assert_array_equal(current.heads[task].predict(frame), old.heads[task].predict(frame))
+def test_release_preserves_original_artifacts_and_excludes_removed_feature():
     runtime.artifact_hashes()
     runtime.message_artifact_hashes()
+    runtime.artifact_hashes_for()
+    current = runtime.load_latest_models()
+    assert [len(current.heads[t].state["columns"]) for t in "nmr"] == [9, 8, 7]
+    assert FEATURE not in current.heads["m"].state["columns"]
+    assert "panel__content_precision" in current.heads["m"].state["columns"]
 
 
 @pytest.mark.parametrize("kind", ["finished", "neuromatics"])
@@ -61,14 +53,6 @@ def test_absent_or_arbitrary_numeric_input_never_changes_scores_or_explanations(
     assert FEATURE not in interpretation["details"]["m"]["feature_order"]
     assert FEATURE not in {row["feature"] for row in profile_rows(interpretation)["m"]}
     assert interpretation["details"]["m"]["additivity_error"] < 1e-9
-    module = runtime.model_module()
-    old = module.AIPM3(runtime.BUNDLE_DIR / "models")
-    if kind == "neuromatics":
-        old.heads["m"] = runtime.load_latest_models().heads["m"]
-        old = NeuromaticsModels(old, module.coefficient)
-    for task in "nr":
-        np.testing.assert_array_equal(runtime.load_models(kind).heads[task].predict(frames[task]),
-                                      old.heads[task].predict(frames[task]))
 
 
 def test_stored_loo_matches_previously_checked_ablation():
@@ -78,21 +62,12 @@ def test_stored_loo_matches_previously_checked_ablation():
     assert spearmanr(frame.y, frame.previous).statistic == pytest.approx(.6215365773775191, abs=1e-12)
 
 
-def test_display_references_follow_new_message_head_without_changing_nr_calibration():
-    current = json.loads((runtime.MESSAGE_BUNDLE_DIR / "neuromatics_display_reference.json").read_text())
-    original = json.loads((runtime.BUNDLE_DIR.parents[1] / "neuromatics_display_reference.json").read_text())
-    assert current["scoring_version"] == "neuromatics-no-screen-number-20261008"
+def test_display_references_use_the_selected_release_in_both_modes():
     from aipm3.display_calibration import neuromatics_reference
     active = neuromatics_reference(runtime.NEUROMATICS_SCORING_VERSION)
-    assert active["references"]["m"] == current["references"]["m"]
-    for task in "nr":
-        assert current["references"][task] == original["references"][task]
-    train = pd.read_csv(runtime.BUNDLE_DIR / "data/fit_m.csv", float_precision="round_trip")
-    bg = train.sort_values(["family", "record", "repeat"]).groupby("family", sort=True).nth(0)
-    reference = current["references"]["m"]
-    pred = runtime.load_latest_models().heads["m"].predict(bg)
-    assert reference["finished_reference"]["mean"] == pytest.approx(pred.mean(), abs=1e-12)
-    np.testing.assert_allclose(reference["finished_reference"]["cuts"], np.quantile(pred, [1 / 3, 2 / 3]))
+    for task in "nmr":
+        assert active["references"][task] == runtime.display_reference()[task]
+    assert active["source"] == "selected_family_loo"
 
 
 @pytest.mark.parametrize("kind,old_version", [

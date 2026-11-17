@@ -1,0 +1,35 @@
+{
+  "policy": {
+    "character_close_up_seconds": "mean",
+    "is_celeb": "keep",
+    "monologue_to_camera": "keep",
+    "pack_shot_duration_seconds": "mean",
+    "panel__first_core_claim_time_band": "keep",
+    "phys__audio_dynamic_range_db": "mean",
+    "phys__motion_mean": "mean",
+    "product_demo_seconds": "mean",
+    "state_transformation_present": "keep"
+  },
+  "constants": {
+    "character_close_up_seconds": {
+      "model_input_mean": 0.16854796548480763,
+      "design_value": -0.005762076087437019
+    },
+    "pack_shot_duration_seconds": {
+      "model_input_mean": 3.3945454545454545,
+      "design_value": -0.12953176672384206
+    },
+    "phys__audio_dynamic_range_db": {
+      "model_input_mean": 12.393983114415951,
+      "design_value": 0.16323083663530494
+    },
+    "phys__motion_mean": {
+      "model_input_mean": 0.043094497072425755,
+      "design_value": 0.030972096736720394
+    },
+    "product_demo_seconds": {
+      "model_input_mean": 4.2709090909090905,
+      "design_value": -0.06368558426243574
+    }
+  }
+}

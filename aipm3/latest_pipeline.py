@@ -319,6 +319,12 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
         if material_kind == "neuromatics":
             prepared["fresh"] = prepared["panel"]
         prepared_hash = {key: file_sha256(path) for key, path in prepared.items()}
+        from .content_precision import measure as measure_precision
+        if progress:
+            progress("Проверяем точность содержания предложения")
+        precision = measure_precision(prepared["panel"], root / "content_precision",
+            prepared_sha=prepared_hash["panel"], source_sha=sha,
+            api_key=api_key, allow_live=allow_live)
         measurements = []
         for repeat in range(1, repeat_count + 1):
             if progress:
@@ -328,7 +334,8 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
                 prepared, prepared_hash, folder, api_key, allow_live,
                 material_kind, repeat, repeat_count, progress)
             measured = dict(repeat=repeat, source_sha=sha, objective_features=objective,
-                            objective_runs=objective_runs, diagnostic_panel=panel, fresh=fresh)
+                            objective_runs=objective_runs, diagnostic_panel=panel, fresh=fresh,
+                            content_precision=precision)
             _write_json(folder / "measurements.json", measured)
             measurements.append(measured)
         if file_sha256(source_video) != sha:
@@ -346,6 +353,8 @@ def run_latest_analysis(*, source_video: Path, output_root: Path, api_key: str =
                           objective_runs={k: [m["objective_runs"][k] for m in measurements]
                                           for k in ("aipm1", "aipm2")}),
             extraction=dict(repeats=repeat_count, calls_per_repeat=16, independent_stage_caches=True,
+                            additional_calls_per_video=4,
+                            content_precision_protocol=precision["protocol_version"],
                             transcript_and_recovery_used=False),
         ), material_kind=material_kind, repeat_count=repeat_count)
         identity = _fingerprint(dict(scoring=version, material_kind=material_kind, brand=brand, vertical=vertical,

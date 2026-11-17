@@ -17,7 +17,7 @@ from aipm3 import latest_runtime as runtime
 def rows():
     result = {}
     for task in "nmr":
-        history = pd.read_csv(runtime.BUNDLE_DIR / "data" / f"fit_{task}.csv",
+        history = pd.read_csv(runtime.RELEASE_BUNDLE_DIR / "data" / f"fit_{task}.csv",
                               float_precision="round_trip")
         frame = pd.DataFrame([history.iloc[0].to_dict() for _ in range(10)])
         frame["record"] = "interpretation-neuromatics"
@@ -39,7 +39,7 @@ def rows():
 
 
 def _background(task):
-    frame = pd.read_csv(runtime.BUNDLE_DIR / "data" / f"fit_{task}.csv",
+    frame = pd.read_csv(runtime.RELEASE_BUNDLE_DIR / "data" / f"fit_{task}.csv",
                         float_precision="round_trip")
     order = [column for column in ("family", "record", "repeat") if column in frame]
     return frame.sort_values(order).groupby("family", sort=True).nth(0).reset_index(drop=True)
@@ -59,9 +59,13 @@ def neuro_explanation(neuro_result):
 def test_selected_head_design_and_exact_shap_match_every_prediction(rows, neuro_result,
                                                                    neuro_explanation, task):
     head = runtime.load_models("neuromatics").heads[task]
-    design, background, predict = interpretation.design_predictor(head, rows[task], _background(task))
-    np.testing.assert_allclose(predict(design), head.predict(rows[task]), atol=1e-12, rtol=0)
-    np.testing.assert_allclose(predict(background), head.predict(_background(task)), atol=1e-12, rtol=0)
+    model = runtime.load_models("neuromatics")
+    bg = model.attribution_background(task, _background(task))
+    components = head.attribution_components(rows[task], bg)
+    prediction = sum(c['weight'] * c['predict'](c['x']) for c in components)
+    background_prediction = sum(c['weight'] * c['predict'](c['background']) for c in components)
+    np.testing.assert_allclose(prediction, head.predict(rows[task]), atol=1e-12, rtol=0)
+    np.testing.assert_allclose(background_prediction, head.predict(bg), atol=1e-12, rtol=0)
     details = neuro_explanation["details"][task]
     np.testing.assert_allclose(details["expected"] + np.asarray(details["per_repeat_shap"]).sum(axis=1),
                                details["per_repeat_scores"], atol=1e-9, rtol=0)
@@ -74,7 +78,7 @@ def test_default_finished_interpretation_preserves_frozen_model(rows):
     result = runtime.score_feature_rows(rows)
     default = interpretation.build_latest_interpretation(result)
     frozen = interpretation.build_latest_interpretation(
-        result, model=runtime.load_latest_models(), bundle_dir=runtime.BUNDLE_DIR)
+        result, model=runtime.load_latest_models(), bundle_dir=runtime.RELEASE_BUNDLE_DIR)
     assert runtime.clean_json(default) == runtime.clean_json(frozen)
     assert default["overall"]["title"] == "AIPM 3.0"
     assert default["material_kind"] == "finished"
@@ -98,7 +102,7 @@ def test_neuromatics_explanation_selects_adapted_heads_and_leaves_message_delive
 def test_display_transfer_preserves_scores_and_uses_paired_prototype_reference(neuro_result, neuro_explanation):
     from aipm3.display_calibration import neuromatics_reference
     ref = neuromatics_reference(runtime.NEUROMATICS_SCORING_VERSION)
-    assert ref['pair_count'] == 12
+    assert ref['source'] == 'selected_family_loo'
     for c in neuro_explanation['cards']:
         assert c['score'] == pytest.approx(neuro_result['scores'][runtime.SCORE_NAMES[c['task']]], abs=1e-12)
         assert c['index'] == pytest.approx(100*c['score']/ref['references'][c['task']]['mean'])
@@ -142,22 +146,18 @@ def test_legacy_state_input_is_the_attributed_meaning(rows):
     head = runtime.load_models("neuromatics").heads["n"]
     frame = rows["n"].copy()
     train = _background("n")
-    x, background, predict = interpretation.design_predictor(head, frame, train)
-    position = head.state["columns"].index("state_transformation_present")
-    # The old broad extraction cannot influence either scores or SHAP designs.
+    train = runtime.load_models("neuromatics").attribution_background("n", train)
+    original = head.attribution_components(frame, train)
     frame["state_transformation_present"] = 0.
-    x_other, _, _ = interpretation.design_predictor(head, frame, train)
-    np.testing.assert_array_equal(x, x_other)
-    phi, base = interpretation.exact_shap(x[:1], background, predict)
-    phi_other, base_other = interpretation.exact_shap(x_other[:1], background, predict)
-    np.testing.assert_array_equal(phi, phi_other)
-    np.testing.assert_array_equal(base, base_other)
-    # A changed stricter reading changes only its existing, named model input.
+    broad_changed = head.attribution_components(frame, train)
     frame["state_transformation"] = 1.
-    x_legacy, _, _ = interpretation.design_predictor(head, frame, train)
-    assert not np.array_equal(x[:, position], x_legacy[:, position])
-    np.testing.assert_array_equal(np.delete(x, position, axis=1),
-                                   np.delete(x_legacy, position, axis=1))
+    strict_changed = head.attribution_components(frame, train)
+    for first, broad, strict in zip(original, broad_changed, strict_changed):
+        position = first['columns'].index('state_transformation_present')
+        np.testing.assert_array_equal(first['x'], broad['x'])
+        assert not np.array_equal(first['x'][:, position], strict['x'][:, position])
+        np.testing.assert_array_equal(np.delete(first['x'], position, axis=1),
+                                      np.delete(strict['x'], position, axis=1))
 
 
 def test_state_evidence_must_agree_with_selected_legacy_reading(neuro_result, monkeypatch):

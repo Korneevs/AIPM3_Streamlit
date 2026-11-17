@@ -1,4 +1,4 @@
-"""Frozen N/R inference with the October 8 eight-input message-delivery head.
+"""Frozen 0.719 N/R mixtures and eight-input NuSVR message-delivery head.
 
 The original bundles are preserved. No training or inference calls to an
 external service take place in this module.
@@ -17,13 +17,14 @@ import numpy as np
 import pandas as pd
 
 from .latest_manual_inputs import (LEGACY_CELEBRITY_VERSIONS, celebrity_presence,
-                                   effective_feature_rows, noticeability_multiplier,
-                                   recall_multiplier, with_celebrity_review)
+                                   effective_feature_rows, with_celebrity_review)
 
 BUNDLE_DIR = Path(__file__).resolve().parent / "latest_bundle" / "20261001"
 MESSAGE_BUNDLE_DIR = Path(__file__).resolve().parent / "message_bundle" / "20261008"
-SCORING_VERSION = "three-heads-no-screen-number-20261008"
-NEUROMATICS_SCORING_VERSION = "neuromatics-finished-means-20261008"
+RELEASE_BUNDLE_DIR = Path(__file__).resolve().parent / "release_bundle" / "20261117"
+SCORING_VERSION = "aipm-0719-refined-20261117"
+NEUROMATICS_SCORING_VERSION = SCORING_VERSION + "-neuromatics"
+MODEL_LABEL = "Модель 0.719 · 17.11.2026"
 PROTOCOL_VERSION = "latest-exact-inputs-20261001-v1"
 # Retain saved 3/5/10-run results; new analyses use three complete runs.
 ANALYSIS_REPEATS = 3
@@ -82,11 +83,25 @@ def model_module():
 
 @lru_cache(maxsize=1)
 def load_latest_models():
-    """Load the frozen N/R heads and the separately rebuilt eight-input M head."""
-    message_artifact_hashes()
-    model = model_module().AIPM3(BUNDLE_DIR / "models")
-    model.heads["m"] = model_module().Head.load(MESSAGE_BUNDLE_DIR / "models/m")
-    return model
+    return release_module().load_models("finished")
+
+
+@lru_cache(maxsize=1)
+def release_module():
+    name = "_aipm_release_20261117"
+    spec = importlib.util.spec_from_file_location(name, RELEASE_BUNDLE_DIR / "runtime.py")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    module.artifact_hashes()
+    if module.SCORING_VERSION != SCORING_VERSION:
+        raise ValueError("Release scoring version mismatch")
+    return module
+
+
+def display_reference():
+    release_module().artifact_hashes()
+    return json.loads((RELEASE_BUNDLE_DIR / "manifest.json").read_text())["display_reference"]
 
 
 def message_artifact_hashes() -> dict[str, str]:
@@ -101,32 +116,22 @@ def message_artifact_hashes() -> dict[str, str]:
 @lru_cache(maxsize=2)
 def load_models(material_kind: str = "finished"):
     scoring_version_for(material_kind)
-    if material_kind == "finished":
-        return load_latest_models()
-    from .neuromatics_models import NeuromaticsModels
-    return NeuromaticsModels(load_latest_models(), model_module().coefficient)
+    return release_module().load_models(material_kind)
 
 
 def artifact_hashes_for(material_kind: str = "finished") -> dict[str, str]:
     scoring_version_for(material_kind)
-    original = {**artifact_hashes(),
-                **{"message_20261008/" + k: v for k, v in message_artifact_hashes().items()}}
-    if material_kind == "finished":
-        return original
-    from .neuromatics_models import artifact_hashes as neuro_hashes
-    from .neuromatics_mean_policy import artifact_hashes as mean_policy_hashes
-    return {**{"finished/" + k: v for k, v in original.items()},
-            **{"neuromatics/" + k: v for k, v in neuro_hashes().items()},
-            **{"neuromatics_mean_policy/" + k: v for k, v in mean_policy_hashes().items()}}
+    return {"release_20261117/" + key: value
+            for key, value in release_module().artifact_hashes().items()}
 
 
 @lru_cache(maxsize=1)
 def known_video_families() -> dict[str, tuple[str, ...]]:
     """Exact source hashes retain their frozen historical family exclusion."""
-    artifact_hashes()
+    release_module().artifact_hashes()
     families: dict[str, set[str]] = {}
     for task in MODEL_TASKS:
-        frame = pd.read_csv(BUNDLE_DIR / "data" / f"fit_{task}.csv")
+        frame = pd.read_csv(RELEASE_BUNDLE_DIR / "data" / f"fit_{task}.csv")
         if "sha" not in frame:
             continue
         for sha, family in frame[["sha", "family"]].dropna().itertuples(index=False, name=None):
@@ -135,6 +140,8 @@ def known_video_families() -> dict[str, tuple[str, ...]]:
 
 
 def family_for_video(source_sha: str) -> str:
+    if hasattr(release_module(), "family_for_video"):
+        return release_module().family_for_video(source_sha) or "upload_" + source_sha
     matches = known_video_families().get(source_sha, ())
     if len(matches) > 1:
         raise ValueError("Source video maps to several historical families; specify family explicitly")
@@ -204,6 +211,8 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
     effective_rows = effective_feature_rows(
         {task: frame.to_dict("records") for task, frame in frames.items()}, metadata or {})
     frames = {task: pd.DataFrame(rows) for task, rows in effective_rows.items()}
+    if material_kind == "neuromatics" and "state_transformation" not in frames["n"]:
+        raise ValueError("Missing raw AIPM1 state transformation observation")
     predictions = {task: model.heads[task].predict(frame)
                    for task, frame in frames.items()}
     if not all(np.isfinite(value).all() for value in predictions.values()):
@@ -212,23 +221,16 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
     for task, column in SCORE_NAMES.items():
         per_repeat[column] = predictions[task]
     per_repeat["OPM"] = predictions["n"] * predictions["m"]
-    per_repeat["Q"] = per_repeat.OPM * predictions["r"]
-    # Keep the frozen package untouched: its public entry point requires ten
-    # rows. The shorter run uses the same heads and mean-of-products rule.
-    scored = (model.score(frames["n"], frames["m"], frames["r"]).iloc[0]
-              if repeat_count == 10 else per_repeat.groupby("record").mean(numeric_only=True).iloc[0])
+    weights = json.loads((RELEASE_BUNDLE_DIR / "manifest.json").read_text())["q_exponents"]
+    per_repeat["Q"] = np.exp(sum(weight * np.log(predictions[task])
+                                  for task, weight in zip(MODEL_TASKS, weights)))
+    scored = per_repeat.groupby("record").mean(numeric_only=True).iloc[0]
     scores = {name: float(scored[name]) for name in [*SCORE_NAMES.values(), "OPM", "Q"]}
     for name, value in scores.items():
         if not np.isclose(value, per_repeat[name].mean(), rtol=1e-12, atol=1e-14):
             raise AssertionError("Frozen score aggregation changed")
-    factor = recall_multiplier(metadata or {})
-    for name in ("norm_ad_recall", "Q"):
-        per_repeat[name] *= factor
-        scores[name] *= factor
-    factor = noticeability_multiplier(metadata or {})
-    for name in ("noticeability", "OPM", "Q"):
-        per_repeat[name] *= factor
-        scores[name] *= factor
+    # Celebrity review changes the observed is_celeb input only. The selected
+    # model has no external N/R multiplier, including on imported metadata.
     result = dict(metadata or {})
     result["metadata"] = {**dict(metadata or {}), "material_kind": material_kind}
     result.update(
@@ -239,6 +241,9 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
         model_sha256=artifact_hashes_for(material_kind),
         record=str(keys.record.iloc[0]),
         scores=scores,
+        classes=release_module().score_classes(scores),
+        q_exponents=weights,
+        model_label=MODEL_LABEL,
         per_repeat=per_repeat.to_dict("records"),
         feature_rows={task: frame.to_dict("records") for task, frame in original_frames.items()},
         model_inputs={task: model.heads[task].state["columns"] for task in MODEL_TASKS},
@@ -249,7 +254,7 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
 def result_metadata(result: dict) -> dict:
     reserved = {"metadata", "scores", "per_repeat", "feature_rows", "model_inputs",
                 "scoring_version", "protocol_version", "model_sha256", "interpretation", "repeat_count",
-                "manager_cards"}
+                "manager_cards", "classes", "q_exponents", "model_label"}
     return {k: v for k, v in result.items() if k not in reserved}
 
 
@@ -315,6 +320,10 @@ def rows_from_measurements(measurements: list[dict], *, source_sha: str,
                     continue  # Learned history is resolved by the frozen head.
                 if feature.startswith("phys__"):
                     value = physical[feature]
+                elif feature == "panel__content_precision":
+                    value = measurement["content_precision"]["mean"]
+                    if not 0 <= float(value) <= 4:
+                        raise ValueError("Invalid content precision observation")
                 elif feature.startswith("panel__"):
                     column = feature.removeprefix("panel__")
                     value = pd.to_numeric(panel[column], errors="raise").mean()

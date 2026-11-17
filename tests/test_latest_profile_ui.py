@@ -15,7 +15,7 @@ from aipm3.manager_report import HIDDEN_MANAGER_FEATURES
 def test_profile_uses_current_heads_without_losing_features_or_changing_scores(kind):
     frames = {}
     for task in 'nmr':
-        train = pd.read_csv(runtime.BUNDLE_DIR / 'data' / f'fit_{task}.csv')
+        train = pd.read_csv(runtime.RELEASE_BUNDLE_DIR / 'data' / f'fit_{task}.csv')
         frame = pd.DataFrame([train.iloc[0].to_dict() for _ in range(3)])
         frame['record'] = frame['family'] = 'interface-fixture'
         frame['sha'] = 'a' * 64

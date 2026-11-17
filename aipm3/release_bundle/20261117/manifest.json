@@ -1,0 +1,169 @@
+{
+  "scoring_version": "aipm-0719-refined-20261117",
+  "mixtures": {
+    "n": {
+      "historical55_refit": 0.98,
+      "cat_babeb05eaf1e__exclude2_refit": 0.02
+    },
+    "m": {
+      "m_v012__exclude2_refit": 1.0
+    },
+    "r": {
+      "old_human__rf011_svr": 0.61,
+      "old_human__historical_native": 0.39
+    }
+  },
+  "q_exponents": [
+    1.010909090909,
+    0.848181818182,
+    1.140909090909
+  ],
+  "class_thresholds": {
+    "n": [
+      0.3633831003218484,
+      0.40087379164232595
+    ],
+    "m": [
+      0.1955303191060736,
+      0.2861248470469908
+    ],
+    "r": [
+      0.0924236310415329,
+      0.10934955612995226
+    ],
+    "q": [
+      0.008368524788246942,
+      0.011430939408382437
+    ]
+  },
+  "class_rule": "1 + (score > lower) + (score > upper); no record-specific overrides",
+  "display_reference": {
+    "n": {
+      "mean": 0.38788006363875227,
+      "cuts": [
+        0.3633831003218484,
+        0.40087379164232595
+      ]
+    },
+    "m": {
+      "mean": 0.25328537791732253,
+      "cuts": [
+        0.1955303191060736,
+        0.2861248470469908
+      ]
+    },
+    "r": {
+      "mean": 0.09955233979072008,
+      "cuts": [
+        0.0924236310415329,
+        0.10934955612995226
+      ]
+    },
+    "q": {
+      "mean": 0.008943626229928248,
+      "cuts": [
+        0.008368524788246942,
+        0.011430939408382437
+      ]
+    }
+  },
+  "display_mean_source": "frozen selected family-LOO prediction vectors",
+  "policies": {
+    "n": {
+      "character_close_up_seconds": "mean",
+      "is_celeb": "keep",
+      "monologue_to_camera": "keep",
+      "pack_shot_duration_seconds": "mean",
+      "panel__first_core_claim_time_band": "keep",
+      "phys__audio_dynamic_range_db": "mean",
+      "phys__motion_mean": "mean",
+      "product_demo_seconds": "mean",
+      "state_transformation_present": "keep"
+    },
+    "r": {
+      "brand_first_mention_seconds": "keep",
+      "brand_history": "keep",
+      "has_callback_to_opening": "keep",
+      "human_characters_count": "keep",
+      "jingle_present": "prompt",
+      "problem_solution_arc_present": "keep",
+      "scene_pace_high": "mean"
+    }
+  },
+  "extra_recall_multiplier": 1.0,
+  "supported_material_kinds": [
+    "finished",
+    "neuromatics"
+  ],
+  "supported_repeat_counts": [
+    3,
+    5,
+    10
+  ],
+  "required_packages": [
+    "numpy",
+    "pandas",
+    "scipy",
+    "scikit-learn",
+    "joblib",
+    "catboost"
+  ],
+  "reference_frames": {
+    "purpose": "Explanation background only",
+    "grouping": "One-way SHA-256 pseudonyms; no raw identity lookup map",
+    "columns": {
+      "n": [
+        "record",
+        "family",
+        "sha",
+        "brand",
+        "vertical",
+        "repeat",
+        "character_close_up_seconds",
+        "is_celeb",
+        "monologue_to_camera",
+        "pack_shot_duration_seconds",
+        "panel__first_core_claim_time_band",
+        "phys__audio_dynamic_range_db",
+        "phys__motion_mean",
+        "product_demo_seconds",
+        "state_transformation_present",
+        "phys__duration",
+        "total_video_duration_sec",
+        "state_transformation"
+      ],
+      "m": [
+        "record",
+        "family",
+        "sha",
+        "brand",
+        "vertical",
+        "repeat",
+        "fresh__audiovisual_claim_alignment",
+        "main_character",
+        "panel__distinct_benefit_count",
+        "panel__mandatory_inference_chain_length",
+        "panel__content_precision",
+        "panel__offer_novelty_explanation_need",
+        "panel__product_role_reveal_time_band",
+        "promo",
+        "phys__duration",
+        "total_video_duration_sec"
+      ],
+      "r": [
+        "record",
+        "family",
+        "sha",
+        "brand",
+        "vertical",
+        "brand_first_mention_seconds",
+        "has_callback_to_opening",
+        "human_characters_count",
+        "jingle_present",
+        "problem_solution_arc_present",
+        "scene_pace_high",
+        "total_video_duration_sec"
+      ]
+    }
+  }
+}

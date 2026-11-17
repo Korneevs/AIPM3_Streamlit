@@ -15,7 +15,7 @@ from aipm3.neuromatics_mean_policy import load_policy
 def frames():
     result = {}
     for task in 'nmr':
-        history = pd.read_csv(runtime.BUNDLE_DIR / 'data' / f'fit_{task}.csv')
+        history = pd.read_csv(runtime.RELEASE_BUNDLE_DIR / 'data' / f'fit_{task}.csv')
         frame = pd.DataFrame([history.iloc[0].to_dict()] * 3)
         frame['record'] = 'policy-test'
         frame['family'] = 'new-policy-family'
@@ -62,23 +62,22 @@ def test_constant_inputs_cannot_change_scores_and_are_not_rounded(frames):
         for feature in policy['constants'][task]:
             changed[feature] = [0., 1., 100.]
         np.testing.assert_array_equal(model.heads[task].predict(original), model.heads[task].predict(changed))
-    index = model.heads['r'].state['columns'].index('scene_pace_high')
-    expected = policy['constants']['r']['scene_pace_high']['model_input_mean']
-    assert 0 < expected < 1
-    assert np.all(model.heads['r'].raw(frames['r'])[:, index] == expected)
+    for leaf in model.heads['r'].leaves:
+        index = leaf.state['columns'].index('scene_pace_high')
+        expected = leaf.constants['scene_pace_high']['model_input_mean']
+        assert 0 < expected < 1
+        assert np.all(leaf.raw(frames['r'])[:, index] == expected)
 
 
 def test_noticeability_matches_direct_mean_substitution(frames):
-    frozen = runtime.load_latest_models()
-    legacy = NeuromaticsModels(frozen, runtime.model_module().coefficient, use_mean_policy=False)
-    policy = load_policy()
-    adjusted = legacy.heads['n'].transformed(frames['n'])
-    for feature, spec in policy['constants']['n'].items():
-        value = spec['model_input_mean']
-        adjusted[feature] = value * adjusted.phys__duration if spec['scale'] == 'fraction_of_duration' else value
-    expected = frozen.heads['n'].predict(adjusted)
-    actual = runtime.load_models('neuromatics').heads['n'].predict(frames['n'])
-    np.testing.assert_array_equal(actual, expected)
+    head = runtime.load_models('neuromatics').heads['n']
+    predictions = []
+    for leaf, weight in zip(head.leaves, head.weights):
+        adjusted = leaf.model.design(leaf.transformed(frames['n']))
+        for feature, point in leaf.constants.items():
+            adjusted[:, leaf.state['columns'].index(feature)] = point['design_value']
+        predictions.append(weight * leaf.predict_design(adjusted))
+    np.testing.assert_array_equal(head.predict(frames['n']), sum(predictions))
 
 
 def test_finished_and_message_heads_preserved_and_old_results_rejected(frames):
@@ -86,7 +85,7 @@ def test_finished_and_message_heads_preserved_and_old_results_rejected(frames):
     frozen = runtime.load_latest_models()
     expected = {t: frozen.heads[t].predict(d) for t, d in frames.items()}
     current = runtime.score_feature_rows(frames, material_kind='neuromatics', repeat_count=3)
-    assert current['scoring_version'] == load_policy()['scoring_version']
+    assert current['scoring_version'] == runtime.NEUROMATICS_SCORING_VERSION
     np.testing.assert_array_equal(pd.DataFrame(current['per_repeat']).message_delivery, expected['m'])
     finished = runtime.score_feature_rows(frames, material_kind='finished', repeat_count=3)
     for task, name in runtime.SCORE_NAMES.items():

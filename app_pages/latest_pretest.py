@@ -14,7 +14,7 @@ from aipm3.latest_interpretation import VERSION, build_latest_interpretation, pu
 from aipm3.latest_pipeline import MissingMeasurement, run_latest_analysis
 from aipm3.latest_runtime import (
     ANALYSIS_REPEATS, NEUROMATICS_ANALYSIS_REPEATS, MATERIAL_LABELS, clean_json,
-    material_kind_for_result, validate_cached_result,
+    material_kind_for_result, validate_cached_result, MODEL_LABEL,
 )
 from aipm3.runtime_resources import AnalysisBusy, AnalysisTimeout
 from aipm3.manager_report import report_cards
@@ -128,6 +128,7 @@ def main(material_kind: str = "finished") -> None:
     analysis_repeats = NEUROMATICS_ANALYSIS_REPEATS if material_kind == "neuromatics" else ANALYSIS_REPEATS
     result_key = prefix + "result"
     st.title(MATERIAL_LABELS[material_kind])
+    st.caption(MODEL_LABEL)
     st.caption("Что поддерживает оценку ролика, что её ограничивает и какие выводы пока нельзя сделать.")
     mode = st.sidebar.radio("Источник результата", ["Загрузить ролик", "Открыть сохранённый результат"],
                     horizontal=True, key=prefix + "source")
@@ -275,7 +276,12 @@ def main(material_kind: str = "finished") -> None:
     if result_key in st.session_state:
         st.divider()
         result = st.session_state[result_key]
-        if material_kind_for_result(result) != material_kind:
+        try:
+            stored_kind = material_kind_for_result(result)
+        except (ValueError, KeyError, TypeError):
+            st.error("Этот разбор сохранён прежней версией модели. Запустите анализ ролика заново.")
+            st.stop()
+        if stored_kind != material_kind:
             st.error("Сохранённый результат относится к другому типу материала. Откройте соответствующий раздел.")
             st.stop()
         if (result.get("celebrity_review") or {}).get("version") in LEGACY_CELEBRITY_VERSIONS:

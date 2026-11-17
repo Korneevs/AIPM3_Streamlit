@@ -13,10 +13,9 @@ import re
 import sys
 import numpy as np
 import pandas as pd
-from .latest_manual_inputs import (effective_feature_rows, celebrity_presence,
-                                   noticeability_multiplier, recall_multiplier)
+from .latest_manual_inputs import effective_feature_rows, celebrity_presence
 
-VERSION = 'manager-decisions-v8-local-criticism-manual-celebrity'
+VERSION = 'manager-decisions-v9-aipm0719-mixture-attributions'
 NAMES = {'n':'Заметность', 'm':'Считываемость', 'r':'Запоминаемость'}
 LABELS = {
  'character_close_up_seconds':'Крупные планы героя',
@@ -34,6 +33,7 @@ LABELS = {
  'panel__distinct_benefit_count':'Число разных выгод',
  'panel__mandatory_inference_chain_length':'Что зрителю приходится додумывать',
  'panel__message_specificity_level':'Конкретность предложения',
+ 'panel__content_precision':'Точность содержания предложения',
  'panel__offer_novelty_explanation_need':'Сложность объяснения предложения',
  'panel__product_role_reveal_time_band':'Когда понятна роль сервиса',
  'promo':'Акция или бонус',
@@ -301,14 +301,15 @@ def semantic_measurement(head,frame,feature):
     return observed,observed
 
 def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,strict_evidence=True):
-    from .latest_runtime import material_kind_for_result
-    from .display_calibration import neuromatics_reference, display_values, audio_status, audio_note
+    from .latest_runtime import material_kind_for_result, display_reference
+    from .display_calibration import display_values, audio_status, audio_note
     material_kind=material_kind_for_result(result)
-    calibration=neuromatics_reference(result['scoring_version']) if material_kind=='neuromatics' else None
+    references=display_reference()
+    calibration=dict(version=result['scoring_version'], references={**references,'Q':references['q']})
     voice=audio_status(result) if material_kind=='neuromatics' else 'complete'
     if model is None or bundle_dir is None:
-        from .latest_runtime import load_models,BUNDLE_DIR
-        model=model or load_models(material_kind);bundle_dir=bundle_dir or BUNDLE_DIR
+        from .latest_runtime import load_models,RELEASE_BUNDLE_DIR
+        model=model or load_models(material_kind);bundle_dir=bundle_dir or RELEASE_BUNDLE_DIR
     evidence=evidence or [];details={};cards=[];rejected=0
     if strict_evidence:
         from .latest_evidence import validate_evidence
@@ -328,9 +329,26 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
         train=pd.read_csv(Path(bundle_dir)/'data'/f'fit_{task}.csv',float_precision='round_trip')
         # One real cached reading per family, selected without outcomes or query.
         order=[c for c in ['family','record','repeat'] if c in train]
+        if hasattr(model,'attribution_background'):
+            train=model.attribution_background(task,train)
         train=train.sort_values(order).groupby('family',sort=True).nth(0).reset_index(drop=True)
-        x,bg,predict=design_predictor(head,frame,train)
-        phi,bases=exact_shap(x,bg,predict);p=predict(x);base=float(bases.mean())
+        if hasattr(head,'attribution_components'):
+            columns=head.state['columns']
+            phi=np.zeros((len(frame),len(columns)));bases=np.zeros(len(frame))
+            p=np.zeros(len(frame))
+            for component in head.attribution_components(frame,train):
+                values,expected=exact_shap(component['x'],component['background'],component['predict'])
+                weight=component['weight']
+                for j,name in enumerate(component['columns']):
+                    phi[:,columns.index(name)]+=weight*values[:,j]
+                bases+=weight*expected
+                p+=weight*component['predict'](component['x'])
+            np.testing.assert_allclose(p,head.predict(frame),rtol=1e-12,atol=1e-14)
+            bgpred=head.predict(train)
+        else:
+            x,bg,predict=design_predictor(head,frame,train)
+            phi,bases=exact_shap(x,bg,predict);p=predict(x);bgpred=predict(bg)
+        base=float(bases.mean())
         score=float(p.mean());vals=phi.mean(0);columns=head.state['columns']
         spread=np.quantile(p,[.1,.9]);drivers=[]
         dur=float(pd.to_numeric(frame.get('phys__duration',frame.get('duration',frame.get('total_video_duration_sec',pd.Series([30])))),errors='coerce').mean())
@@ -374,10 +392,9 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
         coverage=1-missed_mass/total_mass if total_mass else 1.
         partial=coverage<.75 or any(abs(d['index_points'])>=5 for d in unresolved)
         unadjusted_score=score
-        factor=(recall_multiplier(result) if task=='r' else
-                noticeability_multiplier(result) if task=='n' else 1.)
+        factor=1.
         score*=factor;spread*=factor
-        bgpred=predict(bg);q1,q2=np.quantile(bgpred,[1/3,2/3])
+        q1,q2=np.quantile(bgpred,[1/3,2/3])
         level='Выше типичного уровня' if score>q2 else 'Ниже типичного уровня' if score<q1 else 'Типичный уровень'
         card=dict(task=task,title=NAMES[task],score=score,index=100*score/base,level=level,
           repeat_index_range=[100*float(z)/base for z in spread],baseline=base,
@@ -396,11 +413,8 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
               additivity_error=float(abs(base+vals.sum()+adjustment-score)),
               per_repeat_scores=(p*factor).tolist(),per_repeat_shap=phi.tolist(),feature_order=columns)
         cards.append(card)
-    from .latest_runtime import MESSAGE_BUNDLE_DIR, message_artifact_hashes
-    message_artifact_hashes()
-    reference=json.loads((MESSAGE_BUNDLE_DIR/'finished_display_reference.json').read_text())
-    q=float(result['scores']['Q']);lo,hi=reference['Q_tertiles']
-    overall=dict(title=('AIPM3.0 (для нейроматиков)' if material_kind=='neuromatics' else 'AIPM 3.0'),score=q,index=100*q/reference['Q_mean'],
+    q=float(result['scores']['Q']);lo,hi=references['q']['cuts']
+    overall=dict(title=('AIPM3.0 (для нейроматиков)' if material_kind=='neuromatics' else 'AIPM 3.0'),score=q,index=100*q/references['q']['mean'],
       level='Выше типичного уровня' if q>hi else 'Ниже типичного уровня' if q<lo else 'Типичный уровень')
     if calibration:overall.update(display_values(q,calibration['references']['Q']))
     overall['assessment_available']=voice not in {'partial','absent'}
