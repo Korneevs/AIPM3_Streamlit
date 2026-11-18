@@ -16,6 +16,7 @@ from aipm3.runtime_resources import AnalysisBusy, AnalysisTimeout, analysis_dead
 from aipm3.uvp_catalog import VERTICALS, questions_for
 from aipm3.uvp_media import prepare_evidence
 from aipm3.uvp_scoring import score_video
+from aipm3.uvp_summary import POSITIVE_LABELS, build_uvp_summary
 
 
 LABELS = {
@@ -53,8 +54,16 @@ def show_result(result):
     import plotly.graph_objects as go
     from textwrap import wrap
 
-    st.subheader("Основная идея ролика")
+    st.subheader("Основная идея по UVP-разбору")
     st.html(f"<p>{escape(result['main_idea'])}</p>")
+    summary = build_uvp_summary(result)
+    for title, items in (("Основные UVP", summary["uvps"]), ("Основные имиджи", summary["images"])):
+        st.subheader(title)
+        if not items:
+            st.write("Положительный сигнал не выявлен.")
+        for item in items:
+            score = item["score"]
+            st.html(f'<p><b>{escape(item["label"])}</b> — {POSITIVE_LABELS[score]} · +{score}</p>')
     groups = defaultdict(list)
     for image in result["images"]:
         groups[image["group"]].append(image)
@@ -65,9 +74,9 @@ def show_result(result):
     fig = go.Figure(go.Scatter(
         x=[i["score"] for i in ranked], y=list(range(len(ranked))), mode="markers",
         marker=dict(size=12, color=[COLORS.get(i["score"], ("", "#80382E"))[1] for i in ranked],
-                    symbol=["diamond-open" if i["review"] else "circle" for i in ranked]),
+                    symbol="circle"),
         text=[escape(i["label"]) for i in ranked],
-        customdata=[LABELS[i["score"]] + (" · Требует проверки" if i["review"] else "") for i in ranked],
+        customdata=[LABELS[i["score"]] for i in ranked],
         hovertemplate="%{text}<br>%{customdata} · %{x}<extra></extra>",
     ))
     fig.update_yaxes(autorange="reversed", tickmode="array", tickvals=list(range(len(ranked))),
@@ -76,20 +85,19 @@ def show_result(result):
     fig.update_layout(height=100 + sum(max(32, 16 * (t.count("<br>") + 1) + 9) for t in ticks),
                       margin=dict(l=0, r=15, t=32, b=8), showlegend=False)
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-    st.caption("Шкала от −3 до +3. Пустой ромб – оценка требует проверки.")
+    st.caption("Шкала от −3 до +3. Оценка UVP определяется по самому сильному связанному имиджу.")
     st.subheader("UVP и связанные с ними имиджи")
     for group, images in ordered_groups:
         st.markdown(f"#### {group}")
         for image in sorted(images, key=lambda x: -x["score"]):
             score = image["score"]
             background, color = COLORS.get(score, ("#F9E2DF", "#80382E"))
-            review = " · Требует проверки" if image["review"] else ""
             with st.container(border=True):
                 st.html(
                     f'<div style="font-size:1.08rem;font-weight:650">{escape(image["label"])}</div>'
                     f'<span style="display:inline-block;margin:.25rem 0 .4rem;background:{background};'
                     f'color:{color};border-radius:.3rem;padding:.12rem .5rem">'
-                    f'{LABELS[score]} · {score}</span> · {CLARITY[image["clarity"]]}{review}'
+                    f'{LABELS[score]} · {score}</span> · {CLARITY[image["clarity"]]}'
                     f'<p>{escape(image["explanation"])}</p>'
                 )
                 with st.expander("На чём основана оценка"):
@@ -103,8 +111,9 @@ def show_result(result):
     with st.expander("Как читать оценки"):
         st.write("Шкала показывает, насколько убедительно ролик связывает имидж с Авито. "
                  "Минус означает, что в ролике есть основание для противоположного впечатления. "
-                 "Пометка «Требует проверки» появляется, если возможны разные прочтения "
-                 "или остались вопросы к обоснованию.")
+                 "В основных UVP и имиджах показаны самые высокие положительные оценки. "
+                 "Если сильного сигнала нет, выводится умеренный или слабый с соответствующей подписью. "
+                 "Общие имиджи не заменяют профильный UVP.")
 
 
 def main():

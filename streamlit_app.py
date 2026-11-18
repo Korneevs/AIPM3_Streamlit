@@ -38,6 +38,9 @@ def home() -> None:
 
         В разделе **UVP** можно проверить, какие обещания Авито и имиджи
         своей вертикали передаёт ролик.
+
+        В разделе **Креативный отбор** две модели помогут найти сильные идеи
+        в пакете сценариев и объяснят, какие стоит сохранить для обсуждения.
         """
     )
 
@@ -57,5 +60,6 @@ pages.extend([
     st.Page("app_pages/latest_pretest.py", title="AIPM3.0 (для готовых)", icon="🎬", url_path="video_pretest"),
     st.Page("app_pages/neuromatics_pretest.py", title="AIPM3.0 (для нейроматиков)", icon="📝", url_path="neuromatics_pretest"),
     st.Page("app_pages/uvp_pretest.py", title="UVP", icon="🎯", url_path="uvp"),
+    st.Page("app_pages/creative_selection.py", title="Креативный отбор", icon="💡", url_path="creative_selection"),
 ])
 st.navigation(pages).run()

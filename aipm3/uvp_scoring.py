@@ -62,6 +62,22 @@ def _parse(content):
     return obj
 
 
+def _format_correction(exc, prompt, payload):
+    correction = "Исправь только формат, верни полный JSON по заданной схеме. " + str(exc)[:150]
+    if prompt in (prompts.EVALUATE, prompts.REPAIR):
+        ids = payload.get("repair_ids") or [q["id"] for q in payload.get("questions", [])]
+        if ids:
+            correction += (
+                f" Массив images должен содержать ровно {len(ids)} объектов, по одному для каждого ID: "
+                + json.dumps(ids, ensure_ascii=False)
+                + ". Включи каждый имидж, в том числе без поддержки в ролике. Не пропускай и не повторяй ID. "
+                "Сохрани все обязательные поля исходной схемы. takeaway и reason_to_believe должны быть "
+                "непустыми: если опоры нет, объясни её отсутствие, не придумывай подтверждений. "
+                "Критерии и правила оценки не меняются."
+            )
+    return correction
+
+
 def _call(client, model, prompt, payload, sheets, validate, tokens):
     correction = ""
     content = [{"type": "text", "text": json.dumps(payload, ensure_ascii=False)}]
@@ -96,7 +112,7 @@ def _call(client, model, prompt, payload, sheets, validate, tokens):
             if isinstance(exc, httpx.TransportError):
                 time.sleep(attempt + 1)
             else:
-                correction = "Исправь только формат, верни полный JSON по заданной схеме. " + str(exc)[:150]
+                correction = _format_correction(exc, prompt, payload)
 
 
 def _validate_blind(obj):
@@ -219,7 +235,7 @@ def _display_row(q, drafts, flags, sources, frame_times):
     if target == 0 and stats["before"] != 0:
         explanation = "Отдельные детали допускают такую ассоциацию, но подтверждений этой оценки недостаточно."
     if not explanation:
-        explanation = "Обоснования оценщиков требуют проверки по ролику."
+        explanation = "Для оценки нет достаточного обоснования по ролику."
     return dict(id=q["id"], label=q["statement"], group=q["group"], secondary_groups=q.get("secondary_groups", []), score=target,
                 clarity=stats["clarity"], review=stats["review"], explanation=explanation,
                 limitation=limitation, evidence=evidence)

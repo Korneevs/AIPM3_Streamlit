@@ -11,7 +11,7 @@ except ImportError:
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 
-from aipm3 import latest_pipeline, uvp_scoring
+from aipm3 import creative_selection, latest_pipeline, uvp_scoring
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +19,7 @@ ROUTES = {
     "video_pretest": ("AIPM3.0 (для готовых)", "latest_pretest.py"),
     "neuromatics_pretest": ("AIPM3.0 (для нейроматиков)", "neuromatics_pretest.py"),
     "uvp": ("UVP", "uvp_pretest.py"),
+    "creative_selection": ("Креативный отбор", "creative_selection.py"),
 }
 
 
@@ -33,6 +34,7 @@ def offline_navigation(monkeypatch):
 
     monkeypatch.setattr(latest_pipeline, "run_latest_analysis", forbidden)
     monkeypatch.setattr(uvp_scoring, "score_video", forbidden)
+    monkeypatch.setattr(creative_selection, "run_selection", forbidden)
     # AppTest creates PagesManager without its child-page script cache.
     script_cache = ScriptCache()
     monkeypatch.setattr(PagesManager, "get_page_script_byte_code",
@@ -101,6 +103,15 @@ def test_home_describes_both_sections(offline_navigation):
     assert "AIPM3.0 (для готовых)" in text
     assert "AIPM3.0 (для нейроматиков)" in text
     assert "Предыдущая версия" not in text
+
+
+def test_creative_selection_route_opens_without_calling_models(offline_navigation):
+    app = open_url("creative_selection")
+    assert not app.exception
+    assert offline_navigation == ROUTES
+    assert app.title[0].value == "Креативный отбор"
+    assert "Бриф" in [area.label for area in app.text_area]
+    assert any(button.label == "Найти креативные идеи" and button.disabled for button in app.button)
 
 
 def test_navigation_keeps_material_widgets_separate(offline_navigation):
