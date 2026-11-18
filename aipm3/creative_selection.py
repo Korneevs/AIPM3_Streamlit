@@ -21,7 +21,7 @@ from . import creative_prompts as prompts
 from .runtime_resources import request_timeout
 
 
-PROTOCOL_VERSION = "creative-exceptions-two-judges-v1"
+PROTOCOL_VERSION = "creative-strength-and-advertising-value-two-judges-v2"
 DEFAULT_MODELS = ("openai/gpt-6.1-sol", "anthropic/claude-opus-5.5")
 MAX_SCENARIOS = 60
 MAX_SCENARIO_CHARS = 12000
@@ -41,8 +41,9 @@ def _string(value, *, required=False, limit=1200):
 
 
 def validate_inputs(brief, scenarios, quota, models):
-    if not _string(brief, required=True, limit=MAX_BRIEF_CHARS):
-        raise ValueError(f"Добавьте бриф длиной до {MAX_BRIEF_CHARS} символов.")
+    # Retain the optional parameter for callers, but the accepted rubric ignores briefs.
+    if not _string(brief, limit=MAX_BRIEF_CHARS):
+        raise ValueError(f"Бриф должен быть строкой длиной до {MAX_BRIEF_CHARS} символов.")
     if not isinstance(scenarios, list) or not 1 <= len(scenarios) <= MAX_SCENARIOS:
         raise ValueError(f"Нужно от 1 до {MAX_SCENARIOS} сценариев.")
     if type(quota) is not int or not 1 <= quota <= MAX_SCENARIOS:
@@ -93,6 +94,8 @@ def _validate_opinions(payload, expected_ids, source, *, revision=False):
             raise ValueError("quote должна быть точной непрерывной цитатой из text данного сценария.")
         if not revision and row["decision_change_reason"]:
             raise ValueError("В независимом проходе decision_change_reason должна быть пустой.")
+        if any(row[field] != prompts.NOT_ASSESSED for field in ("brief_link", "risk", "minimal_fix")):
+            raise ValueError("Бриф, риск непонимания и правки не оцениваются в этом прогоне.")
     return {row["id"]: {"id": row["id"], "verdict": row["verdict"], **{k: row[k] for k in _FIELDS}}
             for row in rows}
 
@@ -209,7 +212,7 @@ def _validate_portfolio(payload, ids, source, quota):
     return cleaned_groups, cleaned_details
 
 
-def run_selection(*, brief, scenarios, quota, api_key, api_base, models=DEFAULT_MODELS, on_progress=None):
+def run_selection(*, brief="", scenarios, quota, api_key, api_base, models=DEFAULT_MODELS, on_progress=None):
     """Return the complete audited selection, or raise without making up votes."""
     validate_inputs(brief, scenarios, quota, models)
     if not api_key or urlsplit(api_base).scheme != "https":
@@ -225,7 +228,7 @@ def run_selection(*, brief, scenarios, quota, api_key, api_base, models=DEFAULT_
         for start in range(0, len(ids), BATCH_SIZE):
             batch = ids[start:start+BATCH_SIZE]
             notify(f"Независимая оценка: сценарии {start+1}–{start+len(batch)} из {len(ids)}")
-            payload = {"brief": brief, "scenarios": pack, "evaluate_ids": batch}
+            payload = {"scenarios": pack, "evaluate_ids": batch}
             outcomes = _parallel(lambda i: _call(client, model=models[i], prompt=prompts.INDEPENDENT,
                 payload=payload, validator=lambda p: _validate_opinions(p, batch, source)))
             for index, outcome in enumerate(outcomes):
@@ -237,7 +240,7 @@ def run_selection(*, brief, scenarios, quota, api_key, api_base, models=DEFAULT_
             notify(f"Сопоставляем аргументы: {start+1}–{start+len(batch)} из {len(disagreements)}")
 
             def reconsider(index):
-                payload = {"brief": brief, "scenarios": pack, "evaluate_ids": batch,
+                payload = {"scenarios": pack, "evaluate_ids": batch,
                            "own_initial": [initial[index][i] for i in batch],
                            "other_initial": [initial[1-index][i] for i in batch]}
                 return _call(client, model=models[index], prompt=prompts.RECONSIDER, payload=payload,
@@ -263,7 +266,7 @@ def run_selection(*, brief, scenarios, quota, api_key, api_base, models=DEFAULT_
         if confirmed:
             notify("Группируем близкие идеи и объясняем дополнительные кандидаты")
             confirmed_ids = [r["id"] for r in confirmed]
-            portfolio_payload = {"brief": brief, "quota": quota,
+            portfolio_payload = {"quota": quota,
                                  "candidates": [{"id": r["id"], "title": r["title"], "text": r["text"],
                                                  "judgments": r["final"]} for r in confirmed]}
             groups, details = _call(client, model=models[0], prompt=prompts.PORTFOLIO,
@@ -278,7 +281,7 @@ def run_selection(*, brief, scenarios, quota, api_key, api_base, models=DEFAULT_
               ("agreed_initial", "agreed_after_discussion", "rejected", "disputed", "insufficient")}
     counts.update(total=len(rows), confirmed=len(confirmed), independent_ideas=len(groups),
                   additional=max(0, len(groups)-quota))
-    identity = {"brief": brief, "scenarios": pack, "models": list(models), "protocol": PROTOCOL_VERSION}
+    identity = {"scenarios": pack, "models": list(models), "protocol": PROTOCOL_VERSION}
     return {"protocol_version": PROTOCOL_VERSION, "created_at": datetime.now(timezone.utc).isoformat(),
             "input_sha256": hashlib.sha256(json.dumps(identity, ensure_ascii=False, sort_keys=True).encode()).hexdigest(),
             "models": list(models), "quota": quota, "counts": counts, "items": rows, "groups": groups,

@@ -1,5 +1,6 @@
 """Behavioral guarantees for blind selection, disagreement and empty results."""
 import copy
+import hashlib
 import json
 import threading
 
@@ -19,8 +20,8 @@ def scenario(sid):
 def opinion(sid, verdict="nominate", revision=False):
     return {"id": sid, "verdict": verdict, "idea": "Город книг за дверью.",
             "quote": "За дверью город из книг.", "mechanism": "Буквальное превращение библиотеки в город.",
-            "brief_link": "Показывает разнообразие книг на Авито.", "risk": "Бренд появляется поздно.",
-            "minimal_fix": "Гипотеза: раньше показать поиск на Авито.",
+            "brief_link": prompts.NOT_ASSESSED, "risk": prompts.NOT_ASSESSED,
+            "minimal_fix": prompts.NOT_ASSESSED,
             "reason": "Есть поворот, связанный с ассортиментом книг.",
             "decision_change_reason": "Проверил довод о связи с ассортиментом по финальной реплике." if revision else ""}
 
@@ -52,6 +53,7 @@ def test_no_candidates_does_not_fill_quota_or_call_portfolio(monkeypatch):
         calls.append((model, prompt, copy.deepcopy(payload)))
         assert prompt == prompts.INDEPENDENT
         assert "quota" not in payload and "models" not in payload
+        assert "brief" not in payload and "Показать ассортимент книг Авито." not in json.dumps(payload, ensure_ascii=False)
         assert "readability_score" not in json.dumps(payload)
         return validator({"items": [opinion(sid, "reject") for sid in payload["evaluate_ids"]]})
 
@@ -77,6 +79,8 @@ def test_exchange_uses_only_frozen_initial_votes_and_occurs_once(monkeypatch):
 
     def fake(client, *, model, prompt, payload, validator, **kwargs):
         calls.append((model, prompt, copy.deepcopy(payload)))
+        assert "brief" not in payload
+        assert "readability_score" not in json.dumps(payload)
         index = cs.DEFAULT_MODELS.index(model)
         if prompt == prompts.INDEPENDENT:
             assert "quota" not in payload
@@ -149,7 +153,7 @@ def test_31_scenarios_all_reach_both_judges_and_all_confirmed_are_retained(monke
     assert result["counts"]["additional"] == len(result["additional_ids"]) == 29
 
 
-@pytest.mark.parametrize("mutation", ["missing", "duplicate", "invented_quote", "empty_mechanism", "missing_change"])
+@pytest.mark.parametrize("mutation", ["missing", "duplicate", "invented_quote", "empty_mechanism", "missing_change", "assessed_brief"])
 def test_invalid_judgments_never_become_votes(mutation):
     source = {i: scenario(i) for i in "ab"}
     rows = [opinion(i, revision=True) for i in "ab"]
@@ -161,6 +165,8 @@ def test_invalid_judgments_never_become_votes(mutation):
         rows[0]["quote"] = "Герой улетел на Марс."
     elif mutation == "empty_mechanism":
         rows[0]["mechanism"] = ""
+    elif mutation == "assessed_brief":
+        rows[0]["brief_link"] = "Соответствует брифу."
     else:
         rows[0]["decision_change_reason"] = ""
     with pytest.raises(ValueError):
@@ -230,3 +236,21 @@ def test_input_limits_and_models_are_explicit():
         cs.validate_inputs("Бриф", [{**scenario("a"), "text": "x" * (cs.MAX_SCENARIO_CHARS+1)}], 2, cs.DEFAULT_MODELS)
     with pytest.raises(ValueError):
         cs.validate_inputs("Бриф", [scenario("a")], 2, (cs.DEFAULT_MODELS[0], cs.DEFAULT_MODELS[0]))
+
+
+def test_prompts_match_the_user_accepted_58_scenario_run():
+    # Frozen fingerprints of strict_v2_advalue/protocol.json accepted on 2026-11-18.
+    assert hashlib.sha256(prompts.INDEPENDENT.encode()).hexdigest() == "5851e14be94f4fa117e555d6c53f6968b668de4a18ce1621b1f1a29eba98a206"
+    assert hashlib.sha256(prompts.RECONSIDER.encode()).hexdigest() == "dff77517bdc142a3ef9c9622da67cc1057cc56e239e5bfcd99977a602da5cf7d"
+    assert cs.PROTOCOL_VERSION == "creative-strength-and-advertising-value-two-judges-v2"
+
+
+def test_selection_runs_without_brief_and_does_not_send_context_or_scores(monkeypatch):
+    def fake(client, *, model, prompt, payload, validator, **kwargs):
+        assert set(payload) == {"scenarios", "evaluate_ids"}
+        assert all(set(row) == {"id", "title", "text"} for row in payload["scenarios"])
+        return validator({"items": [opinion(sid, "reject") for sid in payload["evaluate_ids"]]})
+    monkeypatch.setattr(cs, "_call", fake)
+    result = cs.run_selection(scenarios=[scenario("a")], quota=2, api_key="fake", api_base="https://example.invalid/v1")
+    assert result["counts"]["rejected"] == 1
+    assert result["protocol_version"] == cs.PROTOCOL_VERSION

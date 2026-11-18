@@ -110,7 +110,8 @@ def test_creative_selection_route_opens_without_calling_models(offline_navigatio
     assert not app.exception
     assert offline_navigation == ROUTES
     assert app.title[0].value == "Креативный отбор"
-    assert "Бриф" in [area.label for area in app.text_area]
+    assert "Бриф" not in [area.label for area in app.text_area]
+    assert "Или вставьте сценарии" in [area.label for area in app.text_area]
     assert any(button.label == "Найти креативные идеи" and button.disabled for button in app.button)
 
 
