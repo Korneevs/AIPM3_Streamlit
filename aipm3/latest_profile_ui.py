@@ -1,4 +1,4 @@
-"""Archive-style cards and feature tabs for the current model's explanations.
+"""Summary cards and the additive balance for the current model's explanations.
 
 No legacy score conversion or legacy SHAP is used. Attribution weights use
 the displayed creative features of each current head, including unresolved ones.
@@ -29,6 +29,11 @@ def show_summary(interpretation: dict) -> None:
         note = "к среднему" if available else "Нужна полная озвучка"
         if not available:
             color, background, status = "#667085", "#F5F6F8", "Оценка ограничена"
+        recall_adjusted = bool(interpretation.get("details", {}).get("r", {}).get("manual_adjustment"))
+        adjustment_note = (
+            '<div style="font-size:12px;margin-top:8px;">С экспертной поправкой</div>'
+            if available and recall_adjusted and (primary or card.get("task") == "r") else ""
+        )
         st.markdown(
             f'<div style="background:{background};border:1px solid {color}33;'
             f'border-radius:12px;padding:{"24px" if primary else "18px 16px"};color:{color};'
@@ -37,7 +42,8 @@ def show_summary(interpretation: dict) -> None:
             f'<div style="font-size:{18 if primary else 14}px;color:#343745;min-height:{24 if primary else 42}px;">{escape(title)}</div>'
             f'<div style="font-size:{60 if primary else 34}px;line-height:1.2;font-weight:700;margin-top:8px;">{value}</div>'
             f'<div style="font-size:13px;margin-top:4px;">{note}</div>'
-            f'<div style="font-size:15px;font-weight:600;margin-top:16px;">{status}</div></div>',
+            f'<div style="font-size:15px;font-weight:600;margin-top:16px;">{status}</div>'
+            f'{adjustment_note}</div>',
             unsafe_allow_html=True,
         )
 
@@ -111,21 +117,5 @@ def feature_figure(row: dict) -> go.Figure:
 
 
 def show_profile(interpretation: dict) -> None:
-    from .neuromatics_manager import manager_profile_rows, effect_label
-    rows = manager_profile_rows(interpretation)
-    st.subheader("Профиль ролика")
-    for tab, task in zip(st.tabs([TITLES[t] for t in ORDER]), ORDER):
-        with tab:
-            for row in rows[task]:
-                with st.container(border=True):
-                    heading, effect = st.columns([3, 1], gap="large")
-                    with heading:
-                        st.markdown("#### " + row["label"])
-                    with effect:
-                        color = {"up": "#137547", "down": "#B42332", "balanced": "#667085"}[row["direction"]]
-                        st.markdown(f'<div style="color:{color};font-weight:600;margin:8px 0;">'
-                                    + escape(effect_label(row)) + '</div>', unsafe_allow_html=True)
-                    st.write(row["meaning"])
-                    st.write(row["finding"])
-                    if row["check"]:
-                        st.markdown("**Вариант для проверки:** " + row["check"])
+    from .latest_balance_ui import show_balance_profile
+    show_balance_profile(interpretation)

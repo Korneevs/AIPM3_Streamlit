@@ -8,6 +8,41 @@ CELEBRITY_VERSION = "latest-manual-celebrity-v3"
 RECALL_MULTIPLIER = 1.3
 LEGACY_RECALL_MULTIPLIER = 1.2
 LEGACY_NOTICEABILITY_MULTIPLIER = 1.3
+RECALL_CELEBRITY_VERSION = "recall-celebrity-expert-v1"
+RECALL_CELEBRITY_FACTOR = 1.2
+
+
+def recall_celebrity_presence(metadata):
+    """A separate source-bound recall policy; old N reviews do not opt in."""
+    review = metadata.get("recall_celebrity_review")
+    if review is None:
+        return None
+    if (not isinstance(review, dict)
+            or review.get("version") != RECALL_CELEBRITY_VERSION
+            or type(review.get("present")) is not bool
+            or not metadata.get("source_sha")
+            or review.get("source_sha") != metadata["source_sha"]):
+        raise ValueError("Не удалось проверить отметку селебрити для запоминаемости этого ролика.")
+    return review["present"]
+
+
+def recall_expert_multiplier(metadata):
+    return RECALL_CELEBRITY_FACTOR if recall_celebrity_presence(metadata) is True else 1.0
+
+
+def with_recall_celebrity_review(result, present):
+    """Apply the recall policy from original rows, without accumulating bonuses."""
+    from .latest_runtime import result_metadata, score_feature_rows, material_kind_for_result
+    if type(present) is not bool:
+        raise ValueError("Отметка селебрити должна быть да или нет.")
+    metadata = result_metadata(result)
+    metadata.pop("manager_review", None)
+    metadata["recall_celebrity_review"] = dict(
+        version=RECALL_CELEBRITY_VERSION, present=present,
+        source_sha=result.get("source_sha"), origin="user_declared")
+    return score_feature_rows(result["feature_rows"], metadata=metadata,
+                              material_kind=material_kind_for_result(result),
+                              repeat_count=result.get("repeat_count", 10))
 
 
 def celebrity_presence(metadata):

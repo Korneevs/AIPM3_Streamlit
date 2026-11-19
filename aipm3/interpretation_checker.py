@@ -168,6 +168,8 @@ def apply_review(interpretation, receipt):
     for rows in draft["profiles"].values():
         for row in rows:
             item = patches[row["id"]]
+            row.update(review_action=item["action"],
+                       reviewed_support_ids=list(item["support_ids"]))
             if item["action"] == "withhold":
                 row.update(direction="balanced", status="unassessed", check="",
                     finding="По этой детали нельзя уверенно назвать сильную или слабую сторону. Для вывода нужна сверка по ролику.")

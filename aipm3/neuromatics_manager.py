@@ -265,6 +265,8 @@ def draft_fingerprint(draft):
         if isinstance(value, bool):
             return value
         if isinstance(value, (int, float)):
+            if not math.isfinite(value):
+                return None
             number = round(value, 12)
             return int(number) if number == int(number) else number
         return value

@@ -13,9 +13,10 @@ import re
 import sys
 import numpy as np
 import pandas as pd
-from .latest_manual_inputs import effective_feature_rows, celebrity_presence
+from .latest_manual_inputs import (effective_feature_rows, celebrity_presence,
+                                  recall_expert_multiplier, recall_celebrity_presence)
 
-VERSION = 'manager-decisions-v9-aipm0719-mixture-attributions'
+VERSION = 'manager-decisions-v10-recall-expert-balance'
 NAMES = {'n':'Заметность', 'm':'Считываемость', 'r':'Запоминаемость'}
 LABELS = {
  'character_close_up_seconds':'Крупные планы героя',
@@ -392,7 +393,7 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
         coverage=1-missed_mass/total_mass if total_mass else 1.
         partial=coverage<.75 or any(abs(d['index_points'])>=5 for d in unresolved)
         unadjusted_score=score
-        factor=1.
+        factor=recall_expert_multiplier(result) if task=='r' else 1.
         score*=factor;spread*=factor
         q1,q2=np.quantile(bgpred,[1/3,2/3])
         level='Выше типичного уровня' if score>q2 else 'Ниже типичного уровня' if score<q1 else 'Типичный уровень'
@@ -420,6 +421,7 @@ def build_latest_interpretation(result,model=None,evidence=None,bundle_dir=None,
     overall['assessment_available']=voice not in {'partial','absent'}
     interpretation=dict(version=VERSION,material_kind=material_kind,cards=cards,details=details,overall=overall,
       celebrity_present=celebrity_presence(result),
+      recall_celebrity_present=recall_celebrity_presence(result),
       display_calibration=calibration['version'] if calibration else None,audio_status=voice,audio_note=audio_note(voice),
       scale_note='100 - средняя оценка исторических роликов в этом компоненте. Это индекс модели, а не процент зрителей.',
       interpretation_note='Плюсы и ограничения объясняют расчет модели относительно исторических роликов. Проверки ниже помогут обсудить правки с Марком и ресерчем; эффект отдельной правки нужно проверить на новой версии.',

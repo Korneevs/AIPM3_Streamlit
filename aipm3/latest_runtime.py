@@ -17,7 +17,8 @@ import numpy as np
 import pandas as pd
 
 from .latest_manual_inputs import (LEGACY_CELEBRITY_VERSIONS, celebrity_presence,
-                                   effective_feature_rows, with_celebrity_review)
+                                   effective_feature_rows, with_celebrity_review,
+                                   recall_expert_multiplier, RECALL_CELEBRITY_VERSION)
 
 BUNDLE_DIR = Path(__file__).resolve().parent / "latest_bundle" / "20261001"
 MESSAGE_BUNDLE_DIR = Path(__file__).resolve().parent / "message_bundle" / "20261008"
@@ -217,6 +218,9 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
                    for task, frame in frames.items()}
     if not all(np.isfinite(value).all() for value in predictions.values()):
         raise ValueError("The frozen model produced a nonfinite prediction")
+    recall_base = float(np.mean(predictions["r"]))
+    recall_factor = recall_expert_multiplier(metadata or {})
+    predictions["r"] = predictions["r"] * recall_factor
     per_repeat = keys.copy()
     for task, column in SCORE_NAMES.items():
         per_repeat[column] = predictions[task]
@@ -229,8 +233,8 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
     for name, value in scores.items():
         if not np.isclose(value, per_repeat[name].mean(), rtol=1e-12, atol=1e-14):
             raise AssertionError("Frozen score aggregation changed")
-    # Celebrity review changes the observed is_celeb input only. The selected
-    # model has no external N/R multiplier, including on imported metadata.
+    # Frozen heads stay unchanged. Only an explicit, versioned recall review
+    # enables the expert adjustment; historical N reviews never enable it.
     result = dict(metadata or {})
     result["metadata"] = {**dict(metadata or {}), "material_kind": material_kind}
     result.update(
@@ -248,13 +252,18 @@ def score_feature_rows(feature_rows: dict[str, list[dict] | pd.DataFrame],
         feature_rows={task: frame.to_dict("records") for task, frame in original_frames.items()},
         model_inputs={task: model.heads[task].state["columns"] for task in MODEL_TASKS},
     )
+    if (metadata or {}).get("recall_celebrity_review") is not None:
+        result["score_adjustments"] = {"recall_celebrity": dict(
+            version=RECALL_CELEBRITY_VERSION, origin="user_declared",
+            factor=recall_factor, base_score=recall_base,
+            contribution=recall_base * (recall_factor - 1.0))}
     return clean_json(result)
 
 
 def result_metadata(result: dict) -> dict:
     reserved = {"metadata", "scores", "per_repeat", "feature_rows", "model_inputs",
                 "scoring_version", "protocol_version", "model_sha256", "interpretation", "repeat_count",
-                "manager_cards", "classes", "q_exponents", "model_label"}
+                "manager_cards", "classes", "q_exponents", "model_label", "score_adjustments"}
     return {k: v for k, v in result.items() if k not in reserved}
 
 

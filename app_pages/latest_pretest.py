@@ -20,7 +20,8 @@ from aipm3.runtime_resources import AnalysisBusy, AnalysisTimeout
 from aipm3.manager_report import report_cards
 from aipm3.display_calibration import audio_status
 from aipm3.latest_manual_inputs import (LEGACY_CELEBRITY_VERSIONS, celebrity_presence,
-                                       with_celebrity_review)
+                                       with_celebrity_review, recall_celebrity_presence,
+                                       with_recall_celebrity_review)
 from aipm3.latest_profile_ui import show_summary, show_profile
 from aipm3.neuromatics_manager import VERSION as MANAGER_VERSION, FINISHED_VERSION
 from aipm3.manager_display import VERSION as DISPLAY_VERSION
@@ -121,6 +122,13 @@ def show_queue_notice(position, notice, status, bar):
         status.update(label="Разбираем ролик")
 
 
+def _accept_result(result: dict, prefix: str) -> None:
+    """Synchronize the manual flag when another export of the same video opens."""
+    st.session_state[prefix + "result"] = result
+    identity = str(result.get("source_sha", result.get("record", "")))
+    st.session_state[prefix + "recall_celebrity_" + identity] = recall_celebrity_presence(result) is True
+
+
 def main(material_kind: str = "finished") -> None:
     if material_kind not in MATERIAL_LABELS:
         raise ValueError(f"Unknown material kind: {material_kind}")
@@ -136,8 +144,8 @@ def main(material_kind: str = "finished") -> None:
     preset = os.environ.get(preset_env)
     if preset and st.session_state.get(prefix + "preset") != preset:
         try:
-            st.session_state[result_key] = validate_cached_result(
-                json.loads(Path(preset).read_text()), material_kind=material_kind)
+            _accept_result(validate_cached_result(
+                json.loads(Path(preset).read_text()), material_kind=material_kind), prefix)
             st.session_state[prefix + "preset"] = preset
         except (ValueError, KeyError, OSError):
             st.error("Не удалось открыть сохранённый разбор для этого типа роликов.")
@@ -149,8 +157,8 @@ def main(material_kind: str = "finished") -> None:
             digest = hashlib.sha256(saved.getvalue()).hexdigest()
             if st.session_state.get(prefix + "saved_sha") != digest:
                 try:
-                    st.session_state[result_key] = validate_cached_result(
-                        json.loads(saved.getvalue()), material_kind=material_kind)
+                    _accept_result(validate_cached_result(
+                        json.loads(saved.getvalue()), material_kind=material_kind), prefix)
                     st.session_state[prefix + "saved_sha"] = digest
                 except (ValueError, KeyError, TypeError):
                     st.error("Не удалось открыть файл. Выберите разбор, сохранённый для этого типа роликов.")
@@ -226,7 +234,7 @@ def main(material_kind: str = "finished") -> None:
                         def finish_analysis(result):
                             result["source_name"] = uploaded.name
                             result = with_celebrity_review(result, selected_celebrity)
-                            st.session_state[result_key] = result
+                            _accept_result(result, prefix)
                             result["main_idea"] = main_idea(result)
                             if analysis_target:
                                 status.update(label="Проверяем попадание в UVP")
@@ -245,7 +253,7 @@ def main(material_kind: str = "finished") -> None:
                             on_queue=lambda position: show_queue_notice(position, queue_notice, status, bar),
                             postprocess=finish_analysis,
                             evidence_collector=_review_collector())
-                        st.session_state[result_key] = result
+                        _accept_result(result, prefix)
                         bar.progress(1., text="Разбор готов")
                         status.update(label="Разбор завершён", state="complete", expanded=False)
                 except MissingMeasurement:
@@ -296,6 +304,17 @@ def main(material_kind: str = "finished") -> None:
             if selected_celebrity != present:
                 result = with_celebrity_review(result, selected_celebrity)
                 st.session_state[result_key] = result
+        recall_present = recall_celebrity_presence(result)
+        with st.expander("Запоминаемость: участие известного человека", expanded=False):
+            recall_selected = st.checkbox(
+                "Учесть участие известного человека",
+                value=recall_present is True,
+                key=prefix + "recall_celebrity_" + str(result.get("source_sha", result.get("record", ""))),
+                help="Отметьте вручную, если в ролике участвует узнаваемая знаменитость. "
+                     "К запоминаемости применяется отдельная экспертная поправка +20%.")
+        if recall_selected != (recall_present is True):
+            result = with_recall_celebrity_review(result, recall_selected)
+            st.session_state[result_key] = result
         if material_kind == "neuromatics":
             choices = {"Полнота озвучки не подтверждена": "unknown", "Вся речь есть (можно черновую)": "complete",
                        "Есть только часть речи": "partial", "Речи нет": "absent"}

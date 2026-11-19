@@ -51,3 +51,26 @@ def test_audio_limited_cards_do_not_show_percentages_or_norms():
     text = ' '.join(x.value for x in app.markdown)
     assert '+20%' not in text and 'Выше нормы' not in text
     assert text.count('Нужна полная озвучка') == 4
+
+
+@pytest.mark.parametrize('adjustment,available,expected', [(0, True, 0), (.05, True, 2), (.05, False, 0)])
+def test_summary_marks_only_available_recall_and_overall_with_expert_adjustment(adjustment, available, expected):
+    card = dict(index=115, level='Выше типичного уровня', assessment_available=available)
+    interpretation = dict(material_kind='finished', overall=dict(card),
+                          cards=[dict(card, task=t) for t in 'nmr'],
+                          details={'r':{'manual_adjustment':adjustment}})
+    app = AppTest.from_string('''
+import streamlit as st
+from aipm3.latest_profile_ui import show_summary
+show_summary(st.session_state['interpretation'])
+''')
+    app.session_state['interpretation'] = interpretation
+    app.run()
+    assert not app.exception
+    html = [x.value for x in app.markdown]
+    assert sum('С экспертной поправкой' in x for x in html) == expected
+    if expected:
+        marked = [x for x in html if 'С экспертной поправкой' in x]
+        assert any('Общая оценка' in x for x in marked)
+        assert any('Запоминаемость' in x for x in marked)
+        assert all('+20%' not in x for x in marked)

@@ -28,10 +28,12 @@ def interpretation():
         "observation": "Изображение показывает заявленное действие.",
         "episodes": [{"start": 3., "end": 5.}]},
         index_points=-5, contribution=-.05, usable=True, direction="limits", interpretation_kind="association_only", why="Это связь в обученной модели.", check=None)
-    return dict(cards=[dict(task=task, title=title, index=index, level="Типичный уровень",
+    return dict(cards=[dict(task=task, title=title, index=index, level="Типичный уровень", score=.2, baseline=.3,
+                           **{'class':2},
                            repeat_index_range=[95., 105.], strengths=[], limitations=[driver], unresolved=[])
                       for task, title, index in [("n", "Заметность", 101), ("m", "Считываемость", 92), ("r", "Запоминаемость", 98)]],
-                details={task: {"drivers": [deepcopy(driver)]} for task in 'nmr'},
+                details={task: {"drivers": [deepcopy(driver)], "expected":.25,
+                                "actual":.2, "manual_adjustment":0} for task in 'nmr'},
                 scale_note="100 — средняя оценка исторических роликов; не процент зрителей.",
                 repeat_note="Разброс повторов не является доверительным интервалом.",
                 interpretation_note="Отдельную правку нужно проверить на новой версии.", evidence_runs=3)
@@ -49,18 +51,19 @@ def test_result_page_shows_three_indices_and_preserves_associations(repeat_count
     app.session_state["interpretation"] = content
     app.run(timeout=30)
     assert not app.exception
-    assert [tab.label for tab in app.tabs] == ["Заметность", "Запоминаемость", "Считываемость основной идеи"]
+    assert [tab.label for tab in app.tabs] == ["Заметность", "Считываемость", "Запоминаемость"]
     text = " ".join(item.value for item in app.markdown)
     captions = " ".join(item.value for item in app.caption)
-    assert "не даёт понятного основания" in text
+    assert "Изображение показывает заявленное действие." in text
     assert all(value in text for value in [">+1%<", ">−8%<", ">−2%<"])
-    assert "Различаем отсутствие связи" in text
+    assert "знак не означает, что приём нужно добавить или убрать" in captions
     assert "На что обратить внимание" not in text
     assert "0% - средняя оценка" in captions
     for forbidden in ["Сравнение и разброс", "Версия расчёта", "пункта индекса", "SHAP", "исходные признаки", "Q", "OPM", "Особенность модели", "замороженная"]:
         assert forbidden not in text + captions
-    assert not app.expander
-    assert not app.get("plotly_chart")
+    assert len(app.expander) == 6
+    assert all(not expander.proto.expanded for expander in app.expander)
+    assert len(app.get("plotly_chart")) == 3
     assert "Вес среди" not in text
     assert "#FFF6D6" in text and "В норме" in text
     assert len(app.get("download_button")) == 1
@@ -325,14 +328,14 @@ def test_both_results_show_directions_idea_and_uvp_without_weights(status, label
     app.run(timeout=30)
     assert not app.exception
     text = ' '.join(x.value for x in app.markdown) + ' '.join(x.value for x in app.caption)
-    assert "+ В плюс в этом ролике" in text and "− В минус в этом ролике" in text
+    assert "+0.0500" in text and "-0.0500" in text
     if kind == 'neuromatics':
         assert "Финальный кадр с брендом" not in text
     assert "На Авито можно найти надёжного мастера." in text
     assert any(x.value == label for x in [*app.success, *app.error])
-    assert not app.get("plotly_chart")
+    assert len(app.get("plotly_chart")) == 3
     assert "Вес среди" not in text and "упорядочены по весу" not in text
-    assert not any("вес" in x.label.lower() or "вклад" in x.label.lower() for x in app.expander)
+    assert sum(x.label == "На чём основаны вклады" for x in app.expander) == 3
     assert app.session_state["result"] == before
 
 
